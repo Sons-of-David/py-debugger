@@ -15,10 +15,15 @@ export interface ShapeArrayElementConfig {
   visible?: boolean;
 }
 
-export interface VisualBuilderElement {
-  type: VisualBuilderElementType;
-  position: [number, number];
-  visible: boolean;
+export interface VisualBuilderElementBase {
+  type: string;               // shape type
+  position: [number, number]; // common position
+  visible?: boolean;          // optional, default true
+  alpha?: number;             // optional, default 1
+  panelId?: string;
+}
+
+export interface VisualBuilderElement extends VisualBuilderElementBase {
   // Type-specific
   width?: number;
   height?: number;
@@ -42,7 +47,6 @@ export interface VisualBuilderElement {
   /** Array2D: number of rows and columns */
   numRows?: number;
   numCols?: number;
-  alpha?: number;
   orientation?: 'up' | 'down' | 'left' | 'right';
   rotation?: number;
 }
