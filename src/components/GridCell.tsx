@@ -1,9 +1,16 @@
 import { memo } from 'react';
-import type { CellData, ShapeType, ArrowOrientation } from '../types/grid';
-import { Circle, Square, Arrow } from './shapes';
+import type { CellData, ArrowOrientation } from '../types/grid';
 import { useTheme } from '../contexts/ThemeContext';
-import { LabelView } from '../types/LabelView';
-import { Array2DView } from '../types/ArrayView';
+import {
+  RectView,
+  CircleView,
+  ArrowView,
+  ArrayShapeView,
+  ArrayValueView,
+  Array2DView,
+  LabelView,
+  PanelView,
+} from './views';
 
 interface GridCellProps {
   row: number;
@@ -15,19 +22,6 @@ interface GridCellProps {
   width?: number;
   height?: number;
 }
-
-interface ShapeComponentProps {
-  color?: string;
-  opacity?: number;
-  strokeWidth?: number;
-}
-
-const ShapeComponents: Record<ShapeType, React.ComponentType<ShapeComponentProps>> = {
-  circle: Circle,
-  square: Square,
-  rectangle: Square,
-  arrow: Arrow,
-};
 
 const THEME_COLORS = {
   light: {
@@ -62,10 +56,9 @@ export const GridCell = memo(function GridCell({
 }: GridCellProps) {
   const { darkMode } = useTheme();
   const t = darkMode ? THEME_COLORS.dark : THEME_COLORS.light;
-  const ShapeComponent = cellData?.shape ? ShapeComponents[cellData.shape] : null;
   const shapeRotation = cellData?.shapeProps?.rotation || 0;
   const arrowOrientation = cellData?.shapeProps?.orientation;
-  const isShapeCell = !!ShapeComponent;
+  const isShapeCell = !!cellData?.shape;
   const isArrayCell = !!cellData?.arrayInfo;
   const is2DArrayCell = !!cellData?.array2dInfo;
   const isPanelCell = !!cellData?.panel;
@@ -111,6 +104,79 @@ export const GridCell = memo(function GridCell({
 
   const isInvalid = !!cellData?.invalidReason;
 
+  const renderStandaloneShape = () => {
+    if (!cellData?.shape) return null;
+    switch (cellData.shape) {
+      case 'arrow':
+        return (
+          <ArrowView
+            color={customColor}
+            opacity={customOpacity}
+            strokeWidth={customLineWidth}
+            orientation={arrowOrientation}
+            rotation={shapeRotation}
+          />
+        );
+      case 'circle':
+        return (
+          <CircleView
+            color={customColor}
+            opacity={customOpacity}
+            strokeWidth={customLineWidth}
+            rotation={shapeRotation}
+          />
+        );
+      case 'square':
+      case 'rectangle':
+        return (
+          <RectView
+            color={customColor}
+            opacity={customOpacity}
+            strokeWidth={customLineWidth}
+            rotation={shapeRotation}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
+  const renderArrayCell = () => {
+    if (!isArrayCell) return null;
+    const info = cellData.arrayInfo!;
+    const hasShapeType = !!info.elementType;
+    const showIndex = info.showIndex ?? !hasShapeType;
+
+    if (hasShapeType) {
+      return (
+        <ArrayShapeView
+          elementType={info.elementType!}
+          color={info.elementConfig?.color}
+          alpha={info.elementConfig?.alpha ?? customOpacity}
+          orientation={info.elementConfig?.orientation as ArrowOrientation}
+          rotation={info.elementConfig?.rotation ?? 0}
+          index={info.index}
+          showIndex={showIndex}
+          indexColor={customColor || t.arrayIndex}
+          indexFontSize={Math.max(8, Math.round(customFontSize * 0.7))}
+        />
+      );
+    }
+
+    return (
+      <ArrayValueView
+        value={info.value}
+        varName={info.varName}
+        index={info.index}
+        showIndex={showIndex}
+        nameColor={customColor || t.arrayName}
+        valueColor={customColor || t.arrayValue}
+        indexColor={customColor || t.arrayIndex}
+        fontSize={customFontSize}
+      />
+    );
+  };
+
   return (
     <div
       className={`
@@ -123,107 +189,19 @@ export const GridCell = memo(function GridCell({
       style={getCellStyle()}
       onClick={onSelect}
     >
-      {ShapeComponent && cellData?.shape === 'arrow' ? (
-        <Arrow
-          color={customColor}
-          opacity={customOpacity}
-          strokeWidth={customLineWidth}
-          orientation={arrowOrientation}
-          rotation={shapeRotation}
-        />
-      ) : ShapeComponent ? (
-        <div style={{ transform: `rotate(${shapeRotation}deg)`, width: '100%', height: '100%' }}>
-          <ShapeComponent
-            color={customColor}
-            opacity={customOpacity}
-            strokeWidth={customLineWidth}
-          />
-        </div>
-      ) : null}
+      {renderStandaloneShape()}
 
-      {/* Array cell display */}
-      {isArrayCell && (() => {
-        const info = cellData.arrayInfo!;
-        const hasShapeType = !!info.elementType;
-        const showIndex = info.showIndex ?? !hasShapeType;
-        const ShapeComp = hasShapeType ? ShapeComponents[info.elementType!] : null;
-        const elemColor = info.elementConfig?.color;
-        const elemOrientation = info.elementConfig?.orientation;
-        const elemRotation = info.elementConfig?.rotation ?? 0;
-        const elemAlpha = info.elementConfig?.alpha ?? customOpacity;
+      {renderArrayCell()}
 
-        if (hasShapeType && ShapeComp) {
-          return (
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <div className="flex-1 flex items-center justify-center w-full">
-                {info.elementType === 'arrow' ? (
-                  <Arrow
-                    color={elemColor}
-                    opacity={elemAlpha}
-                    orientation={elemOrientation as ArrowOrientation}
-                    rotation={elemRotation}
-                  />
-                ) : (
-                  <div style={{ transform: elemRotation ? `rotate(${elemRotation}deg)` : undefined, width: '100%', height: '100%' }}>
-                    <ShapeComp
-                      color={elemColor}
-                      opacity={elemAlpha}
-                    />
-                  </div>
-                )}
-              </div>
-              {showIndex && (
-                <span
-                  className="font-mono leading-none absolute bottom-0"
-                  style={{ color: customColor || t.arrayIndex, fontSize: Math.max(8, Math.round(customFontSize * 0.7)) }}
-                >
-                  [{info.index}]
-                </span>
-              )}
-            </div>
-          );
-        }
-
-        return (
-          <div className="absolute inset-0 flex flex-col items-center justify-between py-1">
-            {info.varName && info.index === 0 && (
-              <span
-                className="text-[8px] font-mono leading-none absolute -top-3 left-0"
-                style={{ color: customColor || t.arrayName }}
-              >
-                {info.varName}
-              </span>
-            )}
-            <div className="flex-1 flex items-center justify-center">
-              <span
-                className="font-mono font-bold"
-                style={{ color: customColor || t.arrayValue, fontSize: customFontSize }}
-              >
-                {info.value}
-              </span>
-            </div>
-            {showIndex && (
-              <span
-                className="font-mono leading-none"
-                style={{ color: customColor || t.arrayIndex, fontSize: Math.max(8, Math.round(customFontSize * 0.7)) }}
-              >
-                [{info.index}]
-              </span>
-            )}
-          </div>
-        );
-      })()}
-
-      {/* 2D Array cell display */}
       {is2DArrayCell && (
-        <Array2DView 
-          array2dInfo={cellData.array2dInfo!} 
-          cellStyle={{ color: customColor || t.array2dName }} 
-          valueStyle={{ color: customColor || t.array2dValue, fontSize: customFontSize }} 
-          indexStyle={{ color: customColor || t.array2dIndex, fontSize: Math.max(7, Math.round(customFontSize * 0.65)) }} />
+        <Array2DView
+          array2dInfo={cellData.array2dInfo!}
+          cellStyle={{ color: customColor || t.array2dName }}
+          valueStyle={{ color: customColor || t.array2dValue, fontSize: customFontSize }}
+          indexStyle={{ color: customColor || t.array2dIndex, fontSize: Math.max(7, Math.round(customFontSize * 0.65)) }}
+        />
       )}
 
-      {/* Label display */}
       {!!cellData?.label && (
         <LabelView
           text={cellData.label.text}
@@ -231,18 +209,11 @@ export const GridCell = memo(function GridCell({
         />
       )}
 
-      {/* Panel display */}
       {isPanelCell && (
-        <div className="absolute inset-0 border-2 border-dashed border-slate-400 dark:border-slate-500 bg-slate-50/50 dark:bg-slate-800/50">
-          {cellData.panel!.title && (
-            <span
-              className="absolute -top-3 left-1 text-[10px] font-mono bg-slate-50 dark:bg-slate-800 px-1"
-              style={{ color: customColor || t.panelTitle }}
-            >
-              {cellData.panel!.title}
-            </span>
-          )}
-        </div>
+        <PanelView
+          title={cellData.panel!.title}
+          titleColor={customColor || t.panelTitle}
+        />
       )}
     </div>
   );

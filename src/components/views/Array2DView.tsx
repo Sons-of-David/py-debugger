@@ -1,13 +1,13 @@
-import type { Array2dInfo } from "./grid";
+import type { Array2dInfo } from '../../types/grid';
 
-interface Array1DViewProps {
+interface Array2DViewProps {
   array2dInfo: Array2dInfo;
   cellStyle?: React.CSSProperties;
   valueStyle?: React.CSSProperties;
   indexStyle?: React.CSSProperties;
 }
 
-export function Array2DView({ array2dInfo, cellStyle, valueStyle, indexStyle }: Array1DViewProps) {
+export function Array2DView({ array2dInfo, cellStyle, valueStyle, indexStyle }: Array2DViewProps) {
   const info = array2dInfo!;
   const isAnchor = info.row === 0 && info.col === 0;
   const showIndices = info.showIndices ?? true;
