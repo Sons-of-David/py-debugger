@@ -298,8 +298,6 @@ export function useGridState() {
     [objects, currentVariables]
   );
 
-  const stepCount = timeline.length;
-
   const renderLabelText = useCallback((template: string, vars: VariableDictionary): string => {
     return template.replace(/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/g, (_match, varName) => {
       const value = vars[varName];
@@ -814,182 +812,15 @@ export function useGridState() {
   }, []);
 
   const selectCell = useCallback((position: CellPosition | null) => {
-    setSelectedCell(position);
   }, []);
 
   const setShape = useCallback((position: CellPosition, shape: ShapeType, panelContext?: { id: string; origin: CellPosition }) => {
-    const objectId = generateObjectId();
-    const targetPosition = panelContext
-      ? { row: position.row - panelContext.origin.row, col: position.col - panelContext.origin.col }
-      : position;
-    const defaultColor =
-      shape === 'circle' ? '#3b82f6' : shape === 'arrow' ? '#ef4444' : '#22c55e';
-    const zOrder = zOrderCounter.current++;
-    setObjects((prev) => {
-      const next = clearOverlappingObjects(prev, position.row, position.col, 1, currentVariables);
-      next.set(objectId, {
-        id: objectId,
-        data: {
-          shape,
-          objectId,
-          style: { color: defaultColor },
-          shapeProps: { width: 1, height: 1 },
-          panelId: panelContext?.id,
-          zOrder,
-        },
-        positionBinding: createHardcodedBinding(targetPosition),
-        zOrder,
-      });
-      return next;
-    });
+
   }, [generateObjectId, clearOverlappingObjects, currentVariables]);
 
   const clearCell = useCallback((position: CellPosition): string | undefined => {
-    let hitPanelId: string | undefined;
-
-    setObjects((prev) => {
-      const next = new Map(prev);
-
-      // Pass 1: find non-panel objects at this position (prioritize child objects)
-      for (const [id, obj] of next) {
-        if (obj.data.panel) continue;
-        const pos = resolveObjectPosition(obj, next, currentVariables);
-
-        if (obj.data.arrayInfo) {
-          const arrayId = obj.data.arrayInfo.id;
-          let arrayLength = 0;
-          const direction = obj.data.arrayInfo.direction || 'right';
-          for (const [, o] of next) {
-            if (o.data.arrayInfo?.id === arrayId) arrayLength++;
-          }
-
-          const arrSizes = collectArrayCellSizes(arrayId, next);
-          const useAccum = arrSizes.some(s => s.width > 1 || s.height > 1);
-          for (let i = 0; i < arrayLength; i++) {
-            const offset = useAccum ? getAccumulatedArrayOffset(direction, i, arrSizes) : getArrayOffset(direction, i);
-            const cellW = arrSizes[i]?.width ?? 1;
-            const cellH = arrSizes[i]?.height ?? 1;
-            for (let r = 0; r < cellH; r++) {
-              for (let c = 0; c < cellW; c++) {
-                if (pos.row + offset.rowDelta + r === position.row && pos.col + offset.colDelta + c === position.col) {
-                  for (const [oid, o] of next) {
-                    if (o.data.arrayInfo?.id === arrayId) {
-                      next.delete(oid);
-                    }
-                  }
-                  return next;
-                }
-              }
-            }
-          }
-        } else if (obj.data.array2dInfo) {
-          const arrayId = obj.data.array2dInfo.id;
-          for (const [, o] of next) {
-            if (o.data.array2dInfo?.id === arrayId) {
-              const cellRow = pos.row + o.data.array2dInfo.row;
-              const cellCol = pos.col + o.data.array2dInfo.col;
-              if (cellRow === position.row && cellCol === position.col) {
-                for (const [oid, del] of next) {
-                  if (del.data.array2dInfo?.id === arrayId) {
-                    next.delete(oid);
-                  }
-                }
-                return next;
-              }
-            }
-          }
-        } else {
-          const width = resolveSizeValue(obj.data.label?.width ?? obj.data.shapeProps?.width, currentVariables, evaluateExpression) ?? 1;
-          const height = resolveSizeValue(obj.data.label?.height ?? obj.data.shapeProps?.height, currentVariables, evaluateExpression) ?? 1;
-          for (let r = 0; r < height; r++) {
-            for (let c = 0; c < width; c++) {
-              if (pos.row + r === position.row && pos.col + c === position.col) {
-                next.delete(id);
-                return next;
-              }
-            }
-          }
-        }
-      }
-
-      // Pass 2: no non-panel object found -- check if position is inside a panel
-      for (const [, obj] of next) {
-        if (!obj.data.panel) continue;
-        const pos = resolveObjectPosition(obj, next, currentVariables);
-        const width = resolveSizeValue(obj.data.panel.width, currentVariables, evaluateExpression) || 1;
-        const height = resolveSizeValue(obj.data.panel.height, currentVariables, evaluateExpression) || 1;
-        for (let r = 0; r < height; r++) {
-          for (let c = 0; c < width; c++) {
-            if (pos.row + r === position.row && pos.col + c === position.col) {
-              hitPanelId = obj.data.panel.id;
-              return next;
-            }
-          }
-        }
-      }
-
-      return next;
-    });
-
-    return hitPanelId;
+    return "hitPanelId";
   }, [currentVariables]);
-
-  const addArray = useCallback((position: CellPosition, length: number, panelContext?: { id: string; origin: CellPosition }) => {
-    const arrayId = `array-${objectIdCounter.current++}`;
-    const targetPosition = panelContext
-      ? { row: position.row - panelContext.origin.row, col: position.col - panelContext.origin.col }
-      : position;
-
-    const zOrder = zOrderCounter.current++;
-    setObjects((prev) => {
-      const next = clearOverlappingObjects(prev, position.row, position.col, length, currentVariables);
-      const binding = createHardcodedBinding(targetPosition);
-
-      for (let i = 0; i < length; i++) {
-        const objectId = generateObjectId();
-        next.set(objectId, {
-          id: objectId,
-          data: {
-            objectId,
-            arrayInfo: {
-              id: arrayId,
-              index: i,
-              value: 0,
-              direction: 'right',
-            },
-            panelId: panelContext?.id,
-            zOrder,
-          },
-          positionBinding: binding,
-          zOrder,
-        });
-      }
-      return next;
-    });
-  }, [generateObjectId, clearOverlappingObjects, currentVariables]);
-
-  const addLabel = useCallback((position: CellPosition, text: string, width: number, height: number, panelContext?: { id: string; origin: CellPosition }) => {
-    const objectId = generateObjectId();
-    const zOrder = zOrderCounter.current++;
-    const targetPosition = panelContext
-      ? { row: position.row - panelContext.origin.row, col: position.col - panelContext.origin.col }
-      : position;
-    setObjects((prev) => {
-      const next = clearOverlappingObjects(prev, position.row, position.col, width, currentVariables);
-      next.set(objectId, {
-        id: objectId,
-        data: {
-          objectId,
-          label: { text, width, height },
-          panelId: panelContext?.id,
-          zOrder,
-        },
-        positionBinding: createHardcodedBinding(targetPosition),
-        zOrder,
-      });
-      return next;
-    });
-  }, [generateObjectId, clearOverlappingObjects, currentVariables]);
 
   const addPanel = useCallback((position: CellPosition, width: number, height: number, title?: string) => {
     const objectId = generateObjectId();
@@ -1011,11 +842,6 @@ export function useGridState() {
       return next;
     });
   }, [generateObjectId, clearOverlappingObjects, currentVariables]);
-
-  const loadTimeline = useCallback((newTimeline: Timeline) => {
-    setTimeline(newTimeline);
-    setCurrentStep(0);
-  }, []);
 
   // Keep loadVariables for backward compatibility - wraps single dict in array
   const loadVariables = useCallback((dict: VariableDictionary) => {
@@ -1587,141 +1413,6 @@ export function useGridState() {
     });
   }, [currentVariables]);
 
-  const panelOptions = useMemo(() => {
-    return Array.from(objects.values())
-      .filter((obj) => obj.data.panel?.id)
-      .map((obj) => ({
-        id: obj.data.panel!.id,
-        title: obj.data.panel!.title || obj.data.panel!.id,
-      }));
-  }, [objects]);
-
-  const moveCell = useCallback((from: CellPosition, to: CellPosition) => {
-    const target = findObjectByCell(objects, from, currentVariables);
-    if (!target) return;
-
-    const panelContext = target.obj.data.panelId ? getPanelContextAt(from) : null;
-    let relativeTarget = to;
-    let extendPanel = false;
-    let newPanelSize: { width: number; height: number } | null = null;
-    let newPanelOrigin: CellPosition | null = null;
-    let shiftRow = 0;
-    let shiftCol = 0;
-
-    if (panelContext) {
-      relativeTarget = {
-        row: to.row - panelContext.origin.row,
-        col: to.col - panelContext.origin.col,
-      };
-      const outOfBounds =
-        relativeTarget.row < 0 ||
-        relativeTarget.col < 0 ||
-        relativeTarget.row >= panelContext.height ||
-        relativeTarget.col >= panelContext.width;
-      if (outOfBounds) {
-        const promptKey = `${panelContext.id}:${relativeTarget.row},${relativeTarget.col}`;
-        if (movePromptRef.current.inFlight && movePromptRef.current.key === promptKey) {
-          return;
-        }
-        movePromptRef.current = { key: promptKey, inFlight: true };
-        const extend = window.confirm('Target is outside the panel. Extend the panel to include it?');
-        movePromptRef.current = { key: promptKey, inFlight: false };
-        if (!extend) return;
-        extendPanel = true;
-        const deltaRow = Math.min(0, relativeTarget.row);
-        const deltaCol = Math.min(0, relativeTarget.col);
-        shiftRow = -deltaRow;
-        shiftCol = -deltaCol;
-        const adjustedTarget = {
-          row: relativeTarget.row + shiftRow,
-          col: relativeTarget.col + shiftCol,
-        };
-        relativeTarget = adjustedTarget;
-        newPanelOrigin = {
-          row: panelContext.origin.row + deltaRow,
-          col: panelContext.origin.col + deltaCol,
-        };
-        newPanelSize = {
-          width: Math.max(panelContext.width + shiftCol, adjustedTarget.col + 1),
-          height: Math.max(panelContext.height + shiftRow, adjustedTarget.row + 1),
-        };
-      }
-    }
-
-    setObjects((prev) => {
-      const next = new Map(prev);
-
-      const adjustComponent = (component: PositionComponent, delta: number): PositionComponent => {
-        if (delta === 0) return component;
-        if (component.type === 'fixed' || component.type === 'hardcoded') {
-          return { type: 'fixed', value: component.value + delta };
-        }
-        if (component.type === 'variable') {
-          return { type: 'expression', expression: `${component.varName} + ${delta}` };
-        }
-        if (component.type === 'expression') {
-          return { type: 'expression', expression: `(${component.expression}) + ${delta}` };
-        }
-        return component;
-      };
-
-      if (extendPanel && panelContext && newPanelSize && newPanelOrigin) {
-        for (const [pid, pobj] of next) {
-          if (pobj.data.panel?.id === panelContext.id) {
-            next.set(pid, {
-              ...pobj,
-              data: {
-                ...pobj.data,
-                panel: {
-                  ...pobj.data.panel,
-                  width: newPanelSize.width,
-                  height: newPanelSize.height,
-                },
-                shapeProps: { ...pobj.data.shapeProps, width: newPanelSize.width, height: newPanelSize.height },
-              },
-              positionBinding: createHardcodedBinding({
-                row: Math.max(0, newPanelOrigin.row),
-                col: Math.max(0, newPanelOrigin.col),
-              }),
-            });
-            break;
-          }
-        }
-        if (shiftRow !== 0 || shiftCol !== 0) {
-          for (const [oid, o] of next) {
-            if (o.data.panelId === panelContext.id) {
-              const binding = o.positionBinding;
-              next.set(oid, {
-                ...o,
-                positionBinding: {
-                  row: adjustComponent(binding.row, shiftRow),
-                  col: adjustComponent(binding.col, shiftCol),
-                },
-              });
-            }
-          }
-        }
-      }
-
-      if (target.arrayId) {
-        for (const [oid, o] of next) {
-          if (o.data.arrayInfo?.id === target.arrayId || o.data.array2dInfo?.id === target.arrayId) {
-            next.set(oid, {
-              ...o,
-              positionBinding: createHardcodedBinding(relativeTarget),
-            });
-          }
-        }
-      } else {
-        next.set(target.id, {
-          ...target.obj,
-          positionBinding: createHardcodedBinding(relativeTarget),
-        });
-      }
-      return next;
-    });
-  }, [objects, currentVariables, getPanelContextAt, resolveObjectPosition, findObjectByCell]);
-
   // Get list of numeric variable names (int and float) for binding UI
   const intVariableNames = useMemo((): string[] => {
     return Object.entries(currentVariables)
@@ -1739,35 +1430,8 @@ export function useGridState() {
   }, [objects]);
 
   const loadObjectsSnapshot = useCallback((snapshot: GridObjectSnapshot[]) => {
-    const next = new Map<string, GridObject>();
-    let maxId = -1;
-    let maxZ = -1;
 
-    for (const obj of snapshot) {
-      const zOrder = obj.zOrder ?? 0;
-      maxZ = Math.max(maxZ, zOrder);
-      next.set(obj.id, {
-        id: obj.id,
-        data: { ...obj.data, zOrder },
-        positionBinding: obj.positionBinding,
-        zOrder,
-      });
 
-      const idMatch = obj.id.match(/-(\d+)$/);
-      if (idMatch) {
-        maxId = Math.max(maxId, parseInt(idMatch[1], 10));
-      }
-      if (obj.data.arrayInfo?.id) {
-        const arrayMatch = obj.data.arrayInfo.id.match(/-(\d+)$/);
-        if (arrayMatch) {
-          maxId = Math.max(maxId, parseInt(arrayMatch[1], 10));
-        }
-      }
-    }
-
-    objectIdCounter.current = maxId + 1;
-    zOrderCounter.current = maxZ + 1;
-    setObjects(next);
   }, []);
 
   const VB_PREFIX = 'vb-';
@@ -1872,50 +1536,12 @@ export function useGridState() {
   return {
     cells,
     overlayCells,
-    selectedCell,
     zoom,
-    variables: currentVariables,
-    timeline,
-    currentStep,
-    stepCount,
-    intVariableNames,
-    selectCell,
-    setShape,
-    clearCell,
-    addArray,
-    addLabel,
-    addPanel,
-    getPanelContextAt,
-    setCellValue,
-    getObjectAtCell,
-    getOccupantAtCell,
     occupancyMap,
-    loadVariables,
-    loadTimeline,
-    nextStep,
-    prevStep,
-    goToStep,
-    placeIntVariable,
-    placeArrayVariable,
-    place2DArrayVariable,
     zoomIn,
     zoomOut,
     setZoom,
-    updateCellStyle,
-    moveCell,
-    setPositionBinding,
-    updateShapeProps,
-    updateArrayDirection,
-    updateIntVarDisplay,
-    setPanelForObject,
-    movePanel,
-    updatePanel,
-    deletePanel,
-    panelOptions,
     panels,
-    getObjectsSnapshot,
-    loadObjectsSnapshot,
     loadVisualBuilderObjects,
-    validateProposedOverTimeline,
   };
 }
