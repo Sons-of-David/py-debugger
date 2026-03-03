@@ -1839,166 +1839,25 @@ export function useGridState() {
         const binding = createHardcodedBinding(targetPosition);
 
         const alpha = el.alpha ?? 1;
+        if ('draw' in el && typeof (el as any).draw === 'function') {
+          const drawResult = (el as any).draw(idx, VB_PREFIX);
 
-        if (el.type === 'rect') {
-          const color = el.color ? rgbToHex(el.color) : '#22c55e';
-          next.set(gridId, {
-            id: gridId,
-            data: {
-              objectId: gridId,
-              shape: 'rectangle',
-              style: { color, opacity: alpha },
-              shapeProps: { width: el.width ?? 1, height: el.height ?? 1 },
-              panelId,
-              zOrder: z,
-            },
-            positionBinding: binding,
-            zOrder: z++,
-          });
-        } else if (el.type === 'circle') {
-          const color = el.color ? rgbToHex(el.color) : '#3b82f6';
-          next.set(gridId, {
-            id: gridId,
-            data: {
-              objectId: gridId,
-              shape: 'circle',
-              style: { color, opacity: alpha },
-              shapeProps: { width: el.width ?? 1, height: el.height ?? 1 },
-              panelId,
-              zOrder: z,
-            },
-            positionBinding: binding,
-            zOrder: z++,
-          });
-        } else if (el.type === 'arrow') {
-          const color = el.color ? rgbToHex(el.color) : '#10b981';
-          next.set(gridId, {
-            id: gridId,
-            data: {
-              objectId: gridId,
-              shape: 'arrow',
-              style: { color, opacity: alpha },
-              shapeProps: {
-                width: el.width ?? 1,
-                height: el.height ?? 1,
-                orientation: (el.orientation as 'up' | 'down' | 'left' | 'right') ?? 'up',
-                rotation: el.rotation ?? 0,
-              },
-              panelId,
-              zOrder: z,
-            },
-            positionBinding: binding,
-            zOrder: z++,
-          });
-        } else if (el.type === 'label') {
-          const style: CellStyle = { opacity: alpha };
-          if (el.color) style.color = rgbToHex(el.color);
-          if (el.fontSize != null) style.fontSize = el.fontSize;
-          next.set(gridId, {
-            id: gridId,
-            data: {
-              objectId: gridId,
-              label: { text: el.label ?? '', width: el.width ?? 1, height: el.height ?? 1 },
-              ...(Object.keys(style).length > 0 && { style }),
-              panelId,
-              zOrder: z,
-            },
-            positionBinding: binding,
-            zOrder: z++,
-          });
-        } else if (el.type === 'var') {
-          next.set(gridId, {
-            id: gridId,
-            data: {
-              objectId: gridId,
-              intVar: { name: el.varName ?? '', value: 0, display: (el.display as 'name-value' | 'value-only') ?? 'name-value' },
-              style: { opacity: alpha },
-              panelId,
-              zOrder: z,
-            },
-            positionBinding: binding,
-            zOrder: z++,
-          });
-        } else if (el.type === 'array2d') {
-          const arrayId = `${VB_PREFIX}array2d-${idx++}`;
-          const numRows = Math.max(1, Math.min(50, el.numRows ?? 3));
-          const numCols = Math.max(1, Math.min(50, el.numCols ?? 3));
-          const showIndices = el.showIndex ?? true;
-          for (let r = 0; r < numRows; r++) {
-            for (let c = 0; c < numCols; c++) {
-              const cellId = `${VB_PREFIX}${idx++}`;
-              next.set(cellId, {
-                id: cellId,
-                data: {
-                  objectId: cellId,
-                  array2dInfo: {
-                    id: arrayId,
-                    row: r,
-                    col: c,
-                    numRows,
-                    numCols,
-                    value: undefined,
-                    varName: el.varName ?? '',
-                    showIndices,
-                  },
-                  panelId,
-                  zOrder: z,
-                },
+          if ('cells' in drawResult) {
+            // It's an array or 2D array
+            for (const cell of drawResult.cells) {
+              next.set(cell.cellId, {
+                id: cell.cellId,
+                data: { ...cell.data, objectId: cell.cellId, panelId, zOrder: z },
                 positionBinding: binding,
                 zOrder: z++,
               });
             }
-          }
-        } else if (el.type === 'array') {
-          const arrayId = `${VB_PREFIX}array-${idx++}`;
-          const length = Math.max(1, Math.min(50, el.length ?? 5));
-          const direction = (el.direction === 'left' || el.direction === 'down' || el.direction === 'up' ? el.direction : 'right') as 'right' | 'left' | 'down' | 'up';
-          const values = el.values ?? [];
-          const arrayElementType: ShapeType | undefined = el.elementType === 'rect' ? 'rectangle' : el.elementType as ShapeType | undefined;
-          const showIndex = el.showIndex ?? !arrayElementType;
-          const hasAnyShapeCell = arrayElementType || values.some(v => typeof v === 'object' && v !== null && 'type' in v);
-          for (let i = 0; i < length; i++) {
-            const cellId = `${VB_PREFIX}${idx++}`;
-            const rawValue = values[i];
-
-            const arrayInfoBase: CellData['arrayInfo'] = {
-              id: arrayId,
-              index: i,
-              direction,
-              showIndex,
-            };
-
-            if (hasAnyShapeCell && typeof rawValue === 'object' && rawValue !== null) {
-              const cfg = rawValue as ShapeArrayElementConfig;
-              const cellType = cfg.type ?? arrayElementType;
-              const mappedType: ShapeType | undefined = cellType === 'rect' ? 'rectangle' : cellType as ShapeType | undefined;
-              const elColor = cfg.color ? rgbToHex(cfg.color) : undefined;
-              arrayInfoBase.elementType = mappedType;
-              arrayInfoBase.elementConfig = {
-                color: elColor,
-                orientation: cfg.orientation as 'up' | 'down' | 'left' | 'right' | undefined,
-                rotation: cfg.rotation,
-                width: cfg.width ?? 1,
-                height: cfg.height ?? 1,
-                alpha: cfg.alpha,
-                visible: cfg.visible,
-              };
-            } else if (arrayElementType) {
-              arrayInfoBase.elementType = arrayElementType;
-              arrayInfoBase.elementConfig = { width: 1, height: 1 };
-            } else {
-              arrayInfoBase.value = (typeof rawValue === 'number' || typeof rawValue === 'string') ? rawValue : 0;
-              arrayInfoBase.varName = el.varName ?? '';
-            }
-
-            next.set(cellId, {
-              id: cellId,
-              data: {
-                objectId: cellId,
-                arrayInfo: arrayInfoBase,
-                panelId,
-                zOrder: z,
-              },
+            idx = drawResult.nextIdx;
+          } else {
+            // It's a simple shape
+            next.set(gridId, {
+              id: gridId,
+              data: { ...drawResult, objectId: gridId, panelId, zOrder: z },
               positionBinding: binding,
               zOrder: z++,
             });

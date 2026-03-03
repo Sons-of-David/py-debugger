@@ -1,6 +1,8 @@
 import { loadPyodide } from './pythonExecutor';
-import type { VisualBuilderElement } from '../types/visualBuilder';
+import { Label, type VisualBuilderElement } from '../types/visualBuilder';
 import VISUAL_BUILDER_PYTHON from './visualBuilder.py?raw';
+import { Arrow, Circle, Rect } from '../types/shapes';
+import { Array1D, Array2D } from '../types/arrayShapes';
 
 export interface ExecuteVisualBuilderResult {
   success: boolean;
@@ -36,8 +38,20 @@ exec('''${escapedCode.replace(/'''/g, "\\'\\'\\'")}''')
     // Serialize and return
     const resultJson = await py.runPythonAsync('_serialize_visual_builder()');
     const elements = JSON.parse(resultJson) as VisualBuilderElement[];
+    
+    const wrappedElements = elements.map(el => {
+      switch(el.type) {
+        case 'rect': return new Rect(el);
+        case 'circle': return new Circle(el);
+        case 'arrow': return new Arrow(el);
+        case 'label': return new Label(el);
+        case 'array': return new Array1D(el);
+        case 'array2d': return new Array2D(el);
+        default: return el;
+      }
+    });
 
-    return { success: true, elements };
+    return { success: true, elements: wrappedElements };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     let cleanError = errorMessage;
