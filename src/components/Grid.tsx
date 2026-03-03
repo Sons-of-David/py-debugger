@@ -27,6 +27,8 @@ interface GridProps {
   panels: Array<PanelInfo>;
   selectedCell: CellPosition | null;
   zoom: number;
+  /** When false, the panel is display-only (no click/drag/resize/context-menu). */
+  interactive?: boolean;
   onSelectCell: (position: CellPosition | null) => void;
   onContextMenu: (e: React.MouseEvent, position: CellPosition) => void;
   onZoom: (delta: number) => void;
@@ -381,6 +383,7 @@ export function Grid({
   panels,
   selectedCell,
   zoom,
+  interactive = true,
   onSelectCell,
   onContextMenu,
   onZoom,
@@ -479,13 +482,14 @@ export function Grid({
 
   const handleWheel = useCallback(
     (e: React.WheelEvent) => {
+      if (!interactive) return;
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
         const delta = e.deltaY > 0 ? -0.1 : 0.1;
         onZoom(delta);
       }
     },
-    [onZoom]
+    [interactive, onZoom]
   );
 
   const handleCellContextMenu = useCallback(
@@ -995,6 +999,7 @@ export function Grid({
 
   // Panel drag handles - rendered above objects so they're always reachable
   const renderedPanelHandles = useMemo(() => {
+    if (!interactive) return [];
     return panels.map((panel) => (
       <span
         key={panel.id}
@@ -1022,7 +1027,7 @@ export function Grid({
         {panel.title || '⋮⋮'}
       </span>
     ));
-  }, [panels, handlePanelDragStart, onPanelContextMenu]);
+  }, [interactive, panels, handlePanelDragStart, onPanelContextMenu]);
 
   return (
     <div
@@ -1040,7 +1045,7 @@ export function Grid({
       >
         {/* Background grid */}
         <div
-          className="grid"
+          className={`grid ${interactive ? '' : 'pointer-events-none'}`}
           style={{
             gridTemplateColumns: `repeat(${GRID_COLS}, ${CELL_SIZE}px)`,
             gridTemplateRows: `repeat(${GRID_ROWS}, ${CELL_SIZE}px)`,
@@ -1058,7 +1063,7 @@ export function Grid({
 
         {/* Animated objects layer */}
         <div className="absolute inset-0 pointer-events-none">
-          <div className="relative w-full h-full pointer-events-auto">
+          <div className={`relative w-full h-full ${interactive ? 'pointer-events-auto' : 'pointer-events-none'}`}>
             {renderedObjects}
           </div>
         </div>

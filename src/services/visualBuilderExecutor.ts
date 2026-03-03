@@ -1,30 +1,6 @@
 import { loadPyodide } from './pythonExecutor';
-import type { ExecutionScope } from './pythonExecutor';
-import type { VariableDictionary } from '../types/grid';
 import type { VisualBuilderElement } from '../types/visualBuilder';
 import VISUAL_BUILDER_PYTHON from './visualBuilder.py?raw';
-
-/**
- * Convert VariableDictionary (typed vars) to a plain dict for Python update(scope, params).
- * Python expects params to be name -> value (number, list of numbers, string, or list of strings).
- */
-function variableDictionaryToParams(vars: VariableDictionary): Record<string, number | number[] | string | string[] | number[][] | string[][]> {
-  const out: Record<string, number | number[] | string | string[] | number[][] | string[][]> = {};
-  for (const [name, v] of Object.entries(vars)) {
-    if (v.type === 'int' || v.type === 'float') out[name] = v.value;
-    else if (v.type === 'str') out[name] = v.value;
-    else if (v.type === 'arr[int]') out[name] = v.value;
-    else if (v.type === 'arr[str]') out[name] = v.value;
-    else if (v.type === 'arr2d[int]') out[name] = v.value;
-    else if (v.type === 'arr2d[str]') out[name] = v.value;
-  }
-  return out;
-}
-
-function escapeForPythonString(s: string): string {
-  return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r/g, '').replace(/\n/g, '\\n');
-}
-
 
 export interface ExecuteVisualBuilderResult {
   success: boolean;
@@ -52,19 +28,9 @@ export async function executeVisualBuilderCode(code: string): Promise<ExecuteVis
       .replace(/'/g, "\\'")
       .replace(/\n/g, '\\n');
 
-    // Reset user update callback before running new code
-    await py.runPythonAsync('_vb_user_update = None');
-
     // Run user's visual builder code
     await py.runPythonAsync(`
 exec('''${escapedCode.replace(/'''/g, "\\'\\'\\'")}''')
-`);
-
-    // Capture user-defined update(scope, params) if present
-    await py.runPythonAsync(`
-_vb_user_update = globals().get('update', None)
-if _vb_user_update is not None and not callable(_vb_user_update):
-    _vb_user_update = None
 `);
 
     // Serialize and return
@@ -83,43 +49,5 @@ if _vb_user_update is not None and not callable(_vb_user_update):
       elements: [],
       error: cleanError,
     };
-  }
-}
-
-/**
- * Call update(scope, params) on each visual element in the Pyodide registry, then
- * re-serialize and return the updated elements. Use when the user has already run
- * Visual Builder Analyze; call this on each step change to apply reactive updates.
- * Returns [] if the registry is empty or not initialized (e.g. no prior Analyze).
- */
-export async function runVisualBuilderUpdate(
-  scope: ExecutionScope,
-  params: VariableDictionary
-): Promise<VisualBuilderElement[]> {
-  try {
-    const py = await loadPyodide();
-
-    const paramsPlain = variableDictionaryToParams(params);
-    const scopeJson = JSON.stringify(scope);
-    const paramsJson = JSON.stringify(paramsPlain);
-    const scopeEsc = escapeForPythonString(scopeJson);
-    const paramsEsc = escapeForPythonString(paramsJson);
-
-    const code = `
-import json
-scope = json.loads('''${scopeEsc}''')
-params = json.loads('''${paramsEsc}''')
-for e in VisualElem._registry:
-    e.update(scope, params)
-if _vb_user_update is not None:
-    _vb_user_update(scope, params)
-_serialize_visual_builder()
-`;
-    const resultJson = await py.runPythonAsync(code);
-    if (resultJson == null || resultJson === undefined) return [];
-    const elements = JSON.parse(String(resultJson)) as VisualBuilderElement[];
-    return elements;
-  } catch {
-    return [];
   }
 }

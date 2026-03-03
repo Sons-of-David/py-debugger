@@ -64,26 +64,14 @@ export interface ClassDoc {
 
 export const VISUAL_ELEM_SCHEMA: ClassDoc[] = [
   {
-    className: 'V',
-    constructorParams: 'expr: str',
-    docstring: 'Bind a property to a Python expression evaluated each step. The expression has access to all current variables plus math helpers (sqrt, floor, ceil, log, pow, abs, min, max, sum, round, len, pi). Examples: V("i"), V("i * 2 + 1"), V("(row, col)"), V("max(i, j)").',
-    properties: [],
-  },
-  {
     className: 'VisualElem',
     constructorParams: '',
-    docstring: 'Base class for all visual elements. Has update(scope, params) called each execution step. Assign V("expr") to any property to make it reactive.',
+    docstring: 'Base class for all visual elements. Provides shared properties like position, visibility, and alpha.',
     properties: [
       { name: 'position', type: 'tuple[int, int]', description: 'Top-left corner (row, col) on the grid.' },
       { name: 'visible', type: 'bool', description: 'Whether the element is shown.' },
-      { name: 'alpha', type: 'float', description: 'Opacity from 0.0 (transparent) to 1.0 (opaque). Default 1.0. Supports V() bindings.' },
+      { name: 'alpha', type: 'float', description: 'Opacity from 0.0 (transparent) to 1.0 (opaque). Default 1.0.' },
     ],
-  },
-  {
-    className: 'update',
-    constructorParams: 'scope, params',
-    docstring: 'Define a top-level update(scope, params) function to run custom logic on every execution step. scope is a list of (func_name, line_number) tuples for the call stack. params is a dict of variable names to their current values. Use this to imperatively update element properties each step.',
-    properties: [],
   },
   {
     className: 'Panel',
