@@ -205,12 +205,18 @@ export function CodeEditor({
   const [showSamples, setShowSamples] = useState(false);
   const [activeTab, setActiveTab] = useState<CodePanelTab>('code');
   const [apiReferenceOpen, setApiReferenceOpen] = useState(true);
+  const [editorMountKey, setEditorMountKey] = useState(0);
   const monacoTheme = darkMode ? 'vs-dark' : 'vs';
 
   // Handle main code editor mount
   const handleEditorDidMount = (editor: editor.IStandaloneCodeEditor, monaco: Monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
+    // Reset stale decoration IDs from the previous editor instance
+    decorationsRef.current = [];
+    breakpointDecorationsRef.current = [];
+    // Incrementing this triggers the decoration effects to re-run on the fresh editor
+    setEditorMountKey((k) => k + 1);
 
     monaco.languages.setLanguageConfiguration('python', {
       comments: { lineComment: '#' },
@@ -419,7 +425,7 @@ export function CodeEditor({
     }
 
     decorationsRef.current = editor.deltaDecorations(decorationsRef.current, newDecorations);
-  }, [currentLine, lastExecutedLine]);
+  }, [currentLine, lastExecutedLine, editorMountKey]);
 
   // Update breakpoint decorations when breakpoints change
   useEffect(() => {
@@ -439,7 +445,7 @@ export function CodeEditor({
       breakpointDecorationsRef.current,
       breakpointDecorations
     );
-  }, [breakpoints]);
+  }, [breakpoints, editorMountKey]);
 
   const loadSample = (sampleCode: string) => {
     onChange(sampleCode);

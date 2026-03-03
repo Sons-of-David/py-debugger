@@ -287,11 +287,11 @@ export function resolveSizeValue(
   expressionEvaluator?: (expression: string, vars: VariableDictionary) => number
 ): number {
   if (value === undefined) return 1;
-  if (typeof value === 'number') return Math.max(1, Math.min(50, Math.floor(value)));
-  if (value.type === 'fixed') return Math.max(1, Math.min(50, value.value));
+  if (typeof value === 'number') return Math.max(0, Math.min(50, Math.floor(value)));
+  if (value.type === 'fixed') return Math.max(0, Math.min(50, value.value));
   if (value.type === 'expression' && expressionEvaluator) {
     try {
-      return Math.max(1, Math.min(50, Math.floor(expressionEvaluator(value.expression, variables))));
+      return Math.max(0, Math.min(50, Math.floor(expressionEvaluator(value.expression, variables))));
     } catch {
       return 1;
     }
