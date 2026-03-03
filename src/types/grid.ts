@@ -142,6 +142,17 @@ export interface CellBounds {
   height?: number;   // in cells
 }
 
+export interface Array2dInfo {
+  id: string;
+  row: number;
+  col: number;
+  numRows: number;
+  numCols: number;
+  value?: string | number;
+  varName?: string;
+  showIndices?: boolean;
+}
+
 export interface CellData {
   // Unique identifier for this object (for tracking across position changes)
   objectId?: string;
@@ -169,16 +180,7 @@ export interface CellData {
     showIndex?: boolean;
   };
   // For 2D array variables
-  array2dInfo?: {
-    id: string;
-    row: number;
-    col: number;
-    numRows: number;
-    numCols: number;
-    value?: string | number;
-    varName?: string;
-    showIndices?: boolean;
-  };
+  array2dInfo?: Array2dInfo;
   // For int variables
   intVar?: {
     name: string;

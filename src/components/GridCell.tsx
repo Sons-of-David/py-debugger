@@ -3,6 +3,7 @@ import type { CellData, ShapeType, ArrowOrientation } from '../types/grid';
 import { Circle, Square, Arrow } from './shapes';
 import { useTheme } from '../contexts/ThemeContext';
 import { LabelView } from '../types/LabelView';
+import { Array2DView } from '../types/ArrayView';
 
 interface GridCellProps {
   row: number;
@@ -223,39 +224,13 @@ export const GridCell = memo(function GridCell({
       })()}
 
       {/* 2D Array cell display */}
-      {is2DArrayCell && (() => {
-        const info = cellData.array2dInfo!;
-        const isAnchor = info.row === 0 && info.col === 0;
-        const showIndices = info.showIndices ?? true;
-        return (
-          <div className="absolute inset-0 flex flex-col items-center justify-between py-1">
-            {isAnchor && info.varName && (
-              <span
-                className="text-[8px] font-mono leading-none absolute -top-3 left-0"
-                style={{ color: customColor || t.array2dName }}
-              >
-                {info.varName}
-              </span>
-            )}
-            <div className="flex-1 flex items-center justify-center">
-              <span
-                className="font-mono font-bold"
-                style={{ color: customColor || t.array2dValue, fontSize: customFontSize }}
-              >
-                {info.value}
-              </span>
-            </div>
-            {showIndices && (
-              <span
-                className="font-mono leading-none"
-                style={{ color: customColor || t.array2dIndex, fontSize: Math.max(7, Math.round(customFontSize * 0.65)) }}
-              >
-                [{info.row}][{info.col}]
-              </span>
-            )}
-          </div>
-        );
-      })()}
+      {is2DArrayCell && (
+        <Array2DView 
+          array2dInfo={cellData.array2dInfo!} 
+          cellStyle={{ color: customColor || t.array2dName }} 
+          valueStyle={{ color: customColor || t.array2dValue, fontSize: customFontSize }} 
+          indexStyle={{ color: customColor || t.array2dIndex, fontSize: Math.max(7, Math.round(customFontSize * 0.65)) }} />
+      )}
 
       {/* Int variable cell display */}
       {isIntVarCell && (() => {
