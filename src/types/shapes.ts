@@ -74,9 +74,9 @@ export class Circle extends BasicShape {
   draw() {
     return {
       shape: 'circle',
+      elementInfo: this,
       style: { color: rgbToHex(this.color, '#3b82f6'), opacity: this.alpha },
       bounds: { width: this.width, height: this.height },
-      basicShape: this,
     };
   }
 }
@@ -103,7 +103,7 @@ export class Arrow extends BasicShape {
   rotation: number;
 
   constructor(el: any) {
-    super('circle', el);
+    super('arrow', el);
     this.color = el.color ?? [1, 0, 0];
     this.orientation = (el.orientation as 'up' | 'down' | 'left' | 'right') ?? 'up';
     this.rotation = el.rotation ?? 0;
@@ -112,6 +112,7 @@ export class Arrow extends BasicShape {
   draw() {
     return {
       shape: 'arrow',
+      elementInfo: this,
       style: { color: rgbToHex(this.color, '#10b981'), opacity: this.alpha },
       bounds: { width: this.width, height: this.height },
       shapeProps: {
@@ -120,7 +121,6 @@ export class Arrow extends BasicShape {
         orientation: this.orientation,
         rotation: this.rotation,
       },
-      basicShape: this,
     };
   }
 }
