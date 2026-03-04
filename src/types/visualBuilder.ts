@@ -4,17 +4,6 @@ export type VisualBuilderElementType = 'rect' | 'label' | 'var' | 'panel' | 'arr
 
 export type ArrayDirection = 'right' | 'left' | 'down' | 'up';
 
-export interface ShapeArrayElementConfig {
-  type?: 'circle' | 'rect' | 'arrow';
-  color?: [number, number, number];
-  orientation?: 'up' | 'down' | 'left' | 'right';
-  rotation?: number;
-  width?: number;
-  height?: number;
-  alpha?: number;
-  visible?: boolean;
-}
-
 export interface VisualBuilderElementBase {
   type: string;               // shape type
   position: [number, number]; // common position
@@ -38,10 +27,8 @@ export interface VisualBuilderElement extends VisualBuilderElementBase {
   /** Array: variable name and layout */
   direction?: ArrayDirection;
   length?: number;
-  /** Per-cell values from the builder. For value arrays: numbers/strings. For shape arrays: config dicts. */
-  values?: (number | string | ShapeArrayElementConfig)[];
-  /** Shape type for each array cell ('circle', 'rect', 'arrow'). When set, array renders shapes instead of values. */
-  elementType?: 'circle' | 'rect' | 'arrow';
+  /** Per-cell values from the builder. */
+  values?: (number | string)[];
   /** Whether to show [i] index labels on array cells. */
   showIndex?: boolean;
   /** Array2D: number of rows and columns */

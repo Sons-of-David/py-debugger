@@ -164,18 +164,8 @@ export interface CellData {
     id: string;
     index: number;
     value?: string | number;
-    varName?: string; // Variable name if from dictionary
+    varName?: string;
     direction?: 'right' | 'left' | 'down' | 'up';
-    elementType?: ShapeType;
-    elementConfig?: {
-      color?: string; // hex
-      orientation?: ArrowOrientation;
-      rotation?: number;
-      width?: number;
-      height?: number;
-      alpha?: number;
-      visible?: boolean;
-    };
     showIndex?: boolean;
   };
   // For 2D array variables
@@ -188,6 +178,7 @@ export interface CellData {
     width: SizeValue;
     height: SizeValue;
     title?: string;
+    arrayType?: '1d' | '2d';
   };
   // Optional panel association for non-panel objects
   panelId?: string;
@@ -315,39 +306,3 @@ export function getArrayOffset(direction: 'right' | 'left' | 'down' | 'up', inde
   }
 }
 
-export interface ArrayCellSize {
-  width: number;
-  height: number;
-}
-
-/**
- * Compute accumulated offset for a cell at `index` in a shape array
- * with variable per-cell sizes. For direction 'right'/'left', offsets accumulate
- * along widths. For 'down'/'up', along heights.
- */
-export function getAccumulatedArrayOffset(
-  direction: 'right' | 'left' | 'down' | 'up',
-  index: number,
-  cellSizes: ArrayCellSize[],
-): { rowDelta: number; colDelta: number } {
-  let accumulated = 0;
-  for (let i = 0; i < index; i++) {
-    const s = cellSizes[i] ?? { width: 1, height: 1 };
-    if (direction === 'right' || direction === 'left') {
-      accumulated += s.width;
-    } else {
-      accumulated += s.height;
-    }
-  }
-  switch (direction) {
-    case 'left':
-      return { rowDelta: 0, colDelta: -accumulated };
-    case 'down':
-      return { rowDelta: accumulated, colDelta: 0 };
-    case 'up':
-      return { rowDelta: -accumulated, colDelta: 0 };
-    case 'right':
-    default:
-      return { rowDelta: 0, colDelta: accumulated };
-  }
-}
