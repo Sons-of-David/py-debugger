@@ -1,4 +1,5 @@
 import type { VisualBuilderElement } from "./visualBuilder";
+import { rgbToHex } from "./visualBuilder";
 import type { CellData } from "./grid";
 
 export interface ShapeArrayElementConfig {
@@ -60,7 +61,7 @@ export class Array1D implements VisualBuilderElement {
         const mappedType = cellType === 'rect' ? 'rectangle' : cellType;
         arrayInfoBase.elementType = mappedType;
         arrayInfoBase.elementConfig = {
-          color: cfg.color ? this.rgbToHex(cfg.color) : undefined,
+          color: rgbToHex(cfg.color, undefined),
           orientation: cfg.orientation as 'up' | 'down' | 'left' | 'right' | undefined,
           rotation: cfg.rotation,
           width: cfg.width ?? 1,
@@ -83,11 +84,6 @@ export class Array1D implements VisualBuilderElement {
     }
 
     return { cells, nextIdx: idx };
-  }
-
-  private rgbToHex(rgb?: [number, number, number], defaultColor: string = '#000000') {
-    if (!rgb) return defaultColor;
-    return '#' + rgb.map(x => Math.max(0, Math.min(255, Math.floor(x))).toString(16).padStart(2, '0')).join('');
   }
 }
 

@@ -96,3 +96,8 @@ export const VISUAL_ELEM_SCHEMA: ClassDoc[] = [
   CIRCLE_SCHEMA,
   ARROW_SCHEMA,
 ];
+
+export function rgbToHex(rgb?: [number, number, number], defaultColor: string = '#10b981') {
+  if (!rgb) return defaultColor;
+  return '#' + rgb.map(x => Math.max(0, Math.min(255, Math.floor(x))).toString(16).padStart(2,'0')).join('');
+}

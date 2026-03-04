@@ -1,4 +1,5 @@
 import type { VisualBuilderElement } from "./visualBuilder";
+import { rgbToHex } from "./visualBuilder";
 
 interface CellStyle {
   color?: string;
@@ -33,7 +34,7 @@ export class Label implements VisualBuilderElement {
 
   draw() {
     const style: CellStyle = { opacity: this.alpha };
-    if (this.color) style.color = this.rgbToHex(this.color);
+    if (this.color) style.color = rgbToHex(this.color);
     if (this.fontSize != null) style.fontSize = this.fontSize;
 
     return {
@@ -43,10 +44,4 @@ export class Label implements VisualBuilderElement {
       ...(Object.keys(style).length > 0 && { style }),
     };
   }
-
-  private rgbToHex(rgb?: [number, number, number], defaultColor: string = '#000000') {
-    if (!rgb) return defaultColor;
-    return '#' + rgb.map(x => Math.max(0, Math.min(255, Math.floor(x))).toString(16).padStart(2,'0')).join('');
-  }
-
 }

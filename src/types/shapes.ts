@@ -1,4 +1,5 @@
 import type { VisualBuilderElementBase } from "./visualBuilder";
+import { rgbToHex } from "./visualBuilder";
 
 export abstract class BasicShape implements VisualBuilderElementBase {
   type: string;
@@ -35,15 +36,10 @@ export class Rect extends BasicShape {
     // return the object structure used in useGridState
     return {
       shape: 'rectangle',
-      style: { color: this.color ? this.rgbToHex(this.color) : '#ef0bef', opacity: this.alpha },
+      style: { color: rgbToHex(this.color, '#ef0bef'), opacity: this.alpha },
       bounds: { width: this.width, height: this.height },
       basicShape: this,
     };
-  }
-
-  private rgbToHex(rgb?: [number, number, number]): string {
-    if (!rgb) return '#e323c6';
-    return '#' + rgb.map(x => Math.max(0, Math.min(255, Math.floor(x))).toString(16).padStart(2,'0')).join('');
   }
 }
 
@@ -57,15 +53,10 @@ export class Circle extends BasicShape {
   draw() {
     return {
       shape: 'circle',
-      style: { color: this.rgbToHex(this.color, '#3b82f6'), opacity: this.alpha },
+      style: { color: rgbToHex(this.color, '#3b82f6'), opacity: this.alpha },
       bounds: { width: this.width, height: this.height },
       basicShape: this,
     };
-  }
-
-  private rgbToHex(rgb?: [number, number, number], defaultColor: string = '#3b82f6') {
-    if (!rgb) return defaultColor;
-    return '#' + rgb.map(x => Math.max(0, Math.min(255, Math.floor(x))).toString(16).padStart(2,'0')).join('');
   }
 }
 
@@ -83,7 +74,7 @@ export class Arrow extends BasicShape {
   draw() {
     return {
       shape: 'arrow',
-      style: { color: this.rgbToHex(this.color, '#10b981'), opacity: this.alpha },
+      style: { color: rgbToHex(this.color, '#10b981'), opacity: this.alpha },
       bounds: { width: this.width, height: this.height },
       shapeProps: {
         width: this.width,
@@ -93,10 +84,5 @@ export class Arrow extends BasicShape {
       },
       basicShape: this,
     };
-  }
-
-  private rgbToHex(rgb?: [number, number, number], defaultColor: string = '#10b981') {
-    if (!rgb) return defaultColor;
-    return '#' + rgb.map(x => Math.max(0, Math.min(255, Math.floor(x))).toString(16).padStart(2,'0')).join('');
   }
 }
