@@ -1,5 +1,5 @@
 import { Arrow, Square, Circle } from '../shapes';
-import type { ShapeType, ArrowOrientation } from '../../types/grid';
+import type { ShapeType, ArrowOrientation } from '../types/grid';
 
 interface ArrayShapeViewProps {
   elementType: ShapeType;

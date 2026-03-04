@@ -1,13 +1,13 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Group, Panel, Separator } from 'react-resizable-panels';
-import { Grid } from './components/Grid';
-import { CodeEditor, SAMPLE_VISUAL_BUILDER } from './components/CodeEditor';
-import { useGridState } from './hooks/useGridState';
+import { Grid } from './visual-panel/components/Grid';
+import { CodeEditor, SAMPLE_VISUAL_BUILDER } from './code-builder/CodeEditor';
+import { useGridState } from './visual-panel/hooks/useGridState';
 import { useTheme } from './contexts/ThemeContext';
-import { loadPyodide, isPyodideLoaded } from './services/pythonExecutor';
-import { executeVisualBuilderCode } from './services/visualBuilderExecutor';
-import { VISUAL_ELEM_SCHEMA } from './types/visualBuilder';
+import { loadPyodide, isPyodideLoaded } from './code-builder/services/pythonExecutor';
+import { executeVisualBuilderCode } from './code-builder/services/visualBuilderExecutor';
+import { VISUAL_ELEM_SCHEMA } from './api/visualBuilder';
 
 function App() {
   const { darkMode, toggleDarkMode } = useTheme();

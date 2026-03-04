@@ -1,6 +1,6 @@
 import { Square } from '../shapes';
-import { rgbToHex } from '../../types/visualBuilder';
-import type { Rect } from '../../types/shapes';
+import { rgbToHex } from '../../api/visualBuilder';
+import type { Rect } from '../types/shapes';
 import { registerRenderer } from './rendererRegistry';
 
 export function RectView({ rect }: { rect: Rect }) {

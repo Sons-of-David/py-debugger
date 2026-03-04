@@ -1,7 +1,7 @@
-import type { VisualBuilderElementBase } from "./visualBuilder";
-import { rgbToHex } from "./visualBuilder";
+import type { VisualBuilderElementBase } from "../../api/visualBuilder";
+import { rgbToHex } from "../../api/visualBuilder";
 import type { CellData, CellStyle } from "./grid";
-import type { ClassDoc } from "./visualBuilder";
+import type { ClassDoc } from "../../api/visualBuilder";
 import { registerVisualElement } from "./elementRegistry";
 import { getArrayOffset } from "./grid";
 

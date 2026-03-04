@@ -28,12 +28,12 @@ export interface ClassDoc {
   methods?: { name: string; signature: string; docstring: string }[];
 }
 
-import { getAllSchemas } from './elementRegistry';
-import { PANEL_SCHEMA } from '../components/views/PanelView';
+import { getAllSchemas } from '../visual-panel/types/elementRegistry';
+import { PANEL_SCHEMA } from '../visual-panel/views/PanelView';
 
-import './shapes';
-import './label';
-import './arrayShapes';
+import '../visual-panel/types/shapes';
+import '../visual-panel/types/label';
+import '../visual-panel/types/arrayShapes';
 
 const VISUAL_ELEM_BASE_SCHEMA: ClassDoc = {
   className: 'VisualElem',

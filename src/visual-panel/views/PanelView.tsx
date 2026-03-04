@@ -1,4 +1,4 @@
-import type { ClassDoc } from '../../types/visualBuilder';
+import type { ClassDoc } from '../../api/visualBuilder';
 
 interface PanelViewProps {
   title?: string;

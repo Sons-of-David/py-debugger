@@ -1,5 +1,5 @@
 import React from "react";
-import type { VisualBuilderElementBase } from "../../types/visualBuilder";
+import type { VisualBuilderElementBase } from "../../api/visualBuilder";
 
 type ElementRenderFn<T extends VisualBuilderElementBase> = (element: T) => React.ReactElement;
 

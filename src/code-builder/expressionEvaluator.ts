@@ -1,4 +1,4 @@
-import type { VariableDictionary } from '../types/grid';
+import type { VariableDictionary } from '../visual-panel/types/grid';
 
 // Token types for the expression parser
 type TokenType =

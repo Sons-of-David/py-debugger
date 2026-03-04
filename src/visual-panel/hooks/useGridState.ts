@@ -7,9 +7,9 @@ import type {
   SizeValue,
   OccupantInfo,
 } from '../types/grid';
-import type { VisualBuilderElementBase } from '../types/visualBuilder';
+import type { VisualBuilderElementBase } from '../../api/visualBuilder';
 import { cellKey, createHardcodedBinding, resolveSizeValue } from '../types/grid';
-import { evaluateExpression } from '../utils/expressionEvaluator';
+import { evaluateExpression } from '../../code-builder/expressionEvaluator';
 import type { ArrayDrawResult } from '../types/arrayShapes';
 
 const MIN_ZOOM = 0.5;

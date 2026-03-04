@@ -1,7 +1,7 @@
 import { registerVisualElement } from "./elementRegistry";
 import type { CellData } from "./grid";
-import type { ClassDoc, VisualBuilderElementBase } from "./visualBuilder";
-import { rgbToHex } from "./visualBuilder";
+import type { ClassDoc, VisualBuilderElementBase } from "../../api/visualBuilder";
+import { rgbToHex } from "../../api/visualBuilder";
 
 export abstract class BasicShape implements VisualBuilderElementBase {
   type: string;

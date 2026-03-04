@@ -1,4 +1,4 @@
-import type { Array2dInfo } from '../../types/grid';
+import type { Array2dInfo } from '../types/grid';
 
 interface Array2DViewProps {
   array2dInfo: Array2dInfo;

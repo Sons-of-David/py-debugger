@@ -1,6 +1,6 @@
 import { Arrow as ArrowShape } from '../shapes';
-import { rgbToHex } from '../../types/visualBuilder';
-import type { Arrow } from '../../types/shapes';
+import { rgbToHex } from '../../api/visualBuilder';
+import type { Arrow } from '../types/shapes';
 import { registerRenderer } from './rendererRegistry';
 
 interface ArrowViewProps {

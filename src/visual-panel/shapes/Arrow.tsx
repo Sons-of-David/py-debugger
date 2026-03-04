@@ -1,4 +1,4 @@
-import type { ArrowOrientation } from '../../types/grid';
+import type { ArrowOrientation } from '../types/grid';
 
 interface ArrowProps {
   color?: string;

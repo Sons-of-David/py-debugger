@@ -1,8 +1,8 @@
 import { loadPyodide } from './pythonExecutor';
-import { type VisualBuilderElementBase } from '../types/visualBuilder';
+import { type VisualBuilderElementBase } from '../../api/visualBuilder';
 import VISUAL_BUILDER_PYTHON from './visualBuilder.py?raw';
 import VISUAL_BUILDER_SHAPES_PYTHON from './visualBuilderShapes.py?raw';
-import { getConstructor } from '../types/elementRegistry';
+import { getConstructor } from '../../visual-panel/types/elementRegistry';
 
 export interface ExecuteVisualBuilderResult {
   success: boolean;

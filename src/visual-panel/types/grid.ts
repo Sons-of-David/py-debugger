@@ -1,4 +1,4 @@
-import type { VisualBuilderElementBase } from "./visualBuilder";
+import type { VisualBuilderElementBase } from "../../api/visualBuilder";
 
 export type ShapeType = 'circle' | 'square' | 'rectangle' | 'arrow';
 

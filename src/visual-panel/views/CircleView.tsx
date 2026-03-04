@@ -1,6 +1,6 @@
 import { Circle as CircleShape } from '../shapes';
-import { rgbToHex } from '../../types/visualBuilder';
-import type { Circle } from '../../types/shapes';
+import { rgbToHex } from '../../api/visualBuilder';
+import type { Circle } from '../types/shapes';
 import { registerRenderer } from './rendererRegistry';
 
 interface CircleViewProps {

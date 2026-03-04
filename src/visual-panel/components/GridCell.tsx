@@ -1,18 +1,18 @@
 import { memo } from 'react';
 import type { CellData } from '../types/grid';
-import { useTheme } from '../contexts/ThemeContext';
-import { Square } from './shapes';
+import { useTheme } from '../../contexts/ThemeContext';
+import { Square } from '../shapes';
 import {
   ArrayValueView,
   Array2DView,
   PanelView,
-} from './views';
-import { renderElement } from './views/rendererRegistry';
+} from '../views';
+import { renderElement } from '../views/rendererRegistry';
 
-import './views/RectView';
-import './views/CircleView';
-import './views/ArrowView';
-import './views/LabelView';
+import '../views/RectView';
+import '../views/CircleView';
+import '../views/ArrowView';
+import '../views/LabelView';
 
 interface GridCellProps {
   row: number;

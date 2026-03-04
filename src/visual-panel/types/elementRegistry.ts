@@ -1,4 +1,4 @@
-import type { ClassDoc, VisualBuilderElementBase } from "./visualBuilder";
+import type { ClassDoc, VisualBuilderElementBase } from "../../api/visualBuilder";
 
 type Constructor<T> = new (...args: any[]) => T;
 
