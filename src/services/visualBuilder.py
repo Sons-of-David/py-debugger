@@ -8,6 +8,44 @@ class VisualElem:
         self._parent = None
         VisualElem._registry.append(self)
 
+    def _serialize_base(self):
+        """Return base serialization dict with common properties."""
+        pos = getattr(self, 'position', (0, 0))
+        if not isinstance(pos, (list, tuple)) or len(pos) < 2:
+            pos = (0, 0)
+        try:
+            row, col = int(pos[0]), int(pos[1])
+        except (ValueError, TypeError):
+            row, col = 0, 0
+
+        alpha = getattr(self, 'alpha', 1.0)
+        try:
+            alpha = float(alpha)
+        except (ValueError, TypeError):
+            alpha = 1.0
+
+        return {
+            "position": [row, col],
+            "visible": getattr(self, 'visible', True),
+            "alpha": alpha,
+        }
+
+    def _serialize(self):
+        """Override in subclasses to provide type-specific serialization."""
+        out = self._serialize_base()
+        out["type"] = "rect"
+        out["width"] = 1
+        out["height"] = 1
+        out["color"] = [34, 197, 94]
+        return out
+
+    @staticmethod
+    def _serialize_color(color, default):
+        """Helper to serialize RGB color tuple."""
+        if isinstance(color, (list, tuple)) and len(color) >= 3:
+            return [int(color[0]), int(color[1]), int(color[2])]
+        return list(default)
+
 
 class Panel(VisualElem):
     def __init__(self, name="Panel"):
@@ -27,6 +65,14 @@ class Panel(VisualElem):
             self._children.remove(elem)
             elem._parent = None
 
+    def _serialize(self):
+        out = self._serialize_base()
+        out["type"] = "panel"
+        out["name"] = getattr(self, 'name', 'Panel')
+        out["width"] = int(getattr(self, 'width', 5))
+        out["height"] = int(getattr(self, 'height', 5))
+        return out
+
 
 class Rect(VisualElem):
     def __init__(self, pos=(0, 0)):
@@ -36,6 +82,14 @@ class Rect(VisualElem):
         self.height = 1
         self.color = (34, 197, 94)
         self.visible = True
+
+    def _serialize(self):
+        out = self._serialize_base()
+        out["type"] = "rect"
+        out["width"] = int(getattr(self, 'width', 1))
+        out["height"] = int(getattr(self, 'height', 1))
+        out["color"] = self._serialize_color(self.color, (34, 197, 94))
+        return out
 
 
 class Label(VisualElem):
@@ -49,6 +103,18 @@ class Label(VisualElem):
         self.color = None
         self.visible = True
 
+    def _serialize(self):
+        out = self._serialize_base()
+        out["type"] = "label"
+        out["label"] = str(getattr(self, 'label', ''))
+        out["width"] = int(getattr(self, 'width', 1))
+        out["height"] = int(getattr(self, 'height', 1))
+        out["fontSize"] = int(getattr(self, 'font_size', 14))
+        c = getattr(self, 'color', None)
+        if c is not None:
+            out["color"] = self._serialize_color(c, (0, 0, 0))
+        return out
+
 
 class Var(VisualElem):
     def __init__(self, var_name=""):
@@ -58,14 +124,12 @@ class Var(VisualElem):
         self.display = "name-value"
         self.visible = True
 
-
-_SHAPE_CLASSES = None
-
-def _get_shape_classes():
-    global _SHAPE_CLASSES
-    if _SHAPE_CLASSES is None:
-        _SHAPE_CLASSES = (Rect, Circle, Arrow)
-    return _SHAPE_CLASSES
+    def _serialize(self):
+        out = self._serialize_base()
+        out["type"] = "var"
+        out["varName"] = str(getattr(self, 'var_name', ''))
+        out["display"] = str(getattr(self, 'display', 'name-value'))
+        return out
 
 
 class Array(VisualElem):
@@ -103,6 +167,19 @@ class Array(VisualElem):
             return self._cells[index]
         return 0
 
+    def _serialize(self):
+        out = self._serialize_base()
+        out["type"] = "array"
+        out["varName"] = str(getattr(self, 'var_name', ''))
+        out["direction"] = str(getattr(self, 'direction', 'right'))
+        out["length"] = int(getattr(self, 'length', 5))
+        out["showIndex"] = bool(getattr(self, 'show_index', True))
+        c = getattr(self, 'color', None)
+        if c is not None:
+            out["color"] = self._serialize_color(c, (0, 0, 0))
+        cells = getattr(self, '_cells', [])
+        out["values"] = list(cells) if isinstance(cells, (list, tuple)) else []
+        return out
 
 
 class Array2D(VisualElem):
@@ -124,6 +201,17 @@ class Array2D(VisualElem):
         self._num_cols = cols
         self._dims_manually_set = True
 
+    def _serialize(self):
+        out = self._serialize_base()
+        out["type"] = "array2d"
+        out["varName"] = str(getattr(self, 'var_name', ''))
+        out["numRows"] = int(getattr(self, '_num_rows', 3))
+        out["numCols"] = int(getattr(self, '_num_cols', 3))
+        out["showIndex"] = bool(getattr(self, 'show_index', True))
+        c = getattr(self, 'color', None)
+        if c is not None:
+            out["color"] = self._serialize_color(c, (0, 0, 0))
+        return out
 
 
 class Circle(VisualElem):
@@ -134,6 +222,14 @@ class Circle(VisualElem):
         self.height = 1
         self.color = (59, 130, 246)
         self.visible = True
+
+    def _serialize(self):
+        out = self._serialize_base()
+        out["type"] = "circle"
+        out["width"] = int(getattr(self, 'width', 1))
+        out["height"] = int(getattr(self, 'height', 1))
+        out["color"] = self._serialize_color(self.color, (59, 130, 246))
+        return out
 
 
 class Arrow(VisualElem):
@@ -147,109 +243,22 @@ class Arrow(VisualElem):
         self.rotation = 0
         self.visible = True
 
+    def _serialize(self):
+        out = self._serialize_base()
+        out["type"] = "arrow"
+        out["width"] = int(getattr(self, 'width', 1))
+        out["height"] = int(getattr(self, 'height', 1))
+        out["color"] = self._serialize_color(self.color, (16, 185, 129))
+        out["orientation"] = str(getattr(self, 'orientation', 'up'))
+        out["rotation"] = int(getattr(self, 'rotation', 0))
+        return out
+
 
 def _serialize_elem(elem, vb_id):
     """Serialize one visual element to a dict for JSON."""
-    pos = getattr(elem, 'position', (0, 0))
-    if not isinstance(pos, (list, tuple)) or len(pos) < 2:
-        pos = (0, 0)
-    try:
-        row, col = int(pos[0]), int(pos[1])
-    except (ValueError, TypeError):
-        row, col = 0, 0
-
-    alpha = getattr(elem, 'alpha', 1.0)
-    try:
-        alpha = float(alpha)
-    except (ValueError, TypeError):
-        alpha = 1.0
-
-    out = {
-        "type": None,
-        "position": [row, col],
-        "visible": getattr(elem, 'visible', True),
-        "alpha": alpha,
-    }
-
-    if isinstance(elem, Panel):
-        out["type"] = "panel"
-        out["name"] = getattr(elem, 'name', 'Panel')
-        out["width"] = int(getattr(elem, 'width', 5))
-        out["height"] = int(getattr(elem, 'height', 5))
-    elif isinstance(elem, Rect):
-        out["type"] = "rect"
-        out["width"] = int(getattr(elem, 'width', 1))
-        out["height"] = int(getattr(elem, 'height', 1))
-        c = getattr(elem, 'color', (34, 197, 94))
-        if isinstance(c, (list, tuple)) and len(c) >= 3:
-            out["color"] = [int(c[0]), int(c[1]), int(c[2])]
-        else:
-            out["color"] = [34, 197, 94]
-    elif isinstance(elem, Label):
-        out["type"] = "label"
-        out["label"] = str(getattr(elem, 'label', ''))
-        out["width"] = int(getattr(elem, 'width', 1))
-        out["height"] = int(getattr(elem, 'height', 1))
-        out["fontSize"] = int(getattr(elem, 'font_size', 14))
-        c = getattr(elem, 'color', None)
-        if isinstance(c, (list, tuple)) and len(c) >= 3:
-            out["color"] = [int(c[0]), int(c[1]), int(c[2])]
-    elif isinstance(elem, Var):
-        out["type"] = "var"
-        out["varName"] = str(getattr(elem, 'var_name', ''))
-        out["display"] = str(getattr(elem, 'display', 'name-value'))
-    elif isinstance(elem, Array):
-        out["type"] = "array"
-        out["varName"] = str(getattr(elem, 'var_name', ''))
-        out["direction"] = str(getattr(elem, 'direction', 'right'))
-        out["length"] = int(getattr(elem, 'length', 5))
-        out["showIndex"] = bool(getattr(elem, 'show_index', True))
-        c = getattr(elem, 'color', None)
-        if isinstance(c, (list, tuple)) and len(c) >= 3:
-            out["color"] = [int(c[0]), int(c[1]), int(c[2])]
-        cells = getattr(elem, '_cells', [])
-        serialized_values = []
-        for cell in (cells if isinstance(cells, (list, tuple)) else []):
-            serialized_values.append(cell)
-        out["values"] = serialized_values
-    elif isinstance(elem, Array2D):
-        out["type"] = "array2d"
-        out["varName"] = str(getattr(elem, 'var_name', ''))
-        out["numRows"] = int(getattr(elem, '_num_rows', 3))
-        out["numCols"] = int(getattr(elem, '_num_cols', 3))
-        out["showIndex"] = bool(getattr(elem, 'show_index', True))
-        c = getattr(elem, 'color', None)
-        if isinstance(c, (list, tuple)) and len(c) >= 3:
-            out["color"] = [int(c[0]), int(c[1]), int(c[2])]
-    elif isinstance(elem, Circle):
-        out["type"] = "circle"
-        out["width"] = int(getattr(elem, 'width', 1))
-        out["height"] = int(getattr(elem, 'height', 1))
-        c = getattr(elem, 'color', (59, 130, 246))
-        if isinstance(c, (list, tuple)) and len(c) >= 3:
-            out["color"] = [int(c[0]), int(c[1]), int(c[2])]
-        else:
-            out["color"] = [59, 130, 246]
-    elif isinstance(elem, Arrow):
-        out["type"] = "arrow"
-        out["width"] = int(getattr(elem, 'width', 1))
-        out["height"] = int(getattr(elem, 'height', 1))
-        c = getattr(elem, 'color', (16, 185, 129))
-        if isinstance(c, (list, tuple)) and len(c) >= 3:
-            out["color"] = [int(c[0]), int(c[1]), int(c[2])]
-        else:
-            out["color"] = [16, 185, 129]
-        out["orientation"] = str(getattr(elem, 'orientation', 'up'))
-        out["rotation"] = int(getattr(elem, 'rotation', 0))
-    else:
-        out["type"] = "rect"
-        out["width"] = 1
-        out["height"] = 1
-        out["color"] = [34, 197, 94]
-
+    out = elem._serialize()
     if getattr(elem, '_parent', None) is not None and hasattr(elem._parent, '_vb_id'):
         out["panelId"] = elem._parent._vb_id
-
     return out
 
 
