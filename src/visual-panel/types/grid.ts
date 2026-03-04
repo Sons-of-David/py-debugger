@@ -1,7 +1,5 @@
 import type { RenderableElement } from "../views/rendererRegistry";
 
-export type ShapeType = 'circle' | 'square' | 'rectangle' | 'arrow';
-
 export interface CellPosition {
   row: number;
   col: number;
@@ -136,7 +134,6 @@ export interface CellBounds {
 export interface CellData {
   // Unique identifier for this object (for tracking across position changes)
   objectId?: string;
-  shape?: ShapeType;
 
   elementInfo?: RenderableElement,
 

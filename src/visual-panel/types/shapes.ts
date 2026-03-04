@@ -35,11 +35,8 @@ export class Rect extends BasicShape {
     this.color = el.color ?? [1, 0, 0];
   }
 
-  // Add a drawing method
   draw(): CellData {
-    // return the object structure used in useGridState
     return {
-      shape: 'rectangle',
       elementInfo: this,
       style: { color: rgbToHex(this.color, '#ef0bef'), opacity: this.alpha },
       bounds: { width: this.width, height: this.height },
@@ -73,7 +70,6 @@ export class Circle extends BasicShape {
 
   draw() {
     return {
-      shape: 'circle',
       elementInfo: this,
       style: { color: rgbToHex(this.color, '#3b82f6'), opacity: this.alpha },
       bounds: { width: this.width, height: this.height },
@@ -111,7 +107,6 @@ export class Arrow extends BasicShape {
 
   draw() {
     return {
-      shape: 'arrow',
       elementInfo: this,
       style: { color: rgbToHex(this.color, '#10b981'), opacity: this.alpha },
       bounds: { width: this.width, height: this.height },
