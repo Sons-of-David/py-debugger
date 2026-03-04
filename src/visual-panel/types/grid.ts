@@ -128,26 +128,9 @@ export interface ShapeProps {
   orientation?: ArrowOrientation;
 }
 
-export interface LabelData {
-  text: string;
-  width?: SizeValue;    // in cells
-  height?: SizeValue;   // in cells
-}
-
 export interface CellBounds {
   width?: number;    // in cells
   height?: number;   // in cells
-}
-
-export interface Array2dInfo {
-  id: string;
-  row: number;
-  col: number;
-  numRows: number;
-  numCols: number;
-  value?: string | number;
-  varName?: string;
-  showIndices?: boolean;
 }
 
 export interface CellData {
@@ -159,19 +142,6 @@ export interface CellData {
 
   bounds?: CellBounds, 
 
-  // For array variables
-  arrayInfo?: {
-    id: string;
-    index: number;
-    value?: string | number;
-    varName?: string;
-    direction?: 'right' | 'left' | 'down' | 'up';
-    showIndex?: boolean;
-  };
-  // For 2D array variables
-  array2dInfo?: Array2dInfo;
-  // For labels
-  label?: LabelData;
   // For panels (container)
   panel?: {
     id: string;

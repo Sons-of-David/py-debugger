@@ -39,9 +39,8 @@ export class Label implements VisualBuilderElementBase {
     if (this.fontSize != null) style.fontSize = this.fontSize;
 
     return {
-      elementInfo: this,
+      elementInfo: this as any,
       bounds: { width: this.width, height: this.height },
-      label: { text: this.label ?? '' },
       ...(Object.keys(style).length > 0 && { style }),
     };
   }

@@ -10,7 +10,8 @@ import type {
 import type { VisualBuilderElementBase } from '../../api/visualBuilder';
 import { cellKey, createHardcodedBinding, resolveSizeValue } from '../types/grid';
 import { evaluateExpression } from '../../code-builder/expressionEvaluator';
-import type { ArrayDrawResult } from '../types/arrayShapes';
+import { Array1DCell, Array2DCell, type ArrayDrawResult } from '../types/arrayShapes';
+import { Label } from '../types/label';
 import { PanelCell } from '../views/PanelView';
 
 const MIN_ZOOM = 0.5;
@@ -94,15 +95,17 @@ export function useGridState() {
         if (child.data.panelId !== panelId) continue;
         const childPos = resolvePositionWithErrors(child.positionBinding, currentVariables).position;
 
+        const childElemInfo = child.data.elementInfo as any;
         if (child.data.panel) {
           const nestedSize = sizes.get(child.data.panel.id);
           const w = nestedSize?.width ?? (typeof child.data.panel.width === 'number' ? child.data.panel.width : 1);
           const h = nestedSize?.height ?? (typeof child.data.panel.height === 'number' ? child.data.panel.height : 1);
           maxRow = Math.max(maxRow, childPos.row + h);
           maxCol = Math.max(maxCol, childPos.col + w);
-        } else if (child.data.label) {
-          const w = resolveSizeValue(child.data.label.width, currentVariables, evaluateExpression) || 1;
-          const h = resolveSizeValue(child.data.label.height, currentVariables, evaluateExpression) || 1;
+        } else if (childElemInfo?.type === 'label') {
+          const labelCell = childElemInfo as Label;
+          const w = resolveSizeValue(labelCell.width, currentVariables, evaluateExpression) || 1;
+          const h = resolveSizeValue(labelCell.height, currentVariables, evaluateExpression) || 1;
           maxRow = Math.max(maxRow, childPos.row + h);
           maxCol = Math.max(maxCol, childPos.col + w);
         } else {
@@ -210,58 +213,81 @@ export function useGridState() {
       let objW = 1;
       let objH = 1;
 
-      if (obj.data.arrayInfo) {
+      const elemInfo = obj.data.elementInfo as any;
+      if (elemInfo?.type === 'array1dcell') {
+        const cell = elemInfo as Array1DCell;
         let cellData: CellData = { ...obj.data };
-        if (cellData.arrayInfo?.varName) {
-          const arrVar = currentVariables[cellData.arrayInfo.varName];
+        let cellInvalidReason: string | undefined;
+        let resolvedValue = cell.value;
+        if (cell.varName) {
+          const arrVar = currentVariables[cell.varName];
           if (arrVar && (arrVar.type === 'arr[int]' || arrVar.type === 'arr[str]')) {
-            const newValue = arrVar.value[cellData.arrayInfo.index];
+            const newValue = arrVar.value[cell.index];
             if (newValue !== undefined) {
-              cellData = { ...cellData, arrayInfo: { ...cellData.arrayInfo!, value: newValue } };
+              resolvedValue = newValue;
             } else {
-              cellData = { ...cellData, invalidReason: `Index ${cellData.arrayInfo.index} out of bounds` };
+              cellInvalidReason = `Index ${cell.index} out of bounds`;
             }
           } else {
-            cellData = { ...cellData, invalidReason: `Array "${cellData.arrayInfo.varName}" not available` };
+            cellInvalidReason = `Array "${cell.varName}" not available`;
           }
         }
+        const updatedCell = new Array1DCell({
+          ...cell,
+          value: resolvedValue,
+        });
         resolvedCellData = {
           ...cellData,
+          elementInfo: updatedCell as any,
           positionBinding: obj.positionBinding,
-          invalidReason: cellData.invalidReason || invalidReason,
+          invalidReason: cellInvalidReason || invalidReason,
         };
         setOrOverlay(cellKey(position.row, position.col), resolvedCellData);
-      } else if (obj.data.array2dInfo) {
+      } else if (elemInfo?.type === 'array2dcell') {
+        const cell = elemInfo as Array2DCell;
         let cellData: CellData = { ...obj.data };
-        const info = obj.data.array2dInfo;
-        if (info.varName) {
-          const arrVar = currentVariables[info.varName];
+        let cellInvalidReason: string | undefined;
+        let resolvedValue = cell.value;
+        if (cell.varName) {
+          const arrVar = currentVariables[cell.varName];
           if (arrVar && (arrVar.type === 'arr2d[int]' || arrVar.type === 'arr2d[str]')) {
-            const newValue = (arrVar.value as (number | string)[][])[info.row]?.[info.col];
+            const newValue = (arrVar.value as (number | string)[][])[cell.row]?.[cell.col];
             if (newValue !== undefined) {
-              cellData = { ...cellData, array2dInfo: { ...info, value: newValue } };
+              resolvedValue = newValue;
             } else {
-              cellData = { ...cellData, invalidReason: `Index [${info.row}][${info.col}] out of bounds` };
+              cellInvalidReason = `Index [${cell.row}][${cell.col}] out of bounds`;
             }
           } else {
-            cellData = { ...cellData, invalidReason: `Array "${info.varName}" not available` };
+            cellInvalidReason = `Array "${cell.varName}" not available`;
           }
         }
+        const updatedCell = new Array2DCell({
+          ...cell,
+          value: resolvedValue,
+        });
         resolvedCellData = {
           ...cellData,
+          elementInfo: updatedCell as any,
           positionBinding: obj.positionBinding,
-          invalidReason: cellData.invalidReason || invalidReason,
+          invalidReason: cellInvalidReason || invalidReason,
         };
         setOrOverlay(cellKey(position.row, position.col), resolvedCellData);
-      } else if (obj.data.label) {
-        const renderedText = renderLabelText(obj.data.label.text, currentVariables);
-        const labelW = resolveSizeValue(obj.data.label.width, currentVariables, evaluateExpression) || 1;
-        const labelH = resolveSizeValue(obj.data.label.height, currentVariables, evaluateExpression) || 1;
+      } else if (elemInfo?.type === 'label') {
+        const labelCell = elemInfo as Label;
+        const renderedText = renderLabelText(labelCell.label ?? '', currentVariables);
+        const labelW = resolveSizeValue(labelCell.width, currentVariables, evaluateExpression) || 1;
+        const labelH = resolveSizeValue(labelCell.height, currentVariables, evaluateExpression) || 1;
         objW = labelW;
         objH = labelH;
+        const updatedLabel = new Label({
+          ...labelCell,
+          label: renderedText,
+          width: labelW,
+          height: labelH,
+        });
         resolvedCellData = {
           ...obj.data,
-          label: { ...obj.data.label, text: renderedText, width: labelW, height: labelH },
+          elementInfo: updatedLabel as any,
           positionBinding: obj.positionBinding,
           invalidReason,
         };
