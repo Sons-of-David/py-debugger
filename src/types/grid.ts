@@ -200,8 +200,6 @@ export interface CellData {
   positionBinding?: PositionBinding;
   // Render/drag order (higher = on top)
   zOrder?: number;
-  // If true, user can resize by dragging edges/corners (no variable-dependent expressions)
-  sizeResizable?: boolean;
 }
 
 export interface OccupantInfo {

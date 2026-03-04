@@ -10,7 +10,7 @@ import type {
 } from '../types/grid';
 import type { VisualBuilderElement } from '../types/visualBuilder';
 import { cellKey, createHardcodedBinding, getArrayOffset, getAccumulatedArrayOffset, resolveSizeValue } from '../types/grid';
-import { evaluateExpression, getExpressionVariables } from '../utils/expressionEvaluator';
+import { evaluateExpression } from '../utils/expressionEvaluator';
 
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 2.0;
@@ -50,15 +50,6 @@ export function useGridState() {
   const [zoom, setZoomLevel] = useState(1);
 
   const zOrderCounter = useRef(0);
-
-  const isSizeResizable = useCallback((w: SizeValue | undefined, h: SizeValue | undefined): boolean => {
-    const noVars = (v: SizeValue | undefined) => {
-      if (v === undefined || typeof v === 'number') return true;
-      if (v.type === 'fixed') return true;
-      return getExpressionVariables(v.expression).length === 0;
-    };
-    return noVars(w) && noVars(h);
-  }, []);
 
   const resolvePositionWithErrors = useCallback(
     (binding: PositionBinding, vars: VariableDictionary): { position: CellPosition; error?: string } => {
@@ -110,6 +101,73 @@ export function useGridState() {
     });
   }, []);
 
+  // Compute panel sizes from children (minimal bounding box)
+  const panelAutoSizes = useMemo(() => {
+    const sizes = new Map<string, { width: number; height: number }>();
+
+    for (const [, obj] of objects) {
+      if (!obj.data.panel) continue;
+      const panelId = obj.data.panel.id;
+
+      let maxRow = 0;
+      let maxCol = 0;
+      const processedArrays = new Set<string>();
+
+      for (const [, child] of objects) {
+        if (child.data.panelId !== panelId) continue;
+        const childPos = resolvePositionWithErrors(child.positionBinding, currentVariables).position;
+
+        if (child.data.arrayInfo) {
+          const arrayId = child.data.arrayInfo.id;
+          if (processedArrays.has(arrayId)) continue;
+          processedArrays.add(arrayId);
+
+          const arrayCells: typeof child[] = [];
+          for (const [, o] of objects) {
+            if (o.data.arrayInfo?.id === arrayId) arrayCells.push(o);
+          }
+          arrayCells.sort((a, b) => (a.data.arrayInfo?.index || 0) - (b.data.arrayInfo?.index || 0));
+
+          const cellSizes = collectArrayCellSizes(arrayId, objects);
+          const useAccum = cellSizes.some(s => s.width > 1 || s.height > 1);
+          const direction = child.data.arrayInfo.direction || 'right';
+
+          for (let i = 0; i < arrayCells.length; i++) {
+            const offset = useAccum
+              ? getAccumulatedArrayOffset(direction, i, cellSizes)
+              : getArrayOffset(direction, i);
+            const cellW = cellSizes[i]?.width ?? 1;
+            const cellH = cellSizes[i]?.height ?? 1;
+            maxRow = Math.max(maxRow, childPos.row + offset.rowDelta + cellH);
+            maxCol = Math.max(maxCol, childPos.col + offset.colDelta + cellW);
+          }
+        } else if (child.data.array2dInfo) {
+          const arrayId = child.data.array2dInfo.id;
+          if (processedArrays.has(arrayId)) continue;
+          processedArrays.add(arrayId);
+          if (child.data.array2dInfo.row === 0 && child.data.array2dInfo.col === 0) {
+            maxRow = Math.max(maxRow, childPos.row + child.data.array2dInfo.numRows);
+            maxCol = Math.max(maxCol, childPos.col + child.data.array2dInfo.numCols);
+          }
+        } else if (child.data.label) {
+          const w = resolveSizeValue(child.data.label.width, currentVariables, evaluateExpression) || 1;
+          const h = resolveSizeValue(child.data.label.height, currentVariables, evaluateExpression) || 1;
+          maxRow = Math.max(maxRow, childPos.row + h);
+          maxCol = Math.max(maxCol, childPos.col + w);
+        } else {
+          const w = resolveSizeValue(child.data.shapeProps?.width, currentVariables, evaluateExpression) ?? 1;
+          const h = resolveSizeValue(child.data.shapeProps?.height, currentVariables, evaluateExpression) ?? 1;
+          maxRow = Math.max(maxRow, childPos.row + h);
+          maxCol = Math.max(maxCol, childPos.col + w);
+        }
+      }
+
+      sizes.set(panelId, { width: Math.max(1, maxCol), height: Math.max(1, maxRow) });
+    }
+
+    return sizes;
+  }, [objects, currentVariables, resolvePositionWithErrors]);
+
   // Compute cell positions from objects and current variables.
   // Array cells take priority so they are never overwritten by a shape/label; displaced single objects go in overlayCells.
   // Also builds occupancyMap: for every covered cell, an array of all occupants (sorted by z-order).
@@ -147,8 +205,9 @@ export function useGridState() {
       if (!obj.data.panel?.id) continue;
       const panelInfo = panelPositions.get(obj.data.panel.id);
       if (!panelInfo) continue;
-      const pw = resolveSizeValue(obj.data.panel.width, currentVariables, evaluateExpression);
-      const ph = resolveSizeValue(obj.data.panel.height, currentVariables, evaluateExpression);
+      const autoSize = panelAutoSizes.get(obj.data.panel.id);
+      const pw = autoSize?.width ?? 1;
+      const ph = autoSize?.height ?? 1;
       for (let r = 0; r < ph; r++) {
         for (let c = 0; c < pw; c++) {
           addOccupant(panelInfo.position.row + r, panelInfo.position.col + c, {
@@ -337,7 +396,6 @@ export function useGridState() {
           ...obj.data,
           label: { ...obj.data.label, text: renderedText, width: labelW, height: labelH },
           positionBinding: obj.positionBinding,
-          sizeResizable: isSizeResizable(obj.data.label.width, obj.data.label.height),
           invalidReason,
         };
         setOrOverlay(cellKey(position.row, position.col), resolvedCellData);
@@ -354,7 +412,6 @@ export function useGridState() {
           shapeSizeBinding: { width: rawW, height: rawH },
           invalidReason,
           positionBinding: obj.positionBinding,
-          sizeResizable: isSizeResizable(obj.data.shapeProps?.width, obj.data.shapeProps?.height),
         };
         setOrOverlay(cellKey(position.row, position.col), resolvedCellData);
       }
@@ -379,7 +436,7 @@ export function useGridState() {
     }
 
     return { cells: cellMap, overlayCells: overlayMap, occupancyMap: occMap };
-  }, [objects, currentVariables, renderLabelText, isSizeResizable, resolvePositionWithErrors]);
+  }, [objects, currentVariables, panelAutoSizes, renderLabelText, resolvePositionWithErrors]);
 
   const panels = useMemo(() => {
     const result: Array<{
@@ -390,30 +447,27 @@ export function useGridState() {
       height: number;
       title?: string;
       invalidReason?: string;
-      sizeResizable: boolean;
     }> = [];
 
     for (const [, obj] of objects) {
       if (!obj.data.panel) continue;
       const resolved = resolvePositionWithErrors(obj.positionBinding, currentVariables);
       const position = resolved.position;
-      const width = resolveSizeValue(obj.data.panel.width, currentVariables, evaluateExpression);
-      const height = resolveSizeValue(obj.data.panel.height, currentVariables, evaluateExpression);
+      const autoSize = panelAutoSizes.get(obj.data.panel.id);
       const invalidReason = resolved.error ?? undefined;
       result.push({
         id: obj.data.panel.id,
         row: position.row,
         col: position.col,
-        width,
-        height,
+        width: autoSize?.width ?? 1,
+        height: autoSize?.height ?? 1,
         title: obj.data.panel.title,
         invalidReason,
-        sizeResizable: isSizeResizable(obj.data.panel.width, obj.data.panel.height),
       });
     }
 
     return result;
-  }, [objects, currentVariables, isSizeResizable, resolvePositionWithErrors]);
+  }, [objects, currentVariables, panelAutoSizes, resolvePositionWithErrors]);
 
   const zoomIn = useCallback(() => {
     setZoomLevel((prev) => Math.min(prev + ZOOM_STEP, MAX_ZOOM));
