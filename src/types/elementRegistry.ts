@@ -20,3 +20,7 @@ export function registerVisualElement<T extends VisualBuilderElementBase>(
 export function getConstructor(type: string): Constructor<VisualBuilderElementBase> | null{
   return visualElemRegistry.get(type)?.constructor ?? null;
 }
+
+export function getAllSchemas(): ClassDoc[] {
+  return Array.from(visualElemRegistry.values()).map(entry => entry.schema);
+}

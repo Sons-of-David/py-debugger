@@ -28,10 +28,12 @@ export interface ClassDoc {
   methods?: { name: string; signature: string; docstring: string }[];
 }
 
-import { RECT_SCHEMA, CIRCLE_SCHEMA, ARROW_SCHEMA } from './shapes';
-import { LABEL_SCHEMA } from './label';
-import { ARRAY_SCHEMA } from './arrayShapes';
+import { getAllSchemas } from './elementRegistry';
 import { PANEL_SCHEMA } from '../components/views/PanelView';
+
+import './shapes';
+import './label';
+import './arrayShapes';
 
 const VISUAL_ELEM_BASE_SCHEMA: ClassDoc = {
   className: 'VisualElem',
@@ -44,15 +46,15 @@ const VISUAL_ELEM_BASE_SCHEMA: ClassDoc = {
   ],
 };
 
-export const VISUAL_ELEM_SCHEMA: ClassDoc[] = [
-  VISUAL_ELEM_BASE_SCHEMA,
-  PANEL_SCHEMA,
-  RECT_SCHEMA,
-  CIRCLE_SCHEMA,
-  ARROW_SCHEMA,
-  LABEL_SCHEMA,
-  ARRAY_SCHEMA,
-];
+export function getVisualElemSchema(): ClassDoc[] {
+  return [
+    VISUAL_ELEM_BASE_SCHEMA,
+    PANEL_SCHEMA,
+    ...getAllSchemas(),
+  ];
+}
+
+export const VISUAL_ELEM_SCHEMA: ClassDoc[] = getVisualElemSchema();
 
 export function rgbToHex(rgb?: [number, number, number], defaultColor: string = '#10b981') {
   if (!rgb) return defaultColor;
