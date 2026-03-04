@@ -1,3 +1,4 @@
+import { registerVisualElement } from "./elementRegistry";
 import type { CellData } from "./grid";
 import type { ClassDoc, VisualBuilderElementBase } from "./visualBuilder";
 import { rgbToHex } from "./visualBuilder";
@@ -56,6 +57,8 @@ export const RECT_SCHEMA: ClassDoc = {
     { name: 'visible', type: 'bool', description: 'Show or hide the rectangle.' },
   ],
 };
+
+registerVisualElement('rect', Rect, RECT_SCHEMA);
 
 export class Circle extends BasicShape {
 

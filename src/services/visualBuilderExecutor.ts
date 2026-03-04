@@ -4,6 +4,7 @@ import VISUAL_BUILDER_PYTHON from './visualBuilder.py?raw';
 import { Arrow, Circle, Rect } from '../types/shapes';
 import { Array1D, Array2D } from '../types/arrayShapes';
 import { Label } from '../types/label';
+import { getConstructor } from '../types/elementRegistry';
 
 export interface ExecuteVisualBuilderResult {
   success: boolean;
@@ -41,8 +42,12 @@ exec('''${escapedCode.replace(/'''/g, "\\'\\'\\'")}''')
     const elementsRaw: VisualBuilderElement[] = JSON.parse(resultJson);
     
     const wrappedElements = elementsRaw.map(el => {
+      const entry = getConstructor(el.type);
+      if (entry) {
+        return new entry(el);
+      }
       switch(el.type) {
-        case 'rect': return new Rect(el);
+        //case 'rect': return new Rect(el);
         case 'circle': return new Circle(el);
         case 'arrow': return new Arrow(el);
         case 'label': return new Label(el);

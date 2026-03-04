@@ -27,16 +27,10 @@ The important part is that GridCell.tsx should not know which object it works wi
 
 ## More general changes
 
-- From files like grid.tsx remove all the leftovers from the mouse interface like selecting and dragging visual objects.
-
-- The `V` class should be removed from visualBuilder.py along with the rest of the API belonging to the previous debugging mode (This will be added back later)
-
-- Move the API reference window. Instead of bottom part of the builder panel, have a show\hide button on the top right. When shown, the API should be on the right, over the visual panel.
-
-- We removed the time line feature for now (from the debugger feature). Make sure it does not have any leftovers. This will be added back later.
-
-- A panel should not have a fixed size. Instead its size is determined as the minimal size needed
-to contain all the elements inside it.
+- separate the files according to components:
+    - Visual panel: the grids, the shapes with their view, etc
+    - The code builder: the monaco component itself, and the conversions to and from python
+    - the API: the component, plus the registration of documentation. 
 
 
 
