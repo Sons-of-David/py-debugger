@@ -71,29 +71,64 @@ export interface NumericExpr {
 
 export type NumericExpression = NumericFixed | NumericExpr;
 
-// Position binding - uses NumericExpression (fixed = literal, expression = formula or variable)
-// Legacy: 'hardcoded' and 'variable' are still supported when reading
+/**
+ * Position binding types for dynamic grid positioning.
+ * 
+ * The system supports multiple ways to specify a position component (row or column):
+ * - NumericFixed: A fixed numeric value { type: 'fixed', value: number }
+ * - NumericExpr: An expression string { type: 'expression', expression: string }
+ * 
+ * Legacy types (kept for backward compatibility when reading older data):
+ * - PositionValue: Hardcoded position { type: 'hardcoded', value: number }
+ * - PositionVarBinding: Variable reference { type: 'variable', varName: string }
+ * - PositionExpression: Expression (duplicate of NumericExpr) { type: 'expression', expression: string }
+ * 
+ * Position resolution is handled by resolvePositionWithErrors() in useGridState.ts,
+ * which evaluates these types and returns both the resolved position and any errors.
+ */
+
+/**
+ * Legacy position type: hardcoded numeric value.
+ * Prefer using NumericFixed { type: 'fixed', value } for new code.
+ */
 export interface PositionValue {
   type: 'hardcoded';
   value: number;
 }
 
+/**
+ * Legacy position type: reference to a variable by name.
+ * The variable's value is used as the position component.
+ * For new code, use NumericExpr with expression: "varName" instead.
+ */
 export interface PositionVarBinding {
   type: 'variable';
   varName: string;
 }
 
+/**
+ * Legacy position type: expression string.
+ * This is functionally equivalent to NumericExpr but kept for backward compatibility.
+ */
 export interface PositionExpression {
   type: 'expression';
   expression: string;
 }
 
+/**
+ * Union type representing all valid ways to specify a position component.
+ * Used in PositionBinding for row and col fields.
+ */
 export type PositionComponent =
   | NumericExpression
   | PositionValue
   | PositionVarBinding
   | PositionExpression;
 
+/**
+ * Binding that specifies how to compute the position of a grid object.
+ * Each component (row, col) can be a fixed value, expression, or variable reference.
+ */
 export interface PositionBinding {
   row: PositionComponent;
   col: PositionComponent;
