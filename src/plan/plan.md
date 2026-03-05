@@ -115,7 +115,7 @@ From the python file describing the visual object there should be an autogenerat
 
 Add a save \ load buttons. Saving saves the code from the visual builder into a json file. In addition, in should contain a mode field, set to 'simple'. Loading it will write it back and automatically call the "analyze" function. Later on we will add more modes.
 
-## 4. The simple continuous animation mode
+## 4. The simple continuous animation mode - skip for now
 
 Have a scrollbar to determine the time of the animation. Right clicking it, we can determine the end time in seconds, and next to the scrollbar there should have a play \ pause button. The scrollbar should move from 0 to 1 and when it is moved manually it triggers the `jump_to(time: float)` event. When the play button is used it advances according to the total time T (namely, if the jump between frames is t seconds, then it advances the internal time by t/T). It similarly triggers `jump_to(t)` and in both cases, after this function is done, the visual panel is updated.
 When entering this mode, and calling analyze for the builder code, it should be validated that it has a `jump_to` function.
@@ -129,8 +129,6 @@ Both these update should be modular, since for each mode we change the save file
 
 ### Steps:
 
-The following assignments should not change the code from the visual-panel and builder-panel. If they need to interact, it should be through
-the registeries, and if needed we will construct new ones. 
 - Add "control area" with a scrollbar that runs from 0 to 1, which shows the current time.
 - When calling 'Analyze' on the visual builder, make sure that it has the `jump_to(t)` function implemented. This should not be implemented directly. Instead, the 'Analyze' event should trigger a validation process on the code being analyzed, and this validation that `jump_to` exists should be registered there.
 - add the `jump_to` section in the API. 
@@ -152,14 +150,18 @@ Here too, the json save file should contain the code, the mode, the max time and
 
 ### Steps:
 
-- Add a new mode 'discrete animation', which should start as the 'simple' mode
-- Create a timeline state file. It will contain a list of all the settings the visual objects can be in.
-- Add a registration to a validation that the builder code has a `jump_to(t: int)` function, and add it also to the API.
-- When analyzing the code, automatically run `jump_to(t: int)` with t go from 0 to 100. After each time save the state of the variables (make sure that it is a deep copy, and not shallow because of the arrays). Use the t=0 state automatically after the analysis.
-- Add the control area with the backward\forward\and the time in the middle.
+The following assignments should not change the code from the visual-panel and builder-panel (mostly). If they need to interact, it should be through
+the registeries, and if needed we will construct new ones. Try to keep the changes into a new folder called timeline.
+- Start a new branch main2, and from it start a new branch discrete-animation
+- Add a choice of mode for the user between discrete and simple. Everything we do from now on will be inside discrete mode. This mode choice should be saved in the json file, and when loaded, it will use the mode in the file to set the mode in the application.
+- Create a python file registry in the code-editor library. You cen register there python files, and the visualBuilderExecutor will take the files from there and run them. Make sure that the visualBuilder.py always runs first. The visualBuilder should have a new Exception type called PopupException(msg). If such an exception is raised when trying to run (analyze) the code, the webapp should show the msg in a popup window.
+- in the timeline folder create a timelime.py file which only checks if the function `jump_to(t: int)` exists, and if not raises a popup exception telling the user to implement it. Afterwards create a function `_create_typescript_timeline(T: int)` that runs `jump_to(t)` with t going from 0 to T (including both), and after each time saves a serialization of all of the visual objects into a timeline list, and returns it.
+- Create a timeline state file. When analyzing the code in the discrete-animation mode, run the `_create_typescript_timeline` function with default T=100, and save its output to the timeline file. Keep it OOP: the `executeVisualBuilderCode` should also get the function name to run. In the simple mode it just runs `_serialize_visual_builder`, and now it will run `_create_typescript_timeline`. Also, what to do with the results should be separated to the files in the respective folder.
+- Create a schema for `jump_to(t: int)` and register it to the API.
+- Add the control area with a backward\forward\and the time in the middle.
 - When the user changes the time, either by using the buttons, or the middle number, use the corresponding state from the timeline to update the visual panel. Make sure that the user always enters a number between 0 and 100, and when the time is 0 or 100 disable the backward \ forward button respectively.
-- Add the right click menu to change the max time from 100 to general nonnegative T
-- update the save \ load process to save also the mode, the current time and max time.
+- Add a way to change the max time T. It must always be a nonnegative integer. If it changes to comething smaller than the current time, automatically jump to this new max time.
+- update the save \ load process to save also the mode, the current time and max time (do not save the whole timeline). When loaded jump to the saved time and don't forget to analyze the code.
 
 ## 6. The debugger mode
 
