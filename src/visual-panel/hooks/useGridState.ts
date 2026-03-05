@@ -7,12 +7,12 @@ import type {
   SizeValue,
   OccupantInfo,
   PanelStyle,
+  ResolvableElement,
 } from '../types/grid';
 import type { VisualBuilderElementBase } from '../../api/visualBuilder';
 import { cellKey, createHardcodedBinding, resolveSizeValue } from '../types/grid';
 import { evaluateExpression } from '../../code-builder/expressionEvaluator';
-import { Array1DCell, Array2DCell, type ArrayDrawResult } from '../types/arrayShapes';
-import { Label } from '../types/label';
+import { type ArrayDrawResult } from '../types/arrayShapes';
 import { PanelCell } from '../views/PanelView';
 
 const MIN_ZOOM = 0.5;
@@ -72,16 +72,6 @@ export function useGridState() {
 
   const currentVariables = useMemo((): VariableDictionary => ({}), []);
 
-  const renderLabelText = useCallback((template: string, vars: VariableDictionary): string => {
-    return template.replace(/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/g, (_match, varName) => {
-      const value = vars[varName];
-      if (!value) return `{${varName}}`;
-      if (value.type === 'arr[int]') return `[${value.value.join(', ')}]`;
-      if (value.type === 'float' || value.type === 'int') return `${value.value}`;
-      return `${(value as { value: string }).value}`;
-    });
-  }, []);
-
   const panelAutoSizes = useMemo(() => {
     const sizes = new Map<string, { width: number; height: number }>();
 
@@ -96,25 +86,25 @@ export function useGridState() {
         if (child.data.panelId !== panelId) continue;
         const childPos = resolvePositionWithErrors(child.positionBinding, currentVariables).position;
 
-        const childElemInfo = child.data.elementInfo as any;
+        const childElemInfo = child.data.elementInfo as ResolvableElement | undefined;
+        let w = 1;
+        let h = 1;
+
         if (child.data.panel) {
           const nestedSize = sizes.get(child.data.panel.id);
-          const w = nestedSize?.width ?? (typeof child.data.panel.width === 'number' ? child.data.panel.width : 1);
-          const h = nestedSize?.height ?? (typeof child.data.panel.height === 'number' ? child.data.panel.height : 1);
-          maxRow = Math.max(maxRow, childPos.row + h);
-          maxCol = Math.max(maxCol, childPos.col + w);
-        } else if (childElemInfo?.type === 'label') {
-          const labelCell = childElemInfo as Label;
-          const w = resolveSizeValue(labelCell.width, currentVariables, evaluateExpression) || 1;
-          const h = resolveSizeValue(labelCell.height, currentVariables, evaluateExpression) || 1;
-          maxRow = Math.max(maxRow, childPos.row + h);
-          maxCol = Math.max(maxCol, childPos.col + w);
+          w = nestedSize?.width ?? (typeof child.data.panel.width === 'number' ? child.data.panel.width : 1);
+          h = nestedSize?.height ?? (typeof child.data.panel.height === 'number' ? child.data.panel.height : 1);
+        } else if (childElemInfo && typeof childElemInfo.resolveForDisplay === 'function') {
+          const resolved = childElemInfo.resolveForDisplay(currentVariables, evaluateExpression);
+          w = resolved.width;
+          h = resolved.height;
         } else {
-          const w = resolveSizeValue(child.data.shapeProps?.width, currentVariables, evaluateExpression) ?? 1;
-          const h = resolveSizeValue(child.data.shapeProps?.height, currentVariables, evaluateExpression) ?? 1;
-          maxRow = Math.max(maxRow, childPos.row + h);
-          maxCol = Math.max(maxCol, childPos.col + w);
+          w = resolveSizeValue(child.data.shapeProps?.width, currentVariables, evaluateExpression) ?? 1;
+          h = resolveSizeValue(child.data.shapeProps?.height, currentVariables, evaluateExpression) ?? 1;
         }
+
+        maxRow = Math.max(maxRow, childPos.row + h);
+        maxCol = Math.max(maxCol, childPos.col + w);
       }
 
       sizes.set(panelId, { width: Math.max(1, maxCol), height: Math.max(1, maxRow) });
@@ -214,83 +204,18 @@ export function useGridState() {
       let objW = 1;
       let objH = 1;
 
-      const elemInfo = obj.data.elementInfo as any;
-      if (elemInfo?.type === 'array1dcell') {
-        const cell = elemInfo as Array1DCell;
-        let cellData: RenderableObjectData = { ...obj.data };
-        let cellInvalidReason: string | undefined;
-        let resolvedValue = cell.value;
-        if (cell.varName) {
-          const arrVar = currentVariables[cell.varName];
-          if (arrVar && (arrVar.type === 'arr[int]' || arrVar.type === 'arr[str]')) {
-            const newValue = arrVar.value[cell.index];
-            if (newValue !== undefined) {
-              resolvedValue = newValue;
-            } else {
-              cellInvalidReason = `Index ${cell.index} out of bounds`;
-            }
-          } else {
-            cellInvalidReason = `Array "${cell.varName}" not available`;
-          }
-        }
-        const updatedCell = new Array1DCell({
-          ...cell,
-          value: resolvedValue,
-        });
-        resolvedRenderableObjectData = {
-          ...cellData,
-          elementInfo: updatedCell as any,
-          positionBinding: obj.positionBinding,
-          invalidReason: cellInvalidReason || invalidReason,
-        };
-        setOrOverlay(cellKey(position.row, position.col), resolvedRenderableObjectData);
-      } else if (elemInfo?.type === 'array2dcell') {
-        const cell = elemInfo as Array2DCell;
-        let cellData: RenderableObjectData = { ...obj.data };
-        let cellInvalidReason: string | undefined;
-        let resolvedValue = cell.value;
-        if (cell.varName) {
-          const arrVar = currentVariables[cell.varName];
-          if (arrVar && (arrVar.type === 'arr2d[int]' || arrVar.type === 'arr2d[str]')) {
-            const newValue = (arrVar.value as (number | string)[][])[cell.row]?.[cell.col];
-            if (newValue !== undefined) {
-              resolvedValue = newValue;
-            } else {
-              cellInvalidReason = `Index [${cell.row}][${cell.col}] out of bounds`;
-            }
-          } else {
-            cellInvalidReason = `Array "${cell.varName}" not available`;
-          }
-        }
-        const updatedCell = new Array2DCell({
-          ...cell,
-          value: resolvedValue,
-        });
-        resolvedRenderableObjectData = {
-          ...cellData,
-          elementInfo: updatedCell as any,
-          positionBinding: obj.positionBinding,
-          invalidReason: cellInvalidReason || invalidReason,
-        };
-        setOrOverlay(cellKey(position.row, position.col), resolvedRenderableObjectData);
-      } else if (elemInfo?.type === 'label') {
-        const labelCell = elemInfo as Label;
-        const renderedText = renderLabelText(labelCell.label ?? '', currentVariables);
-        const labelW = resolveSizeValue(labelCell.width, currentVariables, evaluateExpression) || 1;
-        const labelH = resolveSizeValue(labelCell.height, currentVariables, evaluateExpression) || 1;
-        objW = labelW;
-        objH = labelH;
-        const updatedLabel = new Label({
-          ...labelCell,
-          label: renderedText,
-          width: labelW,
-          height: labelH,
-        });
+      const elemInfo = obj.data.elementInfo as ResolvableElement | undefined;
+
+      if (elemInfo && typeof elemInfo.resolveForDisplay === 'function') {
+        const resolved = elemInfo.resolveForDisplay(currentVariables, evaluateExpression);
+        objW = resolved.width;
+        objH = resolved.height;
         resolvedRenderableObjectData = {
           ...obj.data,
-          elementInfo: updatedLabel as any,
+          elementInfo: resolved.element as any,
+          shapeProps: { ...obj.data.shapeProps, width: resolved.width, height: resolved.height },
           positionBinding: obj.positionBinding,
-          invalidReason,
+          invalidReason: resolved.invalidReason || invalidReason,
         };
         setOrOverlay(cellKey(position.row, position.col), resolvedRenderableObjectData);
       } else {
@@ -328,7 +253,7 @@ export function useGridState() {
     }
 
     return { cells: cellMap, overlayCells: overlayMap, occupancyMap: occMap };
-  }, [objects, currentVariables, panelAutoSizes, renderLabelText, resolvePositionWithErrors]);
+  }, [objects, currentVariables, panelAutoSizes, resolvePositionWithErrors]);
 
   const panels = useMemo(() => {
     const result: Array<{

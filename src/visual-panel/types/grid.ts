@@ -5,6 +5,23 @@ export interface CellPosition {
   col: number;
 }
 
+/**
+ * Interface for visual elements that can resolve their display state based on variables.
+ * This enables polymorphic rendering without type-checking in the grid state logic.
+ */
+export interface ResolvableElement {
+  type: string;
+  resolveForDisplay(
+    variables: VariableDictionary,
+    expressionEvaluator: (expression: string, vars: VariableDictionary) => number
+  ): {
+    element: ResolvableElement;
+    width: number;
+    height: number;
+    invalidReason?: string;
+  };
+}
+
 // Variable dictionary types
 export type VariableType = 'int' | 'float' | 'str' | 'arr[int]' | 'arr[str]' | 'arr2d[int]' | 'arr2d[str]';
 
