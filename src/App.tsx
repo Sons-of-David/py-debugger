@@ -111,14 +111,19 @@ function App() {
     gridRef.current?.alignGrid();
   }, []);
 
+  const [isCapturing, setIsCapturing] = useState(false);
+
   const handleScreenshot = useCallback(async () => {
     const element = gridRef.current?.captureElement();
-    if (!element) return;
+    if (!element || isCapturing) return;
 
+    setIsCapturing(true);
     try {
       const dataUrl = await toPng(element, {
-        pixelRatio: 2,
-        backgroundColor: '#f3f4f6',
+        pixelRatio: 1,
+        backgroundColor: darkMode ? '#111827' : '#f3f4f6',
+        skipFonts: true,
+        cacheBust: false,
       });
       
       const link = document.createElement('a');
@@ -130,8 +135,10 @@ function App() {
       document.body.removeChild(link);
     } catch (err) {
       console.error('Screenshot failed:', err);
+    } finally {
+      setIsCapturing(false);
     }
-  }, []);
+  }, [darkMode, isCapturing]);
 
   return (
     <div className="w-screen h-screen overflow-hidden flex flex-col bg-gray-100 dark:bg-gray-900 dark:text-gray-100">
@@ -189,10 +196,11 @@ function App() {
             </button>
             <button
               onClick={handleScreenshot}
-              className="px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-sm font-medium transition-colors"
+              disabled={isCapturing}
+              className="px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-sm font-medium transition-colors disabled:opacity-50"
               title="Download screenshot"
             >
-              📷
+              {isCapturing ? '⏳' : '📷'}
             </button>
           </div>
 
