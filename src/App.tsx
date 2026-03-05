@@ -119,15 +119,56 @@ function App() {
 
     setIsCapturing(true);
     try {
-      const dataUrl = await toPng(element, {
+      const viewportWidth = element.clientWidth;
+      const viewportHeight = element.clientHeight;
+      const scrollLeft = element.scrollLeft;
+      const scrollTop = element.scrollTop;
+
+      const visibleLeft = scrollLeft;
+      const visibleTop = scrollTop;
+      const visibleRight = scrollLeft + viewportWidth;
+      const visibleBottom = scrollTop + viewportHeight;
+
+      const fullDataUrl = await toPng(element, {
         pixelRatio: 1,
         backgroundColor: darkMode ? '#111827' : '#f3f4f6',
         skipFonts: true,
         cacheBust: false,
+        filter: (node: Node) => {
+          if (!(node instanceof HTMLElement)) return true;
+          if (node === element) return true;
+          if (node.dataset?.gridBackground === 'true') return true;
+          const rect = node.getBoundingClientRect();
+          const containerRect = element.getBoundingClientRect();
+          const nodeLeft = rect.left - containerRect.left + scrollLeft;
+          const nodeTop = rect.top - containerRect.top + scrollTop;
+          const nodeRight = nodeLeft + rect.width;
+          const nodeBottom = nodeTop + rect.height;
+          return !(nodeRight < visibleLeft || nodeLeft > visibleRight ||
+                   nodeBottom < visibleTop || nodeTop > visibleBottom);
+        },
       });
+
+      const img = new Image();
+      img.src = fullDataUrl;
+      await new Promise((resolve) => { img.onload = resolve; });
+
+      const canvas = document.createElement('canvas');
+      canvas.width = viewportWidth;
+      canvas.height = viewportHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Could not get canvas context');
+
+      ctx.drawImage(
+        img,
+        scrollLeft, scrollTop, viewportWidth, viewportHeight,
+        0, 0, viewportWidth, viewportHeight
+      );
+
+      const croppedDataUrl = canvas.toDataURL('image/png');
       
       const link = document.createElement('a');
-      link.href = dataUrl;
+      link.href = croppedDataUrl;
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
       link.download = `visual-panel-${timestamp}.png`;
       document.body.appendChild(link);
