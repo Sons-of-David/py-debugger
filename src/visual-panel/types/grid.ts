@@ -189,7 +189,7 @@ export const PANEL_STYLE_DEFAULT: PanelStyle = {
   titleTextClass: 'text-slate-600 dark:text-slate-300',
 };
 
-export interface CellData {
+export interface RenderableObjectData {
   // Unique identifier for this object (for tracking across position changes)
   objectId?: string;
 
@@ -220,7 +220,7 @@ export interface CellData {
 }
 
 export interface OccupantInfo {
-  cellData: CellData;
+  cellData: RenderableObjectData;
   originRow: number;
   originCol: number;
   isPanel: boolean;
@@ -228,7 +228,7 @@ export interface OccupantInfo {
 }
 
 export interface GridState {
-  cells: Map<string, CellData>;
+  cells: Map<string, RenderableObjectData>;
   zoom: number;
 }
 

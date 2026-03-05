@@ -1,6 +1,6 @@
 import type { VisualBuilderElementBase } from "../../api/visualBuilder";
 import { rgbToHex } from "../../api/visualBuilder";
-import type { CellData, CellStyle, PanelStyle } from "./grid";
+import type { RenderableObjectData, CellStyle, PanelStyle } from "./grid";
 import { PANEL_STYLE_1D, PANEL_STYLE_2D } from "./grid";
 import type { ClassDoc } from "../../api/visualBuilder";
 import { registerVisualElement } from "./elementRegistry";
@@ -19,7 +19,7 @@ export interface ArrayPanelInfo {
 export interface ArrayDrawResult {
   panel: ArrayPanelInfo;
   panelOffset: { row: number; col: number };
-  cells: { cellId: string; data: Partial<CellData>; position: [number, number] }[];
+  cells: { cellId: string; data: Partial<RenderableObjectData>; position: [number, number] }[];
   nextIdx: number;
 }
 
@@ -53,7 +53,7 @@ export class Array1DCell {
     this.style = opts.style;
   }
 
-  draw(): Partial<CellData> {
+  draw(): Partial<RenderableObjectData> {
     return {
       elementInfo: this as any,
       style: this.style,
@@ -97,7 +97,7 @@ export class Array2DCell {
     this.style = opts.style;
   }
 
-  draw(): Partial<CellData> {
+  draw(): Partial<RenderableObjectData> {
     return {
       elementInfo: this as any,
       style: this.style,

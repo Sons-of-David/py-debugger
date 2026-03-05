@@ -1,6 +1,6 @@
 import { useRef, useCallback, useMemo, memo } from 'react';
 import { GridCell } from './GridCell';
-import type { CellData, OccupantInfo, SizeValue, PanelStyle } from '../types/grid';
+import type { RenderableObjectData, OccupantInfo, SizeValue, PanelStyle } from '../types/grid';
 import { cellKey, PANEL_STYLE_DEFAULT } from '../types/grid';
 
 function getSizeAsNumber(value: SizeValue | undefined): number {
@@ -19,8 +19,8 @@ const GRID_ROWS = 50;
 // ── Types ──────────────────────────────────────────────────────────────────
 
 interface GridProps {
-  cells: Map<string, CellData>;
-  overlayCells?: Map<string, CellData>;
+  cells: Map<string, RenderableObjectData>;
+  overlayCells?: Map<string, RenderableObjectData>;
   occupancyMap?: Map<string, OccupantInfo[]>;
   panels: Array<PanelInfo>;
   zoom: number;
@@ -42,7 +42,7 @@ interface RenderableObject {
   key: string;
   row: number;
   col: number;
-  cellData: CellData;
+  cellData: RenderableObjectData;
   widthCells: number;
   heightCells: number;
 }

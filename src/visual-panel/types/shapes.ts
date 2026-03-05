@@ -1,5 +1,5 @@
 import { registerVisualElement } from "./elementRegistry";
-import type { CellData } from "./grid";
+import type { RenderableObjectData } from "./grid";
 import type { ClassDoc, VisualBuilderElementBase } from "../../api/visualBuilder";
 import { rgbToHex } from "../../api/visualBuilder";
 
@@ -35,7 +35,7 @@ export class Rect extends BasicShape {
     this.color = el.color ?? [1, 0, 0];
   }
 
-  draw(): CellData {
+  draw(): RenderableObjectData {
     return {
       elementInfo: this,
       style: { color: rgbToHex(this.color, '#ef0bef'), opacity: this.alpha },

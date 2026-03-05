@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import type {
   CellPosition,
-  CellData,
+  RenderableObjectData,
   VariableDictionary,
   PositionBinding,
   SizeValue,
@@ -21,7 +21,7 @@ const ZOOM_STEP = 0.1;
 
 interface GridObject {
   id: string;
-  data: CellData;
+  data: RenderableObjectData;
   positionBinding: PositionBinding;
   zOrder: number;
 }
@@ -124,12 +124,12 @@ export function useGridState() {
   }, [objects, currentVariables, resolvePositionWithErrors]);
 
   const { cells, overlayCells, occupancyMap } = useMemo((): {
-    cells: Map<string, CellData>;
-    overlayCells: Map<string, CellData>;
+    cells: Map<string, RenderableObjectData>;
+    overlayCells: Map<string, RenderableObjectData>;
     occupancyMap: Map<string, OccupantInfo[]>;
   } => {
-    const cellMap = new Map<string, CellData>();
-    const overlayMap = new Map<string, CellData>();
+    const cellMap = new Map<string, RenderableObjectData>();
+    const overlayMap = new Map<string, RenderableObjectData>();
     const occMap = new Map<string, OccupantInfo[]>();
     const sortedObjects = Array.from(objects.values()).sort((a, b) => (a.zOrder ?? 0) - (b.zOrder ?? 0));
 
@@ -181,7 +181,7 @@ export function useGridState() {
       }
     }
 
-    const setOrOverlay = (key: string, cellData: CellData) => {
+    const setOrOverlay = (key: string, cellData: RenderableObjectData) => {
       if (cellMap.has(key)) overlayMap.set(key, cellData);
       else cellMap.set(key, cellData);
     };
@@ -210,14 +210,14 @@ export function useGridState() {
         col: Math.max(0, Math.min(49, position.col)),
       };
 
-      let resolvedCellData: CellData;
+      let resolvedRenderableObjectData: RenderableObjectData;
       let objW = 1;
       let objH = 1;
 
       const elemInfo = obj.data.elementInfo as any;
       if (elemInfo?.type === 'array1dcell') {
         const cell = elemInfo as Array1DCell;
-        let cellData: CellData = { ...obj.data };
+        let cellData: RenderableObjectData = { ...obj.data };
         let cellInvalidReason: string | undefined;
         let resolvedValue = cell.value;
         if (cell.varName) {
@@ -237,16 +237,16 @@ export function useGridState() {
           ...cell,
           value: resolvedValue,
         });
-        resolvedCellData = {
+        resolvedRenderableObjectData = {
           ...cellData,
           elementInfo: updatedCell as any,
           positionBinding: obj.positionBinding,
           invalidReason: cellInvalidReason || invalidReason,
         };
-        setOrOverlay(cellKey(position.row, position.col), resolvedCellData);
+        setOrOverlay(cellKey(position.row, position.col), resolvedRenderableObjectData);
       } else if (elemInfo?.type === 'array2dcell') {
         const cell = elemInfo as Array2DCell;
-        let cellData: CellData = { ...obj.data };
+        let cellData: RenderableObjectData = { ...obj.data };
         let cellInvalidReason: string | undefined;
         let resolvedValue = cell.value;
         if (cell.varName) {
@@ -266,13 +266,13 @@ export function useGridState() {
           ...cell,
           value: resolvedValue,
         });
-        resolvedCellData = {
+        resolvedRenderableObjectData = {
           ...cellData,
           elementInfo: updatedCell as any,
           positionBinding: obj.positionBinding,
           invalidReason: cellInvalidReason || invalidReason,
         };
-        setOrOverlay(cellKey(position.row, position.col), resolvedCellData);
+        setOrOverlay(cellKey(position.row, position.col), resolvedRenderableObjectData);
       } else if (elemInfo?.type === 'label') {
         const labelCell = elemInfo as Label;
         const renderedText = renderLabelText(labelCell.label ?? '', currentVariables);
@@ -286,13 +286,13 @@ export function useGridState() {
           width: labelW,
           height: labelH,
         });
-        resolvedCellData = {
+        resolvedRenderableObjectData = {
           ...obj.data,
           elementInfo: updatedLabel as any,
           positionBinding: obj.positionBinding,
           invalidReason,
         };
-        setOrOverlay(cellKey(position.row, position.col), resolvedCellData);
+        setOrOverlay(cellKey(position.row, position.col), resolvedRenderableObjectData);
       } else {
         const shapeW = resolveSizeValue(obj.data.shapeProps?.width, currentVariables, evaluateExpression) ?? 1;
         const shapeH = resolveSizeValue(obj.data.shapeProps?.height, currentVariables, evaluateExpression) ?? 1;
@@ -300,20 +300,20 @@ export function useGridState() {
         objH = shapeH;
         const rawW: SizeValue = obj.data.shapeProps?.width ?? 1;
         const rawH: SizeValue = obj.data.shapeProps?.height ?? 1;
-        resolvedCellData = {
+        resolvedRenderableObjectData = {
           ...obj.data,
           shapeProps: { ...obj.data.shapeProps, width: shapeW, height: shapeH },
           shapeSizeBinding: { width: rawW, height: rawH },
           invalidReason,
           positionBinding: obj.positionBinding,
         };
-        setOrOverlay(cellKey(position.row, position.col), resolvedCellData);
+        setOrOverlay(cellKey(position.row, position.col), resolvedRenderableObjectData);
       }
 
       for (let r = 0; r < objH; r++) {
         for (let c = 0; c < objW; c++) {
           addOccupant(position.row + r, position.col + c, {
-            cellData: resolvedCellData!,
+            cellData: resolvedRenderableObjectData!,
             originRow: position.row,
             originCol: position.col,
             isPanel: false,
@@ -505,7 +505,7 @@ export function useGridState() {
             }
             idx = nextIdx;
           } else if ('cells' in drawResult) {
-            const { cells: drawCells, nextIdx } = drawResult as { cells: Array<{ cellId: string; data: CellData }>; nextIdx: number };
+            const { cells: drawCells, nextIdx } = drawResult as { cells: Array<{ cellId: string; data: RenderableObjectData }>; nextIdx: number };
             const binding = createHardcodedBinding(targetPosition);
             for (const cell of drawCells) {
               next.set(cell.cellId, {
@@ -520,7 +520,7 @@ export function useGridState() {
             const binding = createHardcodedBinding(targetPosition);
             next.set(gridId, {
               id: gridId,
-              data: { ...(drawResult as CellData), objectId: gridId, panelId: parentPanelId, zOrder: z },
+              data: { ...(drawResult as RenderableObjectData), objectId: gridId, panelId: parentPanelId, zOrder: z },
               positionBinding: binding,
               zOrder: z++,
             });

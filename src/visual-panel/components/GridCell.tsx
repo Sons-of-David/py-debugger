@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import type { CellData } from '../types/grid';
+import type { RenderableObjectData } from '../types/grid';
 import { renderElement } from '../views/rendererRegistry';
 
 import '../views/RectView';
@@ -13,7 +13,7 @@ import '../views/PanelView';
 interface GridCellProps {
   row: number;
   col: number;
-  cellData?: CellData;
+  cellData?: RenderableObjectData;
   size: number;
   width?: number;
   height?: number;
