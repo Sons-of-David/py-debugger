@@ -1,7 +1,14 @@
 import { useRef, useCallback, useMemo, memo } from 'react';
 import { GridCell } from './GridCell';
-import type { CellData, OccupantInfo } from '../types/grid';
+import type { CellData, OccupantInfo, SizeValue } from '../types/grid';
 import { cellKey } from '../types/grid';
+
+function getSizeAsNumber(value: SizeValue | undefined): number {
+  if (value === undefined) return 1;
+  if (typeof value === 'number') return value;
+  if (value.type === 'fixed') return value.value;
+  return 1;
+}
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -125,8 +132,8 @@ export function Grid({
     for (const [key, cellData] of cells) {
       if (cellData.panel) continue;
       const [row, col] = key.split(',').map(Number);
-      const baseWidth = cellData.bounds?.width ?? 1;
-      const baseHeight = cellData.bounds?.height ?? 1;
+      const baseWidth = getSizeAsNumber(cellData.shapeProps?.width);
+      const baseHeight = getSizeAsNumber(cellData.shapeProps?.height);
       objects.push({
         key, row, col, cellData,
         widthCells: baseWidth,
@@ -136,8 +143,8 @@ export function Grid({
 
     for (const [key, cellData] of overlayCells) {
       const [row, col] = key.split(',').map(Number);
-      const baseWidth = cellData.bounds?.width ?? 1;
-      const baseHeight = cellData.bounds?.height ?? 1;
+      const baseWidth = getSizeAsNumber(cellData.shapeProps?.width);
+      const baseHeight = getSizeAsNumber(cellData.shapeProps?.height);
       objects.push({
         key: 'overlay-' + key,
         row, col, cellData,

@@ -126,18 +126,11 @@ export interface ShapeProps {
   orientation?: ArrowOrientation;
 }
 
-export interface CellBounds {
-  width?: number;    // in cells
-  height?: number;   // in cells
-}
-
 export interface CellData {
   // Unique identifier for this object (for tracking across position changes)
   objectId?: string;
 
-  elementInfo?: RenderableElement,
-
-  bounds?: CellBounds, 
+  elementInfo?: RenderableElement, 
 
   // For panels (container)
   panel?: {

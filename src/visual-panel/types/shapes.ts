@@ -39,7 +39,7 @@ export class Rect extends BasicShape {
     return {
       elementInfo: this,
       style: { color: rgbToHex(this.color, '#ef0bef'), opacity: this.alpha },
-      bounds: { width: this.width, height: this.height },
+      shapeProps: { width: this.width, height: this.height },
     };
   }
 }
@@ -72,7 +72,7 @@ export class Circle extends BasicShape {
     return {
       elementInfo: this,
       style: { color: rgbToHex(this.color, '#3b82f6'), opacity: this.alpha },
-      bounds: { width: this.width, height: this.height },
+      shapeProps: { width: this.width, height: this.height },
     };
   }
 }
@@ -109,7 +109,6 @@ export class Arrow extends BasicShape {
     return {
       elementInfo: this,
       style: { color: rgbToHex(this.color, '#10b981'), opacity: this.alpha },
-      bounds: { width: this.width, height: this.height },
       shapeProps: {
         width: this.width,
         height: this.height,

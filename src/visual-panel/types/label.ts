@@ -40,7 +40,7 @@ export class Label implements VisualBuilderElementBase {
 
     return {
       elementInfo: this as any,
-      bounds: { width: this.width, height: this.height },
+      shapeProps: { width: this.width, height: this.height },
       ...(Object.keys(style).length > 0 && { style }),
     };
   }
