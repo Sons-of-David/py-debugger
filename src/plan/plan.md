@@ -113,7 +113,7 @@ From the python file describing the visual object there should be an autogenerat
 
 ## 3. save and load
 
-Add a save \ load buttons. Saving saves the code from the visual builder into a json file. Loading it will write it back and automatically call the "analyze" function. 
+Add a save \ load buttons. Saving saves the code from the visual builder into a json file. In addition, in should contain a mode field, set to 'simple'. Loading it will write it back and automatically call the "analyze" function. Later on we will add more modes.
 
 ## 4. The simple continuous animation mode
 
@@ -129,7 +129,9 @@ Both these update should be modular, since for each mode we change the save file
 
 ### Steps:
 
-- Add a scrollbar that runs from 0 to 1, which shows the current time.
+The following assignments should not change the code from the visual-panel and builder-panel. If they need to interact, it should be through
+the registeries, and if needed we will construct new ones. 
+- Add "control area" with a scrollbar that runs from 0 to 1, which shows the current time.
 - When calling 'Analyze' on the visual builder, make sure that it has the `jump_to(t)` function implemented. This should not be implemented directly. Instead, the 'Analyze' event should trigger a validation process on the code being analyzed, and this validation that `jump_to` exists should be registered there.
 - add the `jump_to` section in the API. 
 - Handle the scrollbar event so that when changed, it calls `jump_to(t)` with the proper time, and afterwards update the visual panel.
