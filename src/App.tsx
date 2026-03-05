@@ -124,29 +124,11 @@ function App() {
       const scrollLeft = element.scrollLeft;
       const scrollTop = element.scrollTop;
 
-      const visibleLeft = scrollLeft;
-      const visibleTop = scrollTop;
-      const visibleRight = scrollLeft + viewportWidth;
-      const visibleBottom = scrollTop + viewportHeight;
-
       const fullDataUrl = await toPng(element, {
         pixelRatio: 1,
         backgroundColor: darkMode ? '#111827' : '#f3f4f6',
         skipFonts: true,
         cacheBust: false,
-        filter: (node: Node) => {
-          if (!(node instanceof HTMLElement)) return true;
-          if (node === element) return true;
-          if (node.dataset?.gridBackground === 'true') return true;
-          const rect = node.getBoundingClientRect();
-          const containerRect = element.getBoundingClientRect();
-          const nodeLeft = rect.left - containerRect.left + scrollLeft;
-          const nodeTop = rect.top - containerRect.top + scrollTop;
-          const nodeRight = nodeLeft + rect.width;
-          const nodeBottom = nodeTop + rect.height;
-          return !(nodeRight < visibleLeft || nodeLeft > visibleRight ||
-                   nodeBottom < visibleTop || nodeTop > visibleBottom);
-        },
       });
 
       const img = new Image();
