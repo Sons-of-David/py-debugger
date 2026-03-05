@@ -1,6 +1,7 @@
 import type { VisualBuilderElementBase } from "../../api/visualBuilder";
 import { rgbToHex } from "../../api/visualBuilder";
-import type { CellData, CellStyle } from "./grid";
+import type { CellData, CellStyle, PanelStyle } from "./grid";
+import { PANEL_STYLE_1D, PANEL_STYLE_2D } from "./grid";
 import type { ClassDoc } from "../../api/visualBuilder";
 import { registerVisualElement } from "./elementRegistry";
 import { getArrayOffset } from "./grid";
@@ -12,7 +13,7 @@ export interface ArrayPanelInfo {
   width: number;
   height: number;
   title?: string;
-  arrayType: '1d' | '2d';
+  panelStyle: PanelStyle;
 }
 
 export interface ArrayDrawResult {
@@ -180,7 +181,7 @@ export class Array1D implements VisualBuilderElementBase {
         width: panelWidth,
         height: panelHeight,
         title: this.varName,
-        arrayType: '1d',
+        panelStyle: PANEL_STYLE_1D,
       },
       panelOffset: { row: panelRowOffset, col: panelColOffset },
       cells,
@@ -269,7 +270,7 @@ export class Array2D implements VisualBuilderElementBase {
         width: numCols,
         height: numRows,
         title: varName,
-        arrayType: '2d',
+        panelStyle: PANEL_STYLE_2D,
       },
       panelOffset: { row: 0, col: 0 },
       cells,

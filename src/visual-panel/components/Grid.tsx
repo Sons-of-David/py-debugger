@@ -1,7 +1,7 @@
 import { useRef, useCallback, useMemo, memo } from 'react';
 import { GridCell } from './GridCell';
-import type { CellData, OccupantInfo, SizeValue } from '../types/grid';
-import { cellKey } from '../types/grid';
+import type { CellData, OccupantInfo, SizeValue, PanelStyle } from '../types/grid';
+import { cellKey, PANEL_STYLE_DEFAULT } from '../types/grid';
 
 function getSizeAsNumber(value: SizeValue | undefined): number {
   if (value === undefined) return 1;
@@ -34,7 +34,7 @@ export interface PanelInfo {
   width: number;
   height: number;
   title?: string;
-  arrayType?: '1d' | '2d';
+  panelStyle?: PanelStyle;
   invalidReason?: string;
 }
 
@@ -166,14 +166,9 @@ export function Grid({
   const getPanelClasses = (panel: PanelInfo): string => {
     const base = 'absolute transition-all duration-300 ease-out';
     const invalid = panel.invalidReason ? 'opacity-50 grayscale' : '';
+    const style = panel.panelStyle ?? PANEL_STYLE_DEFAULT;
 
-    if (panel.arrayType === '1d') {
-      return `${base} border-2 border-amber-400 dark:border-amber-600 bg-amber-50/50 dark:bg-amber-900/30 ${invalid}`;
-    }
-    if (panel.arrayType === '2d') {
-      return `${base} border-2 border-violet-400 dark:border-violet-600 bg-violet-50/50 dark:bg-violet-900/30 ${invalid}`;
-    }
-    return `${base} border-2 border-dashed bg-slate-50/50 dark:bg-slate-800/50 ${invalid}`;
+    return `${base} ${style.borderClass} ${style.backgroundClass} ${invalid}`;
   };
 
   const renderedPanelBackgrounds = useMemo(() => {
@@ -193,29 +188,25 @@ export function Grid({
   }, [panels]);
 
   const renderedPanelHandles = useMemo(() => {
-    return panels.map((panel) => (
-      <span
-        key={panel.id}
-        className={`absolute text-[10px] font-mono px-1 rounded ${
-          panel.arrayType === '1d'
-            ? 'bg-amber-50 dark:bg-amber-900 text-amber-700 dark:text-amber-300'
-            : panel.arrayType === '2d'
-              ? 'bg-violet-50 dark:bg-violet-900 text-violet-700 dark:text-violet-300'
-              : panel.title
-                ? 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-                : 'bg-slate-50 dark:bg-slate-700 text-slate-400 dark:text-slate-500'
-        }`}
-        style={{
-          left: panel.col * CELL_SIZE + 4,
-          top: panel.row * CELL_SIZE,
-          transform: 'translateY(-100%)',
-          userSelect: 'none',
-          zIndex: 20,
-        }}
-      >
-        {panel.title || '⋮⋮'}
-      </span>
-    ));
+    return panels.map((panel) => {
+      const style = panel.panelStyle ?? PANEL_STYLE_DEFAULT;
+      const textClass = panel.title ? style.titleTextClass : 'text-slate-400 dark:text-slate-500';
+      return (
+        <span
+          key={panel.id}
+          className={`absolute text-[10px] font-mono px-1 rounded ${style.titleBgClass} ${textClass}`}
+          style={{
+            left: panel.col * CELL_SIZE + 4,
+            top: panel.row * CELL_SIZE,
+            transform: 'translateY(-100%)',
+            userSelect: 'none',
+            zIndex: 20,
+          }}
+        >
+          {panel.title || '⋮⋮'}
+        </span>
+      );
+    });
   }, [panels]);
 
   return (

@@ -126,6 +126,34 @@ export interface ShapeProps {
   orientation?: ArrowOrientation;
 }
 
+export interface PanelStyle {
+  borderClass: string;
+  backgroundClass: string;
+  titleBgClass: string;
+  titleTextClass: string;
+}
+
+export const PANEL_STYLE_1D: PanelStyle = {
+  borderClass: 'border-2 border-amber-400 dark:border-amber-600',
+  backgroundClass: 'bg-amber-50/50 dark:bg-amber-900/30',
+  titleBgClass: 'bg-amber-50 dark:bg-amber-900',
+  titleTextClass: 'text-amber-700 dark:text-amber-300',
+};
+
+export const PANEL_STYLE_2D: PanelStyle = {
+  borderClass: 'border-2 border-violet-400 dark:border-violet-600',
+  backgroundClass: 'bg-violet-50/50 dark:bg-violet-900/30',
+  titleBgClass: 'bg-violet-50 dark:bg-violet-900',
+  titleTextClass: 'text-violet-700 dark:text-violet-300',
+};
+
+export const PANEL_STYLE_DEFAULT: PanelStyle = {
+  borderClass: 'border-2 border-dashed',
+  backgroundClass: 'bg-slate-50/50 dark:bg-slate-800/50',
+  titleBgClass: 'bg-slate-50 dark:bg-slate-700',
+  titleTextClass: 'text-slate-600 dark:text-slate-300',
+};
+
 export interface CellData {
   // Unique identifier for this object (for tracking across position changes)
   objectId?: string;
@@ -138,7 +166,7 @@ export interface CellData {
     width: SizeValue;
     height: SizeValue;
     title?: string;
-    arrayType?: '1d' | '2d';
+    panelStyle?: PanelStyle;
   };
   // Optional panel association for non-panel objects
   panelId?: string;

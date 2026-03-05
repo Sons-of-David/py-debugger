@@ -6,6 +6,7 @@ import type {
   PositionBinding,
   SizeValue,
   OccupantInfo,
+  PanelStyle,
 } from '../types/grid';
 import type { VisualBuilderElementBase } from '../../api/visualBuilder';
 import { cellKey, createHardcodedBinding, resolveSizeValue } from '../types/grid';
@@ -337,7 +338,7 @@ export function useGridState() {
       width: number;
       height: number;
       title?: string;
-      arrayType?: '1d' | '2d';
+      panelStyle?: PanelStyle;
       invalidReason?: string;
     }> = [];
 
@@ -373,7 +374,7 @@ export function useGridState() {
         width: autoSize?.width ?? 1,
         height: autoSize?.height ?? 1,
         title: obj.data.panel.title,
-        arrayType: obj.data.panel.arrayType,
+        panelStyle: obj.data.panel.panelStyle,
         invalidReason: posInfo.error ?? undefined,
       });
     }
@@ -484,7 +485,7 @@ export function useGridState() {
                   width: panelInfo.width,
                   height: panelInfo.height,
                   title: panelInfo.title,
-                  arrayType: panelInfo.arrayType,
+                  panelStyle: panelInfo.panelStyle,
                 },
                 shapeProps: { width: panelInfo.width, height: panelInfo.height },
                 panelId: parentPanelId,
