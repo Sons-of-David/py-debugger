@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Group, Panel, Separator } from 'react-resizable-panels';
 import { toPng } from 'html-to-image';
 import { Grid, type GridHandle } from './visual-panel/components/Grid';
-import { CodeEditor, SAMPLE_VISUAL_BUILDER } from './code-builder/CodeEditor';
+import { CodeEditorArea, SAMPLE_VISUAL_BUILDER } from './CodeEditorArea';
 import { useGridState } from './visual-panel/hooks/useGridState';
 import { useTheme } from './contexts/ThemeContext';
 import { loadPyodide, isPyodideLoaded } from './code-builder/services/pythonExecutor';
@@ -93,13 +93,13 @@ function App() {
     URL.revokeObjectURL(url);
   }, [visualBuilderCode]);
 
-  const handleLoad = useCallback((data: {code?: string }) => {
-    if (!data.code) {
+  const handleLoad = useCallback((code?: string ) => {
+    if (!code) {
       setVisualBuilderError('Invalid file: missing code field');
       return;
     }
-    setVisualBuilderCode(data.code);
-    handleAnalyzeVisualBuilder(data.code);
+    setVisualBuilderCode(code);
+    handleAnalyzeVisualBuilder(code);
   }, [handleAnalyzeVisualBuilder]);
 
   const handleZoom = useCallback(
@@ -269,7 +269,7 @@ function App() {
           {/* Left panel - Visual Builder */}
           <Panel defaultSize={50} minSize={20}>
             <div className="h-full border-r border-gray-300 dark:border-gray-600">
-              <CodeEditor
+              <CodeEditorArea
                 code={visualBuilderCode}
                 onChange={setVisualBuilderCode}
                 onAnalyze={handleAnalyzeVisualBuilder}
