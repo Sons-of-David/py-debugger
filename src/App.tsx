@@ -10,6 +10,22 @@ import { loadPyodide, isPyodideLoaded } from './code-builder/services/pythonExec
 import { executeVisualBuilderCode } from './code-builder/services/visualBuilderExecutor';
 import { ApiReferencePanel } from "./ApiReferencePanel";
 
+
+/* ---------- Shared Tailwind class groups ---------- */
+
+const buttonBase =
+  "px-3 py-1 rounded text-sm font-medium transition-colors";
+
+const buttonNeutral =
+  `${buttonBase} bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600`;
+
+const buttonDisabled =
+  `${buttonNeutral} disabled:opacity-50`;
+
+const panelHeader =
+  "flex-shrink-0 px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between";
+
+
 function App() {
   const { darkMode, toggleDarkMode } = useTheme();
 
@@ -221,24 +237,20 @@ function App() {
 
           {/* Zoom controls */}
           <div className="flex items-center gap-2">
-            <button
-              onClick={zoomOut}
-              className="px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-sm font-medium transition-colors"
-            >
+
+            <button onClick={zoomOut} className={buttonNeutral}>
               -
             </button>
             <span className="text-sm text-gray-600 dark:text-gray-300 min-w-[60px] text-center">
               {Math.round(zoom * 100)}%
             </span>
-            <button
-              onClick={zoomIn}
-              className="px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-sm font-medium transition-colors"
-            >
+
+            <button onClick={zoomIn} className={buttonNeutral}>
               +
             </button>
             <button
               onClick={handleAlignGrid}
-              className="px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-sm font-medium transition-colors"
+              className={buttonNeutral}
               title="Align grid to viewport"
             >
               ⊞
@@ -246,7 +258,7 @@ function App() {
             <button
               onClick={handleScreenshot}
               disabled={isCapturing}
-              className="px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-sm font-medium transition-colors disabled:opacity-50"
+              className={buttonDisabled}
               title="Download screenshot"
             >
               {isCapturing ? '⏳' : '📷'}
@@ -256,7 +268,7 @@ function App() {
           {/* Dark mode toggle */}
           <button
             onClick={toggleDarkMode}
-            className="px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-sm font-medium transition-colors"
+            className={buttonNeutral}
             title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
           >
             {darkMode ? 'Light' : 'Dark'}
@@ -264,7 +276,7 @@ function App() {
         </div>
       </header>
 
-      {/* Main content - resizable panel layout */}
+      {/* Main content */}
       <main className="flex-1 overflow-hidden">
         <Group orientation="horizontal" className="h-full">
           {/* Left panel - Visual Builder */}
@@ -287,12 +299,17 @@ function App() {
           {/* Right panel - Visual Grid */}
           <Panel defaultSize={50} minSize={20}>
             <div className="h-full flex flex-col">
-              <div className="flex-shrink-0 px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Visual Panel</span>
+
+              <div className={panelHeader}>
+
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                  Visual Panel
+                </span>
+
                 <button
                   type="button"
                   onClick={() => setApiReferenceOpen((o) => !o)}
-                  className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                  className={buttonNeutral}
                 >
                   {apiReferenceOpen ? 'Hide' : 'Show'} API
                 </button>
