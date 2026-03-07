@@ -1,18 +1,37 @@
-import { useRef } from "react";
+import { useRef, useState, useCallback } from "react";
 import { VISUAL_ELEM_SCHEMA } from "./api/visualBuilder";
 
 interface ApiReferencePanelProps {
-  width: number;
-  onResizeStart: (e: React.MouseEvent) => void;
   onClose: () => void;
 }
 
-export function ApiReferencePanel({
-  width,
-  onResizeStart,
-  onClose,
-}: ApiReferencePanelProps) {
+export function ApiReferencePanel({ onClose }: ApiReferencePanelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(288);
+  const isResizingRef = useRef(false);
+
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isResizingRef.current = true;
+    const startX = e.clientX;
+    const startWidth = width;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!isResizingRef.current) return;
+      const delta = startX - moveEvent.clientX;
+      const newWidth = Math.max(200, Math.min(600, startWidth + delta));
+      setWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      isResizingRef.current = false;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [width]);
 
   return (
     <div
@@ -23,7 +42,7 @@ export function ApiReferencePanel({
       {/* Resize handle */}
       <div
         className="w-1 h-full cursor-ew-resize bg-transparent hover:bg-indigo-400 dark:hover:bg-indigo-500 transition-colors flex-shrink-0"
-        onMouseDown={onResizeStart}
+        onMouseDown={handleResizeStart}
       />
 
       {/* Content */}

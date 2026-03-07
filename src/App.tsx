@@ -30,8 +30,6 @@ function App() {
   const [pyodideLoading, setPyodideLoading] = useState(false);
   const [pyodideReady, setPyodideReady] = useState(false);
   const [apiReferenceOpen, setApiReferenceOpen] = useState(false);
-  const [apiPanelWidth, setApiPanelWidth] = useState(288);
-  const isResizingRef = useRef(false);
 
   // Preload Pyodide on mount
   useEffect(() => {
@@ -97,29 +95,6 @@ function App() {
     setVisualBuilderCode(code);
     handleAnalyzeVisualBuilder(code);
   }, [handleAnalyzeVisualBuilder]);
-
-  const handleApiPanelResizeStart = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    isResizingRef.current = true;
-    const startX = e.clientX;
-    const startWidth = apiPanelWidth;
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      if (!isResizingRef.current) return;
-      const delta = startX - moveEvent.clientX;
-      const newWidth = Math.max(200, Math.min(600, startWidth + delta));
-      setApiPanelWidth(newWidth);
-    };
-
-    const handleMouseUp = () => {
-      isResizingRef.current = false;
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  }, [apiPanelWidth]);
 
   return (
     <div className="w-screen h-screen overflow-hidden flex flex-col bg-gray-100 dark:bg-gray-900 dark:text-gray-100">
@@ -208,8 +183,6 @@ function App() {
 
               {apiReferenceOpen && (
                 <ApiReferencePanel
-                  width={apiPanelWidth}
-                  onResizeStart={handleApiPanelResizeStart}
                   onClose={() => setApiReferenceOpen(false)}
                 />
               )}
