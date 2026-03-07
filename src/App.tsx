@@ -245,36 +245,6 @@ function App() {
             onGoToStep={(_t: number) => {}}
           />
 
-          {/* Zoom controls */}
-          <div className="flex items-center gap-2">
-
-            <button onClick={zoomOut} className={buttonNeutral}>
-              -
-            </button>
-            <span className="text-sm text-gray-600 dark:text-gray-300 min-w-[60px] text-center">
-              {Math.round(zoom * 100)}%
-            </span>
-
-            <button onClick={zoomIn} className={buttonNeutral}>
-              +
-            </button>
-            <button
-              onClick={handleAlignGrid}
-              className={buttonNeutral}
-              title="Align grid to viewport"
-            >
-              ⊞
-            </button>
-            <button
-              onClick={handleScreenshot}
-              disabled={isCapturing}
-              className={buttonDisabled}
-              title="Download screenshot"
-            >
-              {isCapturing ? '⏳' : '📷'}
-            </button>
-          </div>
-
           {/* Dark mode toggle */}
           <button
             onClick={toggleDarkMode}
@@ -282,6 +252,15 @@ function App() {
             title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
           >
             {darkMode ? 'Light' : 'Dark'}
+          </button>
+
+
+          <button
+            type="button"
+            onClick={() => setApiReferenceOpen((o) => !o)}
+            className={`${buttonNeutral} min-w-[90px]`}
+          >
+            {apiReferenceOpen ? 'Hide' : 'Show'} API
           </button>
         </div>
       </header>
@@ -312,17 +291,35 @@ function App() {
 
               <div className={panelHeader}>
 
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                  Visual Panel
-                </span>
+                {/* Visual controls */}
+                <div className="flex items-center gap-2">
 
-                <button
-                  type="button"
-                  onClick={() => setApiReferenceOpen((o) => !o)}
-                  className={buttonNeutral}
-                >
-                  {apiReferenceOpen ? 'Hide' : 'Show'} API
-                </button>
+                  <button onClick={zoomOut} className={buttonNeutral}>
+                    -
+                  </button>
+                  <span className="text-sm text-gray-600 dark:text-gray-300 min-w-[60px] text-center">
+                    {Math.round(zoom * 100)}%
+                  </span>
+
+                  <button onClick={zoomIn} className={buttonNeutral}>
+                    +
+                  </button>
+                  <button
+                    onClick={handleAlignGrid}
+                    className={buttonNeutral}
+                    title="Align grid to viewport"
+                  >
+                    ⊞
+                  </button>
+                  <button
+                    onClick={handleScreenshot}
+                    disabled={isCapturing}
+                    className={buttonDisabled}
+                    title="Download screenshot"
+                  >
+                    {isCapturing ? '⏳' : '📷'}
+                  </button>
+                </div>
               </div>
               <div className="flex-1 overflow-hidden relative">
                 <Grid
