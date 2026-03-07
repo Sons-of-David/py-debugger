@@ -9,6 +9,7 @@ import { useTheme } from './contexts/ThemeContext';
 import { loadPyodide, isPyodideLoaded } from './code-builder/services/pythonExecutor';
 import { executeVisualBuilderCode } from './code-builder/services/visualBuilderExecutor';
 import { ApiReferencePanel } from "./ApiReferencePanel";
+import { TimelineControls } from './timeline/TimelineControls';
 
 
 /* ---------- Shared Tailwind class groups ---------- */
@@ -119,7 +120,7 @@ function App() {
 
   const handleZoom = useCallback(
     (delta: number) => {
-      setZoom(zoom + delta);
+    setZoom(zoom + delta);
     },
     [zoom, setZoom]
   );
@@ -188,7 +189,7 @@ function App() {
       );
 
       const croppedDataUrl = canvas.toDataURL('image/png');
-      
+
       const link = document.createElement('a');
       link.href = croppedDataUrl;
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
@@ -234,6 +235,15 @@ function App() {
               Python Ready
             </span>
           )}
+
+          {/* Timeline controls */}
+          <TimelineControls
+            currentStep={0}
+            stepCount={100}
+            onPrevStep={() => {}}
+            onNextStep={() => {}}
+            onGoToStep={(_t: number) => {}}
+          />
 
           {/* Zoom controls */}
           <div className="flex items-center gap-2">
