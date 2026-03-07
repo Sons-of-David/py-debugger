@@ -98,7 +98,10 @@ function App() {
 
   const handleSave = useCallback(() => {
     const data = {
+      mode: 'discrete',
       code: visualBuilderCode,
+      currentTime: currentStep,
+      maxTime: maxT,
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -109,17 +112,21 @@ function App() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [visualBuilderCode]);
+  }, [visualBuilderCode, currentStep, maxT]);
 
-  const handleLoad = useCallback((data: { code?: string }) => {
-    const { code } = data;
+  const handleLoad = useCallback((data: { code?: string; currentTime?: number; maxTime?: number }) => {
+    const { code, currentTime = 0, maxTime: savedMaxT = maxT } = data;
     if (!code) {
       setVisualBuilderError('Invalid file: missing code field');
       return;
     }
+    const clampedT = Math.max(0, Math.min(1000, Math.floor(savedMaxT)));
+    setMaxT(clampedT);
     setVisualBuilderCode(code);
-    handleAnalyzeVisualBuilder(code);
-  }, [handleAnalyzeVisualBuilder]);
+    handleAnalyzeVisualBuilder(code, clampedT).then(() => {
+      goToStep(Math.max(0, Math.min(currentTime, getMaxTime())));
+    });
+  }, [handleAnalyzeVisualBuilder, goToStep, maxT]);
 
   return (
     <div className="w-screen h-screen overflow-hidden flex flex-col bg-gray-100 dark:bg-gray-900 dark:text-gray-100">

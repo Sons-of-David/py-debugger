@@ -7,7 +7,7 @@ interface CodeEditorAreaProps {
   onChange: (code: string) => void;
   onAnalyze: () => void;
   onSave: () => void;
-  onLoad: (data: { code?: string }) => void;
+  onLoad: (data: { code?: string; currentTime?: number; maxTime?: number }) => void;
   isAnalyzing: boolean;
   error?: string;
 }
