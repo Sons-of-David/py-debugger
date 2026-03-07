@@ -37,6 +37,7 @@ function App() {
   const [currentStep, setCurrentStep] = useState(0);
   const [stepCount, setStepCount] = useState(0);
   const [maxT, setMaxT] = useState(100);
+  const [tInput, setTInput] = useState('100');
 
   // Preload Pyodide on mount
   useEffect(() => {
@@ -93,12 +94,13 @@ function App() {
   const handleMaxTChange = useCallback((newT: number) => {
     const clamped = Math.max(0, Math.min(1000, Math.floor(newT)));
     setMaxT(clamped);
-    if (currentStep > clamped) goToStep(clamped);
-  }, [currentStep, goToStep]);
+    setTInput(String(clamped));
+    if (currentStep > clamped) setCurrentStep(clamped);
+    if (visualBuilderCode.trim()) handleAnalyzeVisualBuilder(undefined, clamped);
+  }, [currentStep, visualBuilderCode, handleAnalyzeVisualBuilder]);
 
   const handleSave = useCallback(() => {
     const data = {
-      mode: 'discrete',
       code: visualBuilderCode,
       currentTime: currentStep,
       maxTime: maxT,
@@ -175,10 +177,17 @@ function App() {
               type="number"
               min={0}
               max={1000}
-              value={maxT}
-              onChange={(e) => {
-                const v = parseInt(e.target.value, 10);
-                if (!isNaN(v)) handleMaxTChange(v);
+              value={tInput}
+              onChange={(e) => setTInput(e.target.value)}
+              onBlur={() => {
+                const v = parseInt(tInput, 10);
+                if (!isNaN(v)) handleMaxTChange(v); else setTInput(String(maxT));
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const v = parseInt(tInput, 10);
+                  if (!isNaN(v)) handleMaxTChange(v); else setTInput(String(maxT));
+                }
               }}
               className="w-16 text-center text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-500 rounded px-1 py-0.5 text-gray-700 dark:text-gray-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               title="Max animation steps (0 – 1000)"
