@@ -32,6 +32,7 @@ export interface ExecuteVisualBuilderResult {
 
 export async function executeVisualBuilderCode(
   code: string,
+  maxT: number = 100,
 ): Promise<ExecuteVisualBuilderResult> {
   try {
     const py = await loadPyodide();
@@ -57,7 +58,7 @@ export async function executeVisualBuilderCode(
 exec('''${escapedCode.replace(/'''/g, "\\'\\'\\'")}''')
 `);
 
-    const timelineJson = await py.runPythonAsync('_create_typescript_timeline(100)');
+    const timelineJson = await py.runPythonAsync(`_create_typescript_timeline(${Math.max(0, Math.floor(maxT))})`);
     const initialElements = hydrateTimelineFromJson(timelineJson);
     return { success: true, elements: initialElements };
 

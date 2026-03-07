@@ -36,6 +36,7 @@ function App() {
   // Timeline state
   const [currentStep, setCurrentStep] = useState(0);
   const [stepCount, setStepCount] = useState(0);
+  const [maxT, setMaxT] = useState(100);
 
   // Preload Pyodide on mount
   useEffect(() => {
@@ -62,15 +63,16 @@ function App() {
     setCurrentStep(clamped);
   }, []);
 
-  const handleAnalyzeVisualBuilder = useCallback(async (codeOverride?: string) => {
+  const handleAnalyzeVisualBuilder = useCallback(async (codeOverride?: string, maxTOverride?: number) => {
     const codeToAnalyze = typeof codeOverride === 'string' ? codeOverride : visualBuilderCode;
+    const effectiveMaxT = maxTOverride ?? maxT;
     if (!codeToAnalyze.trim()) return;
 
     setIsAnalyzingVisualBuilder(true);
     setVisualBuilderError(undefined);
 
     try {
-      const result = await executeVisualBuilderCode(codeToAnalyze);
+      const result = await executeVisualBuilderCode(codeToAnalyze, effectiveMaxT);
 
       if (result.success) {
         const total = getMaxTime() + 1;
@@ -86,7 +88,13 @@ function App() {
     } finally {
       setIsAnalyzingVisualBuilder(false);
     }
-  }, [visualBuilderCode]);
+  }, [visualBuilderCode, maxT]);
+
+  const handleMaxTChange = useCallback((newT: number) => {
+    const clamped = Math.max(0, Math.min(1000, Math.floor(newT)));
+    setMaxT(clamped);
+    if (currentStep > clamped) goToStep(clamped);
+  }, [currentStep, goToStep]);
 
   const handleSave = useCallback(() => {
     const data = {
@@ -153,6 +161,22 @@ function App() {
             onNextStep={() => goToStep(currentStep + 1)}
             onGoToStep={goToStep}
           />
+          {/* Max time T input */}
+          <label className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+            T:
+            <input
+              type="number"
+              min={0}
+              max={1000}
+              value={maxT}
+              onChange={(e) => {
+                const v = parseInt(e.target.value, 10);
+                if (!isNaN(v)) handleMaxTChange(v);
+              }}
+              className="w-16 text-center text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-500 rounded px-1 py-0.5 text-gray-700 dark:text-gray-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              title="Max animation steps (0 – 1000)"
+            />
+          </label>
 
           {/* Dark mode toggle */}
           <button
