@@ -70,7 +70,7 @@ async function loadPythonRuntime(): Promise<any> {
 }
 
 // ---------------------------------------------------------------------------
-// Debugger executor
+// Python executor
 // ---------------------------------------------------------------------------
 
 export interface DebuggerExecuteResult {

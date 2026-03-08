@@ -70,7 +70,6 @@ def _trace_function(
 ):
     """Trace function called for each line of code."""
     global _trace_steps
-    print(f'{frame} , {event}')
 
     if event != 'line':
         return _trace_function
@@ -126,6 +125,39 @@ def _run_with_trace(code_str: str) -> TraceResult:
         'output': output
     }
 
+class V:
+    params = {}
+    scope = []
+
+    SAFE_GLOBALS = {
+        "len": len,
+        "sum": sum,
+        "min": min,
+        "max": max,
+        "abs": abs,
+        "round": round,
+        "sorted": sorted,
+    }
+
+    def __init__(self, expr: str):
+        self.expr = expr
+
+    def eval(self):
+        try:
+            params = {k: v['value'] for k, v in V.params.items()}
+            return eval(self.expr, {"__builtins__": {}}, {**V.SAFE_GLOBALS, **params})
+        except Exception:
+            return self.expr
+
+def get_v_attr(self, name):
+    value = object.__getattribute__(self, name)
+
+    if isinstance(value, V):
+        return value.eval()
+    return value
+
+VisualElem.__getattribute__ = get_v_attr
+    
 
 def update(params: Dict[str, VariableValue], scope: List[Tuple[str, int]]):
     pass
@@ -137,8 +169,15 @@ def _visual_code_trace(code: str) -> str:
     code_trace: List[TraceStep] = list(_trace_steps)
     timeline = []
 
+    next_params = {}
+    for step in code_trace[::-1]:
+        next_params.update(step['variables'])
+        step['variables'].update(next_params)
+
     for step in code_trace:
         update(step['variables'], step['scope'])
+        V.params = step['variables']
+        V.scope = step['scope']
         snapshot_json = _serialize_visual_builder()
         snapshot = json.loads(snapshot_json)
         timeline.append(snapshot)

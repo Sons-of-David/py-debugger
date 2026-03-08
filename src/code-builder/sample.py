@@ -3,6 +3,8 @@
 # Steps 6-9: pop the first element once per step.
 # Press Analyze to build the timeline, then step through it.
 
+label = Label(V('j'))
+
 arr = Array()
 arr.position = (2, 2)
 arr.direction = "right"

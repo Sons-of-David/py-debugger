@@ -11,6 +11,7 @@ import { getStateAt, getMaxTime } from '../timeline/timelineState';
 import { getCodeStepAt } from '../debugger-panel/codeTimelineState';
 import { getTimeline } from '../timeline/timelineState';
 import SAMPLE_VISUAL_BUILDER from '../code-builder/sample.py?raw';
+import SAMPLE_DEBUGGER from '../debugger-panel/debuggerSample.py?raw';
 
 /* ---------- Shared Tailwind class groups ---------- */
 
@@ -28,7 +29,7 @@ function App() {
 
   // Visual builder state
   const [visualBuilderCode, setVisualBuilderCode] = useState(SAMPLE_VISUAL_BUILDER);
-  const [debuggerCode, setDebuggerCode] = useState('');
+  const [debuggerCode, setDebuggerCode] = useState(SAMPLE_DEBUGGER);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | undefined>();
   const [analyzeStatus, setAnalyzeStatus] = useState<'idle' | 'success' | 'error' | 'dirty'>('idle');

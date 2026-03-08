@@ -5,8 +5,6 @@ import { DebuggerCodeEditor } from '../debugger-panel/DebuggerCodeEditor';
 import type { HighlightedLines } from '../debugger-panel/DebuggerCodeEditor';
 import { VariablePanel } from '../debugger-panel/VariablePanel';
 import type { VariableValue } from '../debugger-panel/codeTimelineState';
-import SAMPLE_VISUAL_BUILDER from '../code-builder/sample.py?raw';
-import SAMPLE_DEBUGGER from '../debugger-panel/debuggerSample.py?raw';
 
 type ActiveTab = 'code' | 'visual-builder';
 
@@ -66,14 +64,6 @@ export function CodeEditorArea({
     e.target.value = '';
   };
 
-  const handleSample = () => {
-    if (activeTab === 'code') {
-      onDebuggerCodeChange(SAMPLE_DEBUGGER);
-    } else {
-      onChange(SAMPLE_VISUAL_BUILDER);
-    }
-  };
-
   return (
     <div className="flex flex-col h-full bg-white dark:bg-gray-900">
       {/* Header */}
@@ -98,13 +88,6 @@ export function CodeEditorArea({
 
         {/* Actions */}
         <div className="flex items-center gap-2 px-4">
-          <button
-            type="button"
-            onClick={handleSample}
-            className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-          >
-            Sample
-          </button>
           <button
             type="button"
             onClick={onSave}
