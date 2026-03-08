@@ -120,39 +120,22 @@ class Var(VisualElem):
 
 
 class Array(VisualElem):
-    def __init__(self, var_name=""):
-        super().__init__()
+    def __init__(self, var_name="", arr: list| None = None):
+        super().__init__()        
         self.var_name = var_name
+        if arr is None:
+            arr = []
+        self._cells = arr
         self.position = (0, 0)
         self.direction = "right"
-        self._length = 5
-        self._length_manually_set = False
         self.visible = True
         self.show_index = True
         self.color = None
         self.font_size = None
-        self._cells = [0] * self._length
 
     @property
     def length(self):
-        return self._length
-
-    @length.setter
-    def length(self, value):
-        self._length = value
-        self._length_manually_set = True
-
-    def __setitem__(self, index, value):
-        n = len(self._cells)
-        if index >= n:
-            self._cells.extend([0] * (index - n + 1))
-            self._length = len(self._cells)
-        self._cells[index] = value
-
-    def __getitem__(self, index):
-        if 0 <= index < len(self._cells):
-            return self._cells[index]
-        return 0
+        return len(self._cells)
 
     def _serialize(self):
         out = self._serialize_base()
