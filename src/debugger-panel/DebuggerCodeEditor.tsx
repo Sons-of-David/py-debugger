@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Editor, { type Monaco } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import type * as MonacoTypes from 'monaco-editor';
@@ -13,27 +13,52 @@ interface DebuggerCodeEditorProps {
   code: string;
   onChange: (code: string) => void;
   highlightedLines?: HighlightedLines;
+  breakpoints?: Set<number>;
+  onBreakpointsChange?: (next: Set<number>) => void;
 }
 
 export function DebuggerCodeEditor({
   code,
   onChange,
   highlightedLines,
+  breakpoints,
+  onBreakpointsChange,
 }: DebuggerCodeEditorProps) {
   const { darkMode } = useTheme();
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
-  const decorationIdsRef = useRef<string[]>([]);
+  const decorationsRef = useRef<MonacoTypes.editor.IEditorDecorationsCollection | null>(null);
+  // Tracks the latest breakpoints inside the mouse-down closure without re-registering it
+  const breakpointsRef = useRef<Set<number>>(new Set());
+  const [editorReady, setEditorReady] = useState(false);
+
+  useEffect(() => {
+    breakpointsRef.current = breakpoints ?? new Set();
+  }, [breakpoints]);
 
   const handleMount = (ed: editor.IStandaloneCodeEditor, monaco: Monaco) => {
     editorRef.current = ed;
     monacoRef.current = monaco;
+
+    ed.onMouseDown((e) => {
+      if (e.target.type === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN) {
+        const line = e.target.position?.lineNumber;
+        if (line == null) return;
+        const next = new Set(breakpointsRef.current);
+        if (next.has(line)) next.delete(line); else next.add(line);
+        onBreakpointsChange?.(next);
+      }
+    });
+
+    decorationsRef.current = ed.createDecorationsCollection([]);
+    setEditorReady(true);
   };
 
+  // Re-apply all decorations whenever highlights, breakpoints, or the editor change
   useEffect(() => {
     const ed = editorRef.current;
     const monaco = monacoRef.current;
-    if (!ed || !monaco) return;
+    if (!ed || !monaco || !editorReady) return;
 
     const decorations: MonacoTypes.editor.IModelDeltaDecoration[] = [];
 
@@ -59,8 +84,15 @@ export function DebuggerCodeEditor({
       });
     }
 
-    decorationIdsRef.current = ed.deltaDecorations(decorationIdsRef.current, decorations);
-  }, [highlightedLines]);
+    for (const line of breakpoints ?? []) {
+      decorations.push({
+        range: new monaco.Range(line, 1, line, 1),
+        options: { glyphMarginClassName: 'breakpoint-glyph' },
+      });
+    }
+
+    decorationsRef.current?.set(decorations);
+  }, [highlightedLines, breakpoints, editorReady]);
 
   return (
     <div className="h-full">
@@ -75,7 +107,7 @@ export function DebuggerCodeEditor({
           minimap: { enabled: false },
           fontSize: 14,
           lineNumbers: 'on',
-          glyphMargin: false,
+          glyphMargin: true,
           folding: true,
           scrollBeyondLastLine: false,
           automaticLayout: true,

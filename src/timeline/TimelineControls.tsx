@@ -6,6 +6,10 @@ interface TimelineControlsProps {
   onPrevStep: () => void;
   onNextStep: () => void;
   onGoToStep: (step: number) => void;
+  onPrevBreakpoint?: () => void;
+  onNextBreakpoint?: () => void;
+  hasPrevBreakpoint?: boolean;
+  hasNextBreakpoint?: boolean;
 }
 
 export function TimelineControls({
@@ -14,6 +18,10 @@ export function TimelineControls({
   onPrevStep,
   onNextStep,
   onGoToStep,
+  onPrevBreakpoint,
+  onNextBreakpoint,
+  hasPrevBreakpoint = false,
+  hasNextBreakpoint = false,
 }: TimelineControlsProps) {
   const [inputValue, setInputValue] = useState(String(currentStep));
 
@@ -32,6 +40,10 @@ export function TimelineControls({
   const btnActive =
     `${btnBase} bg-white dark:bg-gray-600 hover:bg-gray-100 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-500`;
   const btnDisabled =
+    `${btnBase} bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 border-gray-200 dark:border-gray-600 cursor-not-allowed`;
+  const btnBreakpoint =
+    `${btnBase} bg-white dark:bg-gray-600 hover:bg-red-50 dark:hover:bg-red-900/30 text-red-500 dark:text-red-400 border-red-300 dark:border-red-700`;
+  const btnBreakpointDisabled =
     `${btnBase} bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 border-gray-200 dark:border-gray-600 cursor-not-allowed`;
 
   const commitInput = () => {
@@ -62,6 +74,17 @@ export function TimelineControls({
         ←
       </button>
 
+      {onPrevBreakpoint && (
+        <button
+          onClick={onPrevBreakpoint}
+          disabled={!hasPrevBreakpoint}
+          className={hasPrevBreakpoint ? btnBreakpoint : btnBreakpointDisabled}
+          title="Previous breakpoint"
+        >
+          ●←
+        </button>
+      )}
+
       {/* Editable step input */}
       <input
         type="number"
@@ -75,6 +98,17 @@ export function TimelineControls({
         title={`Step (0 – ${maxStep})`}
       />
       <span className="text-xs text-gray-500 dark:text-gray-400">/ {maxStep}</span>
+
+      {onNextBreakpoint && (
+        <button
+          onClick={onNextBreakpoint}
+          disabled={!hasNextBreakpoint}
+          className={hasNextBreakpoint ? btnBreakpoint : btnBreakpointDisabled}
+          title="Next breakpoint"
+        >
+          →●
+        </button>
+      )}
 
       <button
         onClick={onNextStep}

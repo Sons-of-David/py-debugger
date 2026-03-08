@@ -38,6 +38,7 @@ function App() {
   // Timeline state
   const [currentStep, setCurrentStep] = useState(0);
   const [stepCount, setStepCount] = useState(0);
+  const [breakpoints, setBreakpoints] = useState<Set<number>>(new Set());
 
   // Preload Pyodide on mount
   useEffect(() => {
@@ -79,6 +80,45 @@ function App() {
     return { prev, next };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, stepCount]);
+
+  const getStepLine = (step: number) => {
+    const scope = getCodeStepAt(step)?.scope ?? [];
+    return scope.length > 0 ? scope[scope.length - 1][1] : null;
+  };
+
+  const goToNextBreakpoint = useCallback(() => {
+    const max = getMaxTime();
+    for (let t = currentStep + 1; t <= max; t++) {
+      const line = getStepLine(t);
+      if (line != null && breakpoints.has(line)) { goToStep(t); return; }
+    }
+  }, [currentStep, breakpoints, goToStep]);
+
+  const goToPrevBreakpoint = useCallback(() => {
+    for (let t = currentStep - 1; t >= 0; t--) {
+      const line = getStepLine(t);
+      if (line != null && breakpoints.has(line)) { goToStep(t); return; }
+    }
+  }, [currentStep, breakpoints, goToStep]);
+
+  const hasNextBreakpoint = useMemo(() => {
+    const max = getMaxTime();
+    for (let t = currentStep + 1; t <= max; t++) {
+      const line = getStepLine(t);
+      if (line != null && breakpoints.has(line)) return true;
+    }
+    return false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep, stepCount, breakpoints]);
+
+  const hasPrevBreakpoint = useMemo(() => {
+    for (let t = currentStep - 1; t >= 0; t--) {
+      const line = getStepLine(t);
+      if (line != null && breakpoints.has(line)) return true;
+    }
+    return false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep, stepCount, breakpoints]);
 
   const handleAnalyze = useCallback(async () => {
     setIsAnalyzing(true);
@@ -168,6 +208,10 @@ function App() {
             onPrevStep={() => goToStep(currentStep - 1)}
             onNextStep={() => goToStep(currentStep + 1)}
             onGoToStep={goToStep}
+            onPrevBreakpoint={goToPrevBreakpoint}
+            onNextBreakpoint={goToNextBreakpoint}
+            hasPrevBreakpoint={hasPrevBreakpoint}
+            hasNextBreakpoint={hasNextBreakpoint}
           />
 
           {/* Dark mode toggle */}
@@ -207,6 +251,8 @@ function App() {
                 error={analyzeError}
                 currentVariables={currentVariables}
                 highlightedLines={highlightedLines}
+                breakpoints={breakpoints}
+                onBreakpointsChange={setBreakpoints}
               />
             </div>
           </Panel>

@@ -22,6 +22,8 @@ interface CodeEditorAreaProps {
   error?: string;
   highlightedLines?: HighlightedLines;
   currentVariables?: Record<string, VariableValue>;
+  breakpoints?: Set<number>;
+  onBreakpointsChange?: (next: Set<number>) => void;
 }
 
 const tabBtnBase = 'px-4 py-2 text-sm font-medium border-b-2 transition-colors';
@@ -40,6 +42,8 @@ export function CodeEditorArea({
   error,
   highlightedLines,
   currentVariables = {},
+  breakpoints,
+  onBreakpointsChange,
 }: CodeEditorAreaProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab>('code');
@@ -144,6 +148,8 @@ export function CodeEditorArea({
                 code={debuggerCode}
                 onChange={onDebuggerCodeChange}
                 highlightedLines={highlightedLines}
+                breakpoints={breakpoints}
+                onBreakpointsChange={onBreakpointsChange}
               />
             </Panel>
             <Separator className="h-1 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 cursor-row-resize" />
