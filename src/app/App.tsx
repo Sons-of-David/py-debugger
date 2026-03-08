@@ -71,6 +71,15 @@ function App() {
     [currentStep, stepCount],
   );
 
+  const highlightedLines = useMemo(() => {
+    const scope = getCodeStepAt(currentStep)?.scope ?? [];
+    const next = scope.length > 0 ? scope[scope.length - 1][1] : null;
+    const prevScope = currentStep > 0 ? getCodeStepAt(currentStep - 1)?.scope ?? [] : [];
+    const prev = prevScope.length > 0 ? prevScope[prevScope.length - 1][1] : null;
+    return { prev, next };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep, stepCount]);
+
   const handleAnalyze = useCallback(async () => {
     if (!debuggerCode.trim()) return;
 
@@ -199,6 +208,7 @@ function App() {
                 isAnalyzing={isAnalyzing}
                 error={analyzeError}
                 currentVariables={currentVariables}
+                highlightedLines={highlightedLines}
               />
             </div>
           </Panel>

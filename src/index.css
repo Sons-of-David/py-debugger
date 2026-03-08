@@ -21,6 +21,23 @@ body {
   transition: none !important;
 }
 
+/* Debugger line highlights in Monaco editor */
+.debugger-prev-line {
+  background-color: rgba(251, 191, 36, 0.18) !important; /* amber — last executed */
+}
+
+.debugger-next-line {
+  background-color: rgba(52, 211, 153, 0.22) !important; /* emerald — next to execute */
+}
+
+.debugger-prev-glyph {
+  border-left: 3px solid rgb(245, 158, 11);
+}
+
+.debugger-next-glyph {
+  border-left: 3px solid rgb(16, 185, 129);
+}
+
 /* Breakpoint glyph in Monaco editor gutter */
 .breakpoint-glyph {
   background: #ef4444;
