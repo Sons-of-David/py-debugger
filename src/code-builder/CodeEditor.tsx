@@ -25,6 +25,15 @@ export function CodeEditor({
   const monacoRef = useRef<Monaco | null>(null);
   const disposablesRef = useRef<{ dispose(): void }[]>([]);
 
+  // Sync external code changes to the editor without using the controlled `value`
+  // prop (which calls setValue on every render and can reset cursor/selection).
+  useEffect(() => {
+    const ed = editorRef.current;
+    if (ed && ed.getValue() !== code) {
+      ed.setValue(code);
+    }
+  }, [code]);
+
   const handleEditorDidMount = (ed: editor.IStandaloneCodeEditor, monaco: Monaco) => {
     editorRef.current = ed;
     monacoRef.current = monaco;
@@ -163,7 +172,7 @@ export function CodeEditor({
           height="100%"
           defaultLanguage="python"
           theme={monacoTheme}
-          value={code}
+          defaultValue={code}
           onChange={(value) => onChange(value || '')}
           onMount={handleEditorDidMount}
           options={{

@@ -36,6 +36,15 @@ export function DebuggerCodeEditor({
     breakpointsRef.current = breakpoints ?? new Set();
   }, [breakpoints]);
 
+  // Sync external code changes to the editor without using the controlled `value`
+  // prop (which calls setValue on every render and can reset cursor/selection).
+  useEffect(() => {
+    const ed = editorRef.current;
+    if (ed && ed.getValue() !== code) {
+      ed.setValue(code);
+    }
+  }, [code]);
+
   const handleMount = (ed: editor.IStandaloneCodeEditor, monaco: Monaco) => {
     editorRef.current = ed;
     monacoRef.current = monaco;
@@ -101,7 +110,7 @@ export function DebuggerCodeEditor({
         height="100%"
         defaultLanguage="python"
         theme={darkMode ? 'vs-dark' : 'vs'}
-        value={code}
+        defaultValue={code}
         onChange={(v) => onChange(v ?? '')}
         onMount={handleMount}
         options={{
