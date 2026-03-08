@@ -1,24 +1,27 @@
-// Pyodide instance - will be loaded lazily
+import type { VisualBuilderElementBase } from '../../api/visualBuilder';
+import VISUAL_BUILDER_PYTHON from './visualBuilder.py?raw';
+import VISUAL_BUILDER_SHAPES_PYTHON from './visualBuilderShapes.py?raw';
+import PYTHON_TRACER from '../../debugger-panel/pythonTracer.py?raw';
+import { hydrateTimelineFromArray } from '../../timeline/timelineState';
+import { setCodeTimeline, type TraceStep } from '../../debugger-panel/codeTimelineState';
+
+// ---------------------------------------------------------------------------
+// Pyodide runtime
+// ---------------------------------------------------------------------------
+
 let pyodide: any = null;
 let isLoading = false;
 let loadPromise: Promise<any> | null = null;
 
-// Load Pyodide directly from CDN
 export async function loadPyodide(): Promise<any> {
   if (pyodide) return pyodide;
-
-  if (isLoading && loadPromise) {
-    return loadPromise;
-  }
+  if (isLoading && loadPromise) return loadPromise;
 
   isLoading = true;
-
   loadPromise = (async () => {
-    // Load Pyodide script from CDN
     const PYODIDE_VERSION = '0.26.4';
     const cdnUrl = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`;
 
-    // Check if script already loaded
     if (!(window as any).loadPyodide) {
       await new Promise<void>((resolve, reject) => {
         const script = document.createElement('script');
@@ -29,11 +32,7 @@ export async function loadPyodide(): Promise<any> {
       });
     }
 
-    // Now load Pyodide
-    pyodide = await (window as any).loadPyodide({
-      indexURL: cdnUrl,
-    });
-
+    pyodide = await (window as any).loadPyodide({ indexURL: cdnUrl });
     isLoading = false;
     return pyodide;
   })();
@@ -41,7 +40,84 @@ export async function loadPyodide(): Promise<any> {
   return loadPromise;
 }
 
-// Check if Pyodide is loaded
 export function isPyodideLoaded(): boolean {
   return pyodide !== null;
+}
+
+// ---------------------------------------------------------------------------
+// Execution helpers
+// ---------------------------------------------------------------------------
+
+const PYTHON_FILES = [
+  { source: VISUAL_BUILDER_PYTHON },
+  { source: VISUAL_BUILDER_SHAPES_PYTHON },
+  { source: PYTHON_TRACER },
+];
+
+function escapeForExec(code: string): string {
+  return code
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/\n/g, '\\n');
+}
+
+async function loadPythonRuntime(): Promise<any> {
+  const py = await loadPyodide();
+  for (const { source } of PYTHON_FILES) {
+    await py.runPythonAsync(source);
+  }
+  return py;
+}
+
+// ---------------------------------------------------------------------------
+// Debugger executor
+// ---------------------------------------------------------------------------
+
+export interface DebuggerExecuteResult {
+  success: boolean;
+  elements: VisualBuilderElementBase[];
+  error?: string;
+}
+
+export async function executeDebuggerCode(
+  visualBuilderCode: string,
+  debuggerCode: string,
+): Promise<DebuggerExecuteResult> {
+  try {
+    const py = await loadPythonRuntime();
+
+    await py.runPythonAsync('VisualElem._registry = []');
+
+    const escapedVB = escapeForExec(visualBuilderCode);
+    await py.runPythonAsync(`exec('''${escapedVB.replace(/'''/g, "\\'\\'\\'")}''')`);
+
+    const escapedCode = escapeForExec(debuggerCode);
+    const resultJson: string = await py.runPythonAsync(
+      `_visual_code_trace('''${escapedCode.replace(/'''/g, "\\'\\'\\'")}''')`,
+    );
+
+    const parsed = JSON.parse(resultJson) as {
+      code_timeline: TraceStep[];
+      visual_timeline: VisualBuilderElementBase[][];
+    };
+
+    if (parsed.code_timeline.length !== parsed.visual_timeline.length) {
+      return {
+        success: false,
+        elements: [],
+        error: `Timeline length mismatch: code=${parsed.code_timeline.length} visual=${parsed.visual_timeline.length}`,
+      };
+    }
+
+    setCodeTimeline(parsed.code_timeline);
+    const initialElements = hydrateTimelineFromArray(parsed.visual_timeline);
+
+    return { success: true, elements: initialElements };
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    const clean = msg.includes('PythonError:')
+      ? msg.split('PythonError:')[1]?.trim() ?? msg
+      : msg;
+    return { success: false, elements: [], error: clean };
+  }
 }
