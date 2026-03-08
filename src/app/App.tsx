@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Group, Panel, Separator } from 'react-resizable-panels';
 import { CodeEditorArea } from './CodeEditorArea';
@@ -9,6 +9,7 @@ import { ApiReferencePanel } from '../api/ApiReferencePanel';
 import { TimelineControls } from '../timeline/TimelineControls';
 import { GridArea, type GridAreaHandle } from './GridArea';
 import { getStateAt, getMaxTime } from '../timeline/timelineState';
+import { getCodeStepAt } from '../debugger-panel/codeTimelineState';
 import SAMPLE_VISUAL_BUILDER from '../code-builder/sample.py?raw';
 
 /* ---------- Shared Tailwind class groups ---------- */
@@ -62,6 +63,13 @@ function App() {
     if (state) gridAreaRef.current?.loadVisualBuilderObjects(state);
     setCurrentStep(clamped);
   }, []);
+
+  const currentVariables = useMemo(
+    () => getCodeStepAt(currentStep)?.variables ?? {},
+    // stepCount changes when a new trace is loaded, forcing a re-compute
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentStep, stepCount],
+  );
 
   const handleAnalyze = useCallback(async () => {
     if (!debuggerCode.trim()) return;
@@ -190,6 +198,7 @@ function App() {
                 onLoad={handleLoad}
                 isAnalyzing={isAnalyzing}
                 error={analyzeError}
+                currentVariables={currentVariables}
               />
             </div>
           </Panel>

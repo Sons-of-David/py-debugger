@@ -1,7 +1,10 @@
 import { useRef, useState } from 'react';
+import { Group, Panel, Separator } from 'react-resizable-panels';
 import { CodeEditor } from '../code-builder/CodeEditor';
 import { DebuggerCodeEditor } from '../debugger-panel/DebuggerCodeEditor';
 import type { HighlightedLines } from '../debugger-panel/DebuggerCodeEditor';
+import { VariablePanel } from '../debugger-panel/VariablePanel';
+import type { VariableValue } from '../debugger-panel/codeTimelineState';
 import SAMPLE_VISUAL_BUILDER from '../code-builder/sample.py?raw';
 import SAMPLE_DEBUGGER from '../debugger-panel/debuggerSample.py?raw';
 
@@ -14,10 +17,11 @@ interface CodeEditorAreaProps {
   onDebuggerCodeChange: (code: string) => void;
   onAnalyze: () => void;
   onSave: () => void;
-  onLoad: (data: { code?: string; currentTime?: number; maxTime?: number }) => void;
+  onLoad: (data: { code?: string; debuggerCode?: string; currentTime?: number }) => void;
   isAnalyzing: boolean;
   error?: string;
   highlightedLines?: HighlightedLines;
+  currentVariables?: Record<string, VariableValue>;
 }
 
 const tabBtnBase = 'px-4 py-2 text-sm font-medium border-b-2 transition-colors';
@@ -35,6 +39,7 @@ export function CodeEditorArea({
   isAnalyzing,
   error,
   highlightedLines,
+  currentVariables = {},
 }: CodeEditorAreaProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab>('code');
@@ -133,11 +138,19 @@ export function CodeEditorArea({
       {/* Editor */}
       <div className="flex-1 overflow-hidden">
         {activeTab === 'code' ? (
-          <DebuggerCodeEditor
-            code={debuggerCode}
-            onChange={onDebuggerCodeChange}
-            highlightedLines={highlightedLines}
-          />
+          <Group orientation="vertical" className="h-full">
+            <Panel defaultSize={70} minSize={30}>
+              <DebuggerCodeEditor
+                code={debuggerCode}
+                onChange={onDebuggerCodeChange}
+                highlightedLines={highlightedLines}
+              />
+            </Panel>
+            <Separator className="h-1 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 cursor-row-resize" />
+            <Panel defaultSize={30} minSize={10}>
+              <VariablePanel variables={currentVariables} />
+            </Panel>
+          </Group>
         ) : (
           <CodeEditor code={code} onChange={onChange} error={error} />
         )}
