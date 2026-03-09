@@ -118,6 +118,7 @@ export async function executePythonCode(
 
     return { success: true };
   } catch (error) {
+    console.error('Execution error:', error);
     const msg = error instanceof Error ? error.message : String(error);
     const clean = msg.includes('PythonError:')
       ? msg.split('PythonError:')[1]?.trim() ?? msg

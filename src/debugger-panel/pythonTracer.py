@@ -205,7 +205,8 @@ def _visual_code_trace(code: str, persistent: bool = False) -> str:
         step['variables'].update(next_params)
 
     for step in code_trace:
-        update(step['variables'], step['scope'])
+        params = {key: v['value'] for key, v in step['variables'].items()}
+        update(params, step['scope'])
         V.params = step['variables']
         V.scope = step['scope']
         snapshot_json = _serialize_visual_builder()

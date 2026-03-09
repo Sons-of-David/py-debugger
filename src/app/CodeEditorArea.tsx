@@ -34,6 +34,20 @@ const tabBtnBase = 'px-4 py-2 text-sm font-medium border-b-2 transition-colors';
 const tabActive = `${tabBtnBase} border-indigo-500 text-indigo-600 dark:text-indigo-400`;
 const tabInactive = `${tabBtnBase} border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300`;
 
+// Load all sample JSON files from src/samples/ at build time via Vite glob import.
+// Keys are like "/src/samples/bubble-sort.json"; values are the parsed JSON objects.
+const SAMPLE_MODULES = import.meta.glob('../samples/*.json', { eager: true }) as Record<
+  string,
+  { code?: string; debuggerCode?: string }
+>;
+
+const SAMPLES: { name: string; data: { code?: string; debuggerCode?: string } }[] =
+  Object.entries(SAMPLE_MODULES).map(([path, data]) => {
+    const filename = path.split('/').pop() ?? path;
+    const name = filename.replace(/\.json$/, '');
+    return { name, data };
+  });
+
 export function CodeEditorArea({
   code,
   onChange,
@@ -57,6 +71,7 @@ export function CodeEditorArea({
 }: CodeEditorAreaProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab>('code');
+  const [samplesOpen, setSamplesOpen] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -159,6 +174,38 @@ export function CodeEditorArea({
             onChange={handleFileChange}
             className="hidden"
           />
+
+          {/* Samples dropdown */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setSamplesOpen((o) => !o)}
+              className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+            >
+              Samples
+            </button>
+            {samplesOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setSamplesOpen(false)} />
+                <div className="absolute right-0 top-full mt-1 z-50 min-w-[160px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded shadow-lg">
+                  {SAMPLES.map(({ name, data }) => (
+                    <button
+                      key={name}
+                      type="button"
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      onClick={() => {
+                        onLoad(data);
+                        setSamplesOpen(false);
+                      }}
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
           {analyzeStatus === 'success' ? (
             <button
               type="button"
