@@ -168,6 +168,7 @@ function App() {
     const data = {
       code: visualBuilderCode,
       debuggerCode,
+      breakpoints: [...breakpoints],
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -178,16 +179,17 @@ function App() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [visualBuilderCode, debuggerCode]);
+  }, [visualBuilderCode, debuggerCode, breakpoints]);
 
-  const handleLoad = useCallback((data: { code?: string; debuggerCode?: string }) => {
-    const { code, debuggerCode: savedDebugger } = data;
+  const handleLoad = useCallback((data: { code?: string; debuggerCode?: string; breakpoints?: number[] }) => {
+    const { code, debuggerCode: savedDebugger, breakpoints: savedBreakpoints } = data;
     if (!code) {
       setAnalyzeError('Invalid file: missing code field');
       return;
     }
     setVisualBuilderCode(code);
     if (savedDebugger) setDebuggerCode(savedDebugger);
+    setBreakpoints(savedBreakpoints ? new Set(savedBreakpoints) : new Set());
   }, []);
 
   const handleEnterInteractive = useCallback(() => {
