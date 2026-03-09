@@ -55,11 +55,14 @@ const PYTHON_FILES = [
   { source: PYTHON_TRACER },
 ];
 
-function escapeForExec(code: string): string {
+// Escapes a string for embedding inside a Python '''...''' triple-quoted string.
+// Backslashes and single quotes are escaped first, then any resulting ''' sequences
+// are broken up so they cannot accidentally close the triple-quote delimiter.
+function escapeForTripleQuote(code: string): string {
   return code
     .replace(/\\/g, '\\\\')
     .replace(/'/g, "\\'")
-    .replace(/\n/g, '\\n');
+    .replace(/'''/g, "\\'\\'\\'");
 }
 
 async function loadPythonRuntime(): Promise<any> {
@@ -88,12 +91,12 @@ export async function executePythonCode(
 
     await py.runPythonAsync('VisualElem._clear_registry()');
 
-    const escapedVB = escapeForExec(visualBuilderCode);
-    await py.runPythonAsync(`exec('''${escapedVB.replace(/'''/g, "\\'\\'\\'")}''')`);
+    const escapedVB = escapeForTripleQuote(visualBuilderCode);
+    await py.runPythonAsync(`exec('''${escapedVB}''')`);
 
-    const escapedCode = escapeForExec(debuggerCode);
+    const escapedCode = escapeForTripleQuote(debuggerCode);
     const resultJson: string = await py.runPythonAsync(
-      `_visual_code_trace('''${escapedCode.replace(/'''/g, "\\'\\'\\'")}''')`,
+      `_visual_code_trace('''${escapedCode}''')`,
     );
 
     const parsed = JSON.parse(resultJson) as {
@@ -156,9 +159,9 @@ export type DebugCallResult = {
 export async function executeDebugCall(expression: string, lineOffset: number): Promise<DebugCallResult> {
   if (!pyodide) return null;
   try {
-    const escapedExpr = escapeForExec(expression);
+    const escapedExpr = escapeForTripleQuote(expression);
     const resultJson: string = await pyodide.runPythonAsync(
-      `_prepare_and_trace_debug_call('${escapedExpr}', ${lineOffset})`,
+      `_prepare_and_trace_debug_call('''${escapedExpr}''', ${lineOffset})`,
     );
     const parsed = JSON.parse(resultJson) as {
       code_timeline: TraceStep[];
