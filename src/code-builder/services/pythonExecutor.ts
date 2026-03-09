@@ -128,7 +128,6 @@ export async function executeClickHandler(
   row: number,
   col: number,
 ): Promise<VisualBuilderElementBase[] | null> {
-  console.log('HHHHHHHHHHHHHH')
   if (!pyodide) return null;
   try {
     const resultJson: string = await pyodide.runPythonAsync(

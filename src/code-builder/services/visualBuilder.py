@@ -42,6 +42,12 @@ class PopupException(Exception):
     pass
 
 
+class DebugCall:
+    """Return this from an event handler to trigger a debugged sub-run of expression."""
+    def __init__(self, expression: str):
+        self.expression = expression
+
+
 class VisualElem:
     _registry = []
     _vis_elem_id = 0
@@ -252,13 +258,20 @@ def _serialize_elem(elem, vb_id):
     return out
 
 def _handle_click(elem_id, row, col):
-    """Call on_click on the element with the given id and return the updated snapshot."""    
-    for elem in VisualElem._registry:        
-        if elem._elem_id == elem_id:   
-            #raise Exception(inspect.signature(elem.on_click))         
-            elem.on_click((row, col))
+    """Call on_click on the element with the given id.
+
+    Returns the debug expression string if the handler returned a DebugCall,
+    or None for a plain visual update. The caller is responsible for fetching
+    the updated snapshot via _serialize_visual_builder().
+    """
+    result = None
+    for elem in VisualElem._registry:
+        if elem._elem_id == elem_id:
+            result = elem.on_click((row, col))
             break
-    return _serialize_visual_builder()
+    if isinstance(result, DebugCall):
+        return result.expression
+    return None
 
 
 def _serialize_handlers():

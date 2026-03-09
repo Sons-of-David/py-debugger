@@ -342,34 +342,46 @@ Additionally, `handleEnterInteractive` in `App.tsx` calls `goToStep(getMaxTime()
 
 **Files:** `src/code-builder/services/visualBuilder.py`
 
-Add a `DebugCall` class with a single `expression: str` field. Event handlers return it instead of raising an exception — this reads naturally and avoids using exceptions for control flow:
+Add a `DebugCall` class with a single `expression: str` field. Event handlers return it to signal a debug sub-run:
 
 ```python
 def on_click(self, position):
-    self.color = (100, 200, 100)
+    self.color = (100, 200, 100)   # visual mutation still applies
     return DebugCall("run_step()")
 ```
 
-Update `_handle_click` to capture the return value of `on_click` and check `isinstance(result, DebugCall)`:
-- Normal return (`None`): wrap snapshot in `{ "mode": "visual_update", "snapshot": [...] }`.
-- `DebugCall` return: return `{ "mode": "debug_call", "expression": result.expression }`.
+Update `_handle_click` to capture the return value and return either `None` (visual-only) or the expression string (debug call). It no longer calls `_serialize_visual_builder()` — that becomes the TypeScript side's responsibility so the snapshot is always fetched regardless of which path was taken:
+
+```python
+def _handle_click(elem_id, row, col):
+    result = None
+    for elem in VisualElem._registry:
+        if elem._elem_id == elem_id:
+            result = elem.on_click((row, col))
+            break
+    if isinstance(result, DebugCall):
+        return result.expression   # JS receives a string
+    return None                    # JS receives null
+```
 
 This is purely a Python change and has no effect until the TypeScript side is updated in Commit 5.
 
 ---
 
-### Commit 5 — Update `executeClickHandler` return type to `ClickHandlerResult` (`pythonExecutor.ts`)
+### Commit 5 — Update `executeClickHandler` to always fetch snapshot separately (`pythonExecutor.ts`)
 
 **Files:** `src/code-builder/services/pythonExecutor.ts`
 
+`executeClickHandler` now makes two sequential Pyodide calls: first `_handle_click` (returns `null` or an expression string), then always `_serialize_visual_builder()` to get the current visual state. This guarantees the snapshot reflects any mutations made by `on_click` regardless of whether a debug call was also requested.
+
 Define and export:
 ```typescript
-type ClickHandlerResult =
+export type ClickHandlerResult =
   | { mode: 'visual_update'; snapshot: VisualBuilderElementBase[] }
-  | { mode: 'debug_call'; expression: string }
+  | { mode: 'debug_call'; expression: string; snapshot: VisualBuilderElementBase[] }
   | null;
 ```
-Change `executeClickHandler` to return `Promise<ClickHandlerResult>` and parse the new JSON envelope from Python. `GridArea.handleElementClick` currently calls this and always treats the result as a snapshot array — update it to only process `visual_update` results and silently ignore `debug_call` for now (that path is wired in Commit 8).
+`GridArea.handleElementClick` always applies the snapshot first, then — if mode is `debug_call` — calls `onDebugCall?.(result.expression)` (wired in Commit 8).
 
 ---
 
