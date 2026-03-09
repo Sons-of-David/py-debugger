@@ -78,16 +78,16 @@ export function DebuggerCodeEditor({
 
     const decorations: MonacoTypes.editor.IModelDeltaDecoration[] = [];
 
-    if (highlightedLines?.prev != null) {
-      decorations.push({
-        range: new monaco.Range(highlightedLines.prev, 1, highlightedLines.prev, 1),
-        options: {
-          isWholeLine: true,
-          className: 'debugger-prev-line',
-          linesDecorationsClassName: 'debugger-prev-glyph',
-        },
-      });
-    }
+    // if (highlightedLines?.prev != null) {
+    //   decorations.push({
+    //     range: new monaco.Range(highlightedLines.prev, 1, highlightedLines.prev, 1),
+    //     options: {
+    //       isWholeLine: true,
+    //       className: 'debugger-prev-line',
+    //       linesDecorationsClassName: 'debugger-prev-glyph',
+    //     },
+    //   });
+    // }
 
     if (highlightedLines?.next != null) {
       decorations.push({
