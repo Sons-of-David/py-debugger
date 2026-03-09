@@ -23,8 +23,8 @@ interface CodeEditorAreaProps {
   currentVariables?: Record<string, VariableValue>;
   breakpoints?: Set<number>;
   onBreakpointsChange?: (next: Set<number>) => void;
-  mouseEnabled: boolean;
-  onMouseEnabledChange: (enabled: boolean) => void;
+  appMode: 'idle' | 'trace' | 'interactive' | 'debug_in_event';
+  onEnterInteractive: () => void;
 }
 
 const tabBtnBase = 'px-4 py-2 text-sm font-medium border-b-2 transition-colors';
@@ -46,8 +46,8 @@ export function CodeEditorArea({
   currentVariables = {},
   breakpoints,
   onBreakpointsChange,
-  mouseEnabled,
-  onMouseEnabledChange,
+  appMode,
+  onEnterInteractive,
 }: CodeEditorAreaProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab>('code');
@@ -92,19 +92,17 @@ export function CodeEditorArea({
 
         {/* Actions */}
         <div className="flex items-center gap-2 px-4">
-          {/* Mouse mode toggle */}
-          <button
-            type="button"
-            onClick={() => onMouseEnabledChange(!mouseEnabled)}
-            className={`px-3 py-1 text-sm rounded transition-colors w-[90px] ${
-              mouseEnabled
-                ? 'bg-indigo-500 text-white hover:bg-indigo-600'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-            }`}
-            title={mouseEnabled ? 'Switch to debugger mode' : 'Switch to events mode'}
-          >
-            {mouseEnabled ? 'Events' : 'Debugger'}
-          </button>
+          {/* Finish & Interact button — only in trace mode after a successful analyze */}
+          {appMode === 'trace' && (
+            <button
+              type="button"
+              onClick={onEnterInteractive}
+              className="px-3 py-1 text-sm rounded transition-colors bg-indigo-500 text-white hover:bg-indigo-600"
+              title="Finish trace and enter mouse interaction mode"
+            >
+              Finish &amp; Interact
+            </button>
+          )}
           <button
             type="button"
             onClick={onSave}

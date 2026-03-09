@@ -37,7 +37,10 @@ function App() {
   const [pyodideLoading, setPyodideLoading] = useState(false);
   const [pyodideReady, setPyodideReady] = useState(false);
   const [apiReferenceOpen, setApiReferenceOpen] = useState(false);
-  const [mouseEnabled, setMouseEnabled] = useState(true);
+
+  type AppMode = 'idle' | 'trace' | 'interactive' | 'debug_in_event';
+  const [appMode, setAppMode] = useState<AppMode>('idle');
+  const mouseEnabled = appMode === 'interactive';
 
   // Timeline state
   const [currentStep, setCurrentStep] = useState(0);
@@ -141,6 +144,7 @@ function App() {
         setCurrentStep(0);
         gridAreaRef.current?.loadVisualBuilderObjects(getTimeline()[0]);
         setAnalyzeStatus('success');
+        setAppMode('trace');
       } else {
         setAnalyzeError(result.error);
         setAnalyzeStatus('error');
@@ -267,8 +271,8 @@ function App() {
                 highlightedLines={highlightedLines}
                 breakpoints={breakpoints}
                 onBreakpointsChange={setBreakpoints}
-                mouseEnabled={mouseEnabled}
-                onMouseEnabledChange={setMouseEnabled}
+                appMode={appMode}
+                onEnterInteractive={() => setAppMode('interactive')}
               />
             </div>
           </Panel>
