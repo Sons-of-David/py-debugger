@@ -1,7 +1,5 @@
 // Visual Builder element types (serialized from Python)
 
-export type VisualBuilderElementType = 'rect' | 'label' | 'var' | 'panel' | 'array' | 'array2d' | 'circle' | 'arrow';
-
 export type ArrayDirection = 'right' | 'left' | 'down' | 'up';
 
 export interface VisualBuilderElementBase {
