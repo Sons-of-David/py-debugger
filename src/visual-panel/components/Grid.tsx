@@ -313,6 +313,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
             <TextBoxesLayer
               textBoxes={textBoxes}
               selectedId={selectedTextBoxId}
+              zoom={zoom}
               addingTextBox={addingTextBox}
               onSelectTextBox={onSelectTextBox ?? (() => {})}
               onTextBoxAdded={onTextBoxAdded ?? (() => {})}

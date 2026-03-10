@@ -12,6 +12,7 @@ interface DrawState {
 interface TextBoxesLayerProps {
   textBoxes: TextBox[];
   selectedId: string | null;
+  zoom: number;
   addingTextBox: boolean;
   onSelectTextBox: (id: string | null) => void;
   onTextBoxAdded: (box: TextBox) => void;
@@ -21,6 +22,7 @@ interface TextBoxesLayerProps {
 export function TextBoxesLayer({
   textBoxes,
   selectedId,
+  zoom,
   addingTextBox,
   onSelectTextBox,
   onTextBoxAdded,
@@ -116,6 +118,7 @@ export function TextBoxesLayer({
         <TextBoxItem
           key={box.id}
           box={box}
+          zoom={zoom}
           selected={selectedId === box.id}
           onSelect={onSelectTextBox}
           onChange={onTextBoxChange}
