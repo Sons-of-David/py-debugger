@@ -12,3 +12,10 @@
     - and line ending (e.g. arrows)
 5. support 2d arrays
 6. support imports
+
+# assignment
+
+1. check if setDebugCallSuffix can be handled in the level of CodeEditorArea instead of the full app.
+2. Do we still need both 'dirty' and 'idle' for the analyze button?
+3. if the debugger code is empty (only blank lines or comments) jump over the initial trace step, directly to the interactive step.
+4. add python logger
