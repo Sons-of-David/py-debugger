@@ -46,6 +46,12 @@ src/
 ├── api/
 │   └── visualBuilder.ts            # VisualBuilderElementBase type; VISUAL_ELEM_SCHEMA
 │
+├── text-boxes/                     # UI-only grid text annotations (not Python objects)
+│   ├── types.ts                    # TextBox interface
+│   ├── TextBoxesLayer.tsx          # Drawing mode overlay + renders all TextBoxItem children
+│   ├── TextBoxItem.tsx             # Single draggable/resizable/editable text box
+│   └── TextBoxFormatToolbar.tsx    # Font size, text color, bg color, delete
+│
 ├── contexts/ThemeContext.tsx        # Dark/light mode
 ├── timeline/TimelineControls.tsx   # Prev/next/breakpoint controls in header
 └── samples/                        # Bundled sample JSON files (bubble-sort.json, ...)
@@ -200,19 +206,63 @@ App.tsx
 
 ---
 
+## Text Boxes (User Annotations)
+
+Text boxes are UI-only grid annotations — not Python objects. They persist across Analyze
+runs and are saved/loaded as part of the project JSON.
+
+**State ownership:**
+- `textBoxes: TextBox[]` — lives in `App.tsx` (needed for save/load)
+- `addingTextBox: boolean`, `selectedTextBoxId: string|null` — local to `GridArea.tsx`
+
+**Rendering:**
+- `TextBoxesLayer` renders inside Grid's `gridContentRef` (the `transform: scale(zoom)` div)
+  as a 5th absolute layer — automatically zooms with the grid
+- Coordinates: `left = col * CELL_SIZE`, `top = row * CELL_SIZE` (CELL_SIZE = 40)
+
+**Drawing mode (T+ button):**
+- `addingTextBox = true` overlays a transparent fullscreen div with `cursor: crosshair`
+- `offsetX / CELL_SIZE` → column (works correctly because CSS transforms don't affect offsetX)
+- On mouseup: creates `TextBox` with `id = text-${Date.now()}`, adds to state, auto-selects
+
+**Drag/resize coordinate math:**
+- Move: `newCol = startCol + Math.round((clientX - startClientX) / (CELL_SIZE * zoom))`
+- Resize: same math on width/height; min 2×2 cells enforced
+
+**Formatting toolbar:**
+- Rendered inside the text box div at `position: absolute; bottom: 100%`
+- Controls: font-size select (10–48px), text color, bg color, clear-bg, delete
+
+**Key files:**
+- `src/text-boxes/types.ts` — TextBox interface
+- `src/text-boxes/TextBoxesLayer.tsx` — drawing mode + all TextBoxItem children
+- `src/text-boxes/TextBoxItem.tsx` — drag, resize, edit, format toolbar
+- `src/text-boxes/TextBoxFormatToolbar.tsx` — formatting controls
+
+**TODO (future):**
+- Rich/structured text (title + bullet runs)
+- Hebrew RTL, inline LaTeX, center-aligned LaTeX block
+
+---
+
 ## Save / Load JSON Format
 
 ```json
 {
   "builderCode": "panel = Panel('main')...",
   "debuggerCode": "arr = [5,3,8,1]\n...",
-  "breakpoints": [7, 12]
+  "breakpoints": [7, 12],
+  "textBoxes": [
+    { "id": "text-1234", "row": 1, "col": 2, "widthCells": 8, "heightCells": 3,
+      "text": "Title", "fontSize": 18, "color": "#111827", "bgColor": "#ffffff" }
+  ]
 }
 ```
 
 - `builderCode` = visual builder editor content (not `code` — renamed for clarity)
 - `debuggerCode` = debugger editor content
 - `breakpoints` = array of line numbers (restored as `new Set(...)` on load)
+- `textBoxes` = user annotation boxes (added in text-box feature; defaults to `[]` for old saves)
 - On load: both editors are updated and `runAnalyze()` is called automatically
 
 Samples live in `src/samples/*.json` and are bundled at build time via Vite's
