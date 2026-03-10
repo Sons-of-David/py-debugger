@@ -182,7 +182,7 @@ export function CodeEditor({
           onChange={(value) => onChange(value || '')}
           onMount={handleEditorDidMount}
           options={{
-            readOnly: false,
+            readOnly,
             minimap: { enabled: false },
             fontSize: 14,
             lineNumbers: 'on',

@@ -120,6 +120,7 @@ export function DebuggerCodeEditor({
         onChange={(v) => onChange(v ?? '')}
         onMount={handleMount}
         options={{
+          readOnly,
           minimap: { enabled: false },
           fontSize: 14,
           lineNumbers: 'on',

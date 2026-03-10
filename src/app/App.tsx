@@ -138,12 +138,12 @@ function App() {
     setAppMode('idle');
   }, []);
 
-  const handleAnalyze = useCallback(async () => {
+  const runAnalyze = useCallback(async (vbCode: string, dbgCode: string) => {
     setIsAnalyzing(true);
     setAnalyzeError(undefined);
 
     try {
-      const result = await executePythonCode(visualBuilderCode, debuggerCode);
+      const result = await executePythonCode(vbCode, dbgCode);
 
       if (result.success) {
         setStepCount(getMaxTime() + 1);
@@ -162,11 +162,15 @@ function App() {
       everAnalyzedRef.current = true;
       setIsAnalyzing(false);
     }
-  }, [visualBuilderCode, debuggerCode]);
+  }, []);
+
+  const handleAnalyze = useCallback(() => {
+    return runAnalyze(visualBuilderCode, debuggerCode);
+  }, [visualBuilderCode, debuggerCode, runAnalyze]);
 
   const handleSave = useCallback(() => {
     const data = {
-      code: visualBuilderCode,
+      builderCode: visualBuilderCode,
       debuggerCode,
       breakpoints: [...breakpoints],
     };
@@ -181,16 +185,17 @@ function App() {
     URL.revokeObjectURL(url);
   }, [visualBuilderCode, debuggerCode, breakpoints]);
 
-  const handleLoad = useCallback((data: { code?: string; debuggerCode?: string; breakpoints?: number[] }) => {
-    const { code, debuggerCode: savedDebugger, breakpoints: savedBreakpoints } = data;
-    if (!code) {
-      setAnalyzeError('Invalid file: missing code field');
+  const handleLoad = useCallback(async (data: { builderCode?: string; debuggerCode?: string; breakpoints?: number[] }) => {
+    if (!data.builderCode) {
+      setAnalyzeError('Invalid file: missing builderCode field');
       return;
     }
-    setVisualBuilderCode(code);
-    if (savedDebugger) setDebuggerCode(savedDebugger);
-    setBreakpoints(savedBreakpoints ? new Set(savedBreakpoints) : new Set());
-  }, []);
+    const dbgCode = data.debuggerCode ?? '';
+    setVisualBuilderCode(data.builderCode);
+    setDebuggerCode(dbgCode);
+    setBreakpoints(data.breakpoints ? new Set(data.breakpoints) : new Set());
+    await runAnalyze(data.builderCode, dbgCode);
+  }, [runAnalyze]);
 
   const handleEnterInteractive = useCallback(() => {
     goToStep(getMaxTime());
