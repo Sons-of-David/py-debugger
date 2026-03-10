@@ -216,7 +216,13 @@ def _visual_code_trace(code: str, persistent: bool = False) -> str:
 
     for step in code_trace:
         params = {key: v['value'] for key, v in step['variables'].items()}
-        update(params, step['scope'])
+        _builder_cap = StringIO()
+        sys.stdout = _builder_cap
+        try:
+            update(params, step['scope'])
+        finally:
+            sys.stdout = _original_stdout
+        step['builder_output'] = _builder_cap.getvalue()
         V.params = step['variables']
         V.scope = step['scope']
         snapshot_json = _serialize_visual_builder()
@@ -226,7 +232,7 @@ def _visual_code_trace(code: str, persistent: bool = False) -> str:
     # When code is empty (or has no traceable lines) still return the
     # current visual-builder state as a single step so the panel renders.
     if not timeline:
-        code_trace = [{'variables': {}, 'scope': [], 'output': ''}]
+        code_trace = [{'variables': {}, 'scope': [], 'output': '', 'builder_output': ''}]
         timeline = [json.loads(_serialize_visual_builder())]
 
     return json.dumps({
