@@ -28,7 +28,6 @@ export interface ClassDoc {
 
 import { getAllSchemas } from '../visual-panel/types/elementRegistry';
 import { PANEL_SCHEMA } from '../visual-panel/render-objects/panel';
-import { JUMP_TO_SCHEMA } from '../timeline/discreteTimelineSchema';
 
 import '../visual-panel/render-objects/rect/Rect';
 import '../visual-panel/render-objects/circle/Circle';
@@ -37,10 +36,12 @@ import '../visual-panel/render-objects/label/Label';
 import '../visual-panel/render-objects/array/arrayShapes';
 
 export function getVisualElemSchema(): ClassDoc[] {
-  return [PANEL_SCHEMA, ...getAllSchemas(), JUMP_TO_SCHEMA];
+  return [PANEL_SCHEMA, ...getAllSchemas()];
 }
 
 export const VISUAL_ELEM_SCHEMA: ClassDoc[] = getVisualElemSchema();
+
+export { FUNCTIONS_SCHEMA } from './functionsSchema';
 
 export function rgbToHex(rgb?: [number, number, number], defaultColor: string = '#10b981') {
   if (!rgb) return defaultColor;

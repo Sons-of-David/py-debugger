@@ -1,13 +1,72 @@
 import { useRef, useState, useCallback } from "react";
-import { VISUAL_ELEM_SCHEMA } from "../api/visualBuilder";
+import { VISUAL_ELEM_SCHEMA, FUNCTIONS_SCHEMA } from "../api/visualBuilder";
+import type { ClassDoc } from "../api/visualBuilder";
 
 interface ApiReferencePanelProps {
   onClose: () => void;
 }
 
+function SchemaList({ schema }: { schema: ClassDoc[] }) {
+  return (
+    <div className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 space-y-3">
+      {schema.map((cls) => (
+        <div
+          key={cls.className}
+          className="border-b border-gray-300 dark:border-gray-600 pb-2 last:border-0"
+        >
+          <div className="font-mono font-medium text-gray-900 dark:text-gray-200">
+            {cls.className}
+          </div>
+
+          <div className="text-gray-500 dark:text-gray-400 text-xs mt-0.5">
+            {cls.docstring}
+          </div>
+
+          <div className="mt-1.5 space-y-0.5">
+            {cls.properties.map((p) => (
+              <div key={p.name} className="font-mono text-xs">
+                <span className="text-amber-600 dark:text-amber-300">
+                  {p.name}
+                </span>
+                <span className="text-gray-400 dark:text-gray-500">
+                  : {p.type}
+                </span>
+                {p.default !== undefined && (
+                  <span className="text-indigo-500 dark:text-indigo-400">
+                    {' '}= {p.default}
+                  </span>
+                )}
+                <div className="text-gray-500 dark:text-gray-400 pl-2">
+                  {p.description}
+                </div>
+              </div>
+            ))}
+
+            {cls.methods?.map((m) => (
+              <div key={m.name} className="font-mono text-xs mt-0.5">
+                <span className="text-cyan-600 dark:text-cyan-300">
+                  {m.name}
+                </span>
+                <span className="text-gray-400 dark:text-gray-500">
+                  {" "}
+                  {m.signature}
+                </span>
+                <div className="text-gray-500 dark:text-gray-400 pl-2">
+                  {m.docstring}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function ApiReferencePanel({ onClose }: ApiReferencePanelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(288);
+  const [tab, setTab] = useState<'objects' | 'functions'>('objects');
   const isResizingRef = useRef(false);
 
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
@@ -47,71 +106,38 @@ export function ApiReferencePanel({ onClose }: ApiReferencePanelProps) {
 
       {/* Content */}
       <div className="flex-1 overflow-auto">
-        <div className="px-3 py-2 border-b border-gray-300 dark:border-gray-600 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800">
-          <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">
-            API Reference
-          </span>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-sm"
-          >
-            &times;
-          </button>
-        </div>
-
-        <div className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 space-y-3">
-          {VISUAL_ELEM_SCHEMA.map((cls) => (
-            <div
-              key={cls.className}
-              className="border-b border-gray-300 dark:border-gray-600 pb-2 last:border-0"
+        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-300 dark:border-gray-600">
+          <div className="px-3 py-2 flex items-center justify-between">
+            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">
+              API Reference
+            </span>
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-sm"
             >
-              <div className="font-mono font-medium text-gray-900 dark:text-gray-200">
-                {cls.className}
-              </div>
-
-              <div className="text-gray-500 dark:text-gray-400 text-xs mt-0.5">
-                {cls.docstring}
-              </div>
-
-              <div className="mt-1.5 space-y-0.5">
-                {cls.properties.map((p) => (
-                  <div key={p.name} className="font-mono text-xs">
-                    <span className="text-amber-600 dark:text-amber-300">
-                      {p.name}
-                    </span>
-                    <span className="text-gray-400 dark:text-gray-500">
-                      : {p.type}
-                    </span>
-                    {p.default !== undefined && (
-                      <span className="text-indigo-500 dark:text-indigo-400">
-                        {' '}= {p.default}
-                      </span>
-                    )}
-                    <div className="text-gray-500 dark:text-gray-400 pl-2">
-                      {p.description}
-                    </div>
-                  </div>
-                ))}
-
-                {cls.methods?.map((m) => (
-                  <div key={m.name} className="font-mono text-xs mt-0.5">
-                    <span className="text-cyan-600 dark:text-cyan-300">
-                      {m.name}
-                    </span>
-                    <span className="text-gray-400 dark:text-gray-500">
-                      {" "}
-                      {m.signature}
-                    </span>
-                    <div className="text-gray-500 dark:text-gray-400 pl-2">
-                      {m.docstring}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
+              &times;
+            </button>
+          </div>
+          <div className="flex text-xs">
+            {(['objects', 'functions'] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTab(t)}
+                className={`px-3 py-1 capitalize border-b-2 transition-colors ${
+                  tab === t
+                    ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
         </div>
+
+        <SchemaList schema={tab === 'objects' ? VISUAL_ELEM_SCHEMA : FUNCTIONS_SCHEMA} />
       </div>
     </div>
   );
