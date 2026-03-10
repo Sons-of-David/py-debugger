@@ -30,7 +30,7 @@ export class Arrow extends BasicShape {
 
 export const ARROW_SCHEMA: ClassDoc = {
   className: 'Arrow',
-  constructorParams: 'pos=(0,0), width=1, height=1, color=(16,185,129), orientation="up", rotation=0, visible=True',
+  constructorParams: 'pos=(0, 0)',
   docstring: 'An arrow shape on the grid. Points in the given orientation and can be rotated.',
   properties: [
     { name: 'position', type: 'tuple[int, int]', description: 'Top-left corner (row, col) of the bounding box.', default: '(0, 0)' },
