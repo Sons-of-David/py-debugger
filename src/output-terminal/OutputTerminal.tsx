@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { getBuilderOutput, getClickOutput, getTerminalOutput } from './terminalState';
+import {
+  getCombinedLines,
+  getBuilderOutput,
+  getBuilderStepOutput,
+  getDebuggerOutput,
+  type TerminalLine,
+} from './terminalState';
 
 type TerminalTab = 'builder' | 'debugger' | 'combined';
 
@@ -8,34 +14,59 @@ interface OutputTerminalProps {
   appMode: 'idle' | 'trace' | 'interactive' | 'debug_in_event';
 }
 
+const DEFAULT_HEIGHT = 128;
+const MIN_HEIGHT = 48;
+const MAX_HEIGHT = 600;
+
 function splitLines(text: string): string[] {
   if (!text) return [];
-  const lines = text.split('\n');
-  if (lines[lines.length - 1] === '') lines.pop();
-  return lines;
+  const parts = text.split('\n');
+  if (parts[parts.length - 1] === '') parts.pop();
+  return parts;
 }
 
 export function OutputTerminal({ currentStep, appMode }: OutputTerminalProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<TerminalTab>('combined');
+  const [height, setHeight] = useState(DEFAULT_HEIGHT);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isAtBottomRef = useRef(true);
+  const dragStartY = useRef<number | null>(null);
+  const dragStartHeight = useRef(DEFAULT_HEIGHT);
 
-  const builderOutput = getBuilderOutput();
-  const debuggerOutput = getTerminalOutput(currentStep);
-  const clickOutput = getClickOutput();
+  // ── Drag-to-resize ────────────────────────────────────────────────────────
+  const onDragHandleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    dragStartY.current = e.clientY;
+    dragStartHeight.current = height;
 
-  const builderLines = splitLines(builderOutput);
-  const debuggerLines = splitLines(debuggerOutput);
-  const clickLines = splitLines(clickOutput);
+    const onMove = (e: MouseEvent) => {
+      if (dragStartY.current === null) return;
+      const delta = dragStartY.current - e.clientY; // drag up → increase height
+      setHeight(Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, dragStartHeight.current + delta)));
+    };
+    const onUp = () => {
+      dragStartY.current = null;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
 
+  // ── Scroll tracking ───────────────────────────────────────────────────────
   const handleScroll = () => {
     const el = scrollRef.current;
     if (!el) return;
     isAtBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 4;
   };
 
-  const contentKey = builderOutput + debuggerOutput + clickOutput;
+  // Gather content for change detection (auto-scroll)
+  const builderInit = getBuilderOutput();
+  const builderSteps = getBuilderStepOutput(currentStep);
+  const debuggerText = getDebuggerOutput(currentStep);
+  const combinedLines = getCombinedLines(currentStep);
+  const contentKey = builderInit + builderSteps + debuggerText + combinedLines.length;
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -43,8 +74,10 @@ export function OutputTerminal({ currentStep, appMode }: OutputTerminalProps) {
     el.scrollTop = el.scrollHeight;
   }, [contentKey]);
 
+  // ── Tab helpers ───────────────────────────────────────────────────────────
   const tabBtn = (tab: TerminalTab, label: string) => (
     <button
+      key={tab}
       type="button"
       onClick={() => setActiveTab(tab)}
       className={`px-2 py-0.5 text-xs rounded transition-colors ${
@@ -57,69 +90,79 @@ export function OutputTerminal({ currentStep, appMode }: OutputTerminalProps) {
     </button>
   );
 
-  const hasAnyOutput = builderLines.length > 0 || debuggerLines.length > 0 || clickLines.length > 0;
+  // ── Content renderers ─────────────────────────────────────────────────────
+  const renderLines = (lines: string[], className: string) =>
+    lines.map((line, i) => (
+      <div key={i} className={`whitespace-pre ${className}`}>{line || '\u00A0'}</div>
+    ));
 
-  const renderContent = () => {
-    if (!hasAnyOutput) {
+  const colorFor = (source: TerminalLine['source']) => {
+    if (source === 'builder') return 'text-emerald-400';
+    if (source === 'marker') return 'text-gray-500';
+    return 'text-gray-200';
+  };
+
+  const renderBuilderTab = () => {
+    const initLines = splitLines(builderInit);
+    const stepLines = splitLines(builderSteps);
+    const hasContent = initLines.length > 0 || stepLines.length > 0;
+    if (!hasContent) return <div className="text-gray-600 italic">No builder output.</div>;
+    return (
+      <>
+        {renderLines(initLines, 'text-emerald-400')}
+        {initLines.length > 0 && stepLines.length > 0 && (
+          <div className="border-t border-gray-700 my-1" />
+        )}
+        {renderLines(stepLines, 'text-emerald-400')}
+      </>
+    );
+  };
+
+  const renderDebuggerTab = () => {
+    const lines = splitLines(debuggerText);
+    if (!lines.length) return <div className="text-gray-600 italic">No debugger output.</div>;
+    return renderLines(lines, 'text-gray-200');
+  };
+
+  const renderCombinedTab = () => {
+    const initLines = splitLines(builderInit);
+    const hasInit = initLines.length > 0;
+    const hasStream = combinedLines.length > 0;
+
+    if (!hasInit && !hasStream) {
       return <div className="text-gray-600 italic">No output.</div>;
     }
 
-    if (activeTab === 'builder') {
-      return builderLines.length > 0
-        ? builderLines.map((line, i) => (
-            <div key={i} className="text-emerald-400 whitespace-pre">{line}</div>
-          ))
-        : <div className="text-gray-600 italic">No builder output.</div>;
-    }
+    return (
+      <>
+        {renderLines(initLines, 'text-emerald-400')}
+        {hasInit && hasStream && <div className="border-t border-gray-700 my-1" />}
+        {combinedLines.map((line, i) => (
+          <div key={i} className={`whitespace-pre ${colorFor(line.source)}`}>
+            {line.text || '\u00A0'}
+          </div>
+        ))}
+      </>
+    );
+  };
 
-    if (activeTab === 'debugger') {
-      return debuggerLines.length > 0
-        ? debuggerLines.map((line, i) => (
-            <div key={i} className="text-gray-200 whitespace-pre">{line}</div>
-          ))
-        : <div className="text-gray-600 italic">No debugger output.</div>;
-    }
-
-    // Combined: builder (green) → debugger stream (white) → click events (yellow)
-    const sections: JSX.Element[] = [];
-
-    if (builderLines.length > 0) {
-      builderLines.forEach((line, i) => {
-        sections.push(
-          <div key={`b-${i}`} className="text-emerald-400 whitespace-pre">{line}</div>
-        );
-      });
-    }
-
-    if (debuggerLines.length > 0) {
-      if (builderLines.length > 0) {
-        sections.push(<div key="sep-d" className="border-t border-gray-700 my-1" />);
-      }
-      debuggerLines.forEach((line, i) => {
-        sections.push(
-          <div key={`d-${i}`} className="text-gray-200 whitespace-pre">{line}</div>
-        );
-      });
-    }
-
-    if (clickLines.length > 0) {
-      if (builderLines.length > 0 || debuggerLines.length > 0) {
-        sections.push(<div key="sep-c" className="border-t border-gray-700 my-1" />);
-      }
-      clickLines.forEach((line, i) => {
-        sections.push(
-          <div key={`c-${i}`} className="text-yellow-300 whitespace-pre">{line}</div>
-        );
-      });
-    }
-
-    return sections;
+  const renderContent = () => {
+    if (activeTab === 'builder') return renderBuilderTab();
+    if (activeTab === 'debugger') return renderDebuggerTab();
+    return renderCombinedTab();
   };
 
   return (
-    <div className="flex-shrink-0 border-t border-gray-300 dark:border-gray-700 bg-gray-950 dark:bg-gray-950 flex flex-col">
+    <div className="flex-shrink-0 flex flex-col border-t border-gray-300 dark:border-gray-700">
+      {/* Drag handle */}
+      <div
+        onMouseDown={onDragHandleMouseDown}
+        className="h-1 bg-gray-700 hover:bg-indigo-500 cursor-row-resize transition-colors flex-shrink-0"
+        title="Drag to resize output panel"
+      />
+
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-1 bg-gray-800 dark:bg-gray-800 select-none">
+      <div className="flex items-center justify-between px-3 py-1 bg-gray-800 select-none flex-shrink-0">
         <div className="flex items-center gap-1">
           <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider mr-2">
             Output
@@ -143,7 +186,8 @@ export function OutputTerminal({ currentStep, appMode }: OutputTerminalProps) {
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className="h-32 overflow-y-auto p-2 font-mono text-xs leading-relaxed"
+          style={{ height }}
+          className="overflow-y-auto p-2 font-mono text-xs leading-relaxed bg-gray-950"
         >
           {renderContent()}
         </div>
