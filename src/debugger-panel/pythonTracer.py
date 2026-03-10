@@ -20,6 +20,7 @@ class TraceResult(TypedDict):
 MAX_TRACE_STEPS = 1000  # TODO: make this user-configurable
 
 _trace_steps: List[TraceStep] = []
+_step_stdout_positions: List[int] = []
 _output_capture = StringIO()
 _original_stdout = sys.stdout
 
@@ -85,7 +86,7 @@ def _trace_function(
     arg: Any
 ):
     """Trace function called for each line of code."""
-    global _trace_steps
+    global _trace_steps, _step_stdout_positions
 
     if event != 'line':
         return _trace_function
@@ -97,6 +98,8 @@ def _trace_function(
 
     if code.co_name.startswith('_'):
         return _trace_function
+
+    _step_stdout_positions.append(_output_capture.tell())
 
     variables = _capture_variables(frame, {'__builtins__', '__name__', '__doc__'})
 
@@ -133,8 +136,9 @@ def _run_with_trace(code_str: str, persistent: bool = False) -> TraceResult:
     When persistent=True the saved dict is reused, giving the sub-run access to
     all variables and functions defined during the initial trace.
     """
-    global _trace_steps, _output_capture, _exec_context
+    global _trace_steps, _step_stdout_positions, _output_capture, _exec_context
     _trace_steps = []
+    _step_stdout_positions = []
     _output_capture = StringIO()
 
     if not persistent:
@@ -150,9 +154,15 @@ def _run_with_trace(code_str: str, persistent: bool = False) -> TraceResult:
         sys.settrace(None)
         sys.stdout = _original_stdout
 
+    total_output = _output_capture.getvalue()
+    for i, step in enumerate(_trace_steps):
+        start = _step_stdout_positions[i]
+        end = _step_stdout_positions[i + 1] if i + 1 < len(_step_stdout_positions) else len(total_output)
+        step['output'] = total_output[start:end]
+
     return {
         'steps': _trace_steps,
-        'output': _output_capture.getvalue()
+        'output': total_output
     }
 
 class V:
@@ -216,7 +226,7 @@ def _visual_code_trace(code: str, persistent: bool = False) -> str:
     # When code is empty (or has no traceable lines) still return the
     # current visual-builder state as a single step so the panel renders.
     if not timeline:
-        code_trace = [{'variables': {}, 'scope': []}]
+        code_trace = [{'variables': {}, 'scope': [], 'output': ''}]
         timeline = [json.loads(_serialize_visual_builder())]
 
     return json.dumps({
