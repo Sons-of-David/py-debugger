@@ -4,6 +4,7 @@ import { Group, Panel, Separator } from 'react-resizable-panels';
 import { CodeEditorArea } from './CodeEditorArea';
 import { useTheme } from '../contexts/ThemeContext';
 import { loadPyodide, isPyodideLoaded, executePythonCode, executeDebugCall } from '../code-builder/services/pythonExecutor';
+import { clearAll as clearTerminal } from '../output-terminal/terminalState';
 import { ApiReferencePanel } from '../api/ApiReferencePanel';
 import { TimelineControls } from '../timeline/TimelineControls';
 import { GridArea, type GridAreaHandle } from './GridArea';
@@ -142,6 +143,7 @@ function App() {
   const runAnalyze = useCallback(async (vbCode: string, dbgCode: string) => {
     setIsAnalyzing(true);
     setAnalyzeError(undefined);
+    clearTerminal();
 
     try {
       const result = await executePythonCode(vbCode, dbgCode);
@@ -325,6 +327,7 @@ function App() {
                 readOnly={analyzeStatus === 'success' || appMode !== 'idle'}
                 onEnterInteractive={handleEnterInteractive}
                 onBackToInteractive={handleBackToInteractive}
+                currentStep={currentStep}
               />
             </div>
           </Panel>

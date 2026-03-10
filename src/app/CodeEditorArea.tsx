@@ -5,6 +5,7 @@ import { DebuggerCodeEditor } from '../debugger-panel/DebuggerCodeEditor';
 import type { HighlightedLines } from '../debugger-panel/DebuggerCodeEditor';
 import { VariablePanel } from '../debugger-panel/VariablePanel';
 import type { VariableValue } from '../debugger-panel/codeTimelineState';
+import { OutputTerminal } from '../output-terminal/OutputTerminal';
 
 type ActiveTab = 'code' | 'visual-builder';
 
@@ -28,6 +29,7 @@ interface CodeEditorAreaProps {
   readOnly?: boolean;
   onEnterInteractive: () => void;
   onBackToInteractive?: () => void;
+  currentStep: number;
 }
 
 const tabBtnBase = 'px-4 py-2 text-sm font-medium border-b-2 transition-colors';
@@ -68,6 +70,7 @@ export function CodeEditorArea({
   readOnly = false,
   onEnterInteractive,
   onBackToInteractive,
+  currentStep,
 }: CodeEditorAreaProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab>('code');
@@ -236,7 +239,8 @@ export function CodeEditorArea({
       </div>
 
       {/* Editor */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+        <div className="flex-1 min-h-0 overflow-hidden">
         {activeTab === 'code' ? (
           (() => {
             const editor = (
@@ -263,6 +267,8 @@ export function CodeEditorArea({
         ) : (
           <CodeEditor code={code} onChange={onChange} error={error} readOnly={readOnly} />
         )}
+        </div>
+        <OutputTerminal currentStep={currentStep} appMode={appMode} />
       </div>
     </div>
   );
