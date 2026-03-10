@@ -21,7 +21,6 @@ export class Circle extends BasicShape {
 
 export const CIRCLE_SCHEMA: ClassDoc = {
   className: 'Circle',
-  constructorParams: 'pos=(0, 0)',
   docstring: 'A circle (or ellipse) shape on the grid.',
   properties: [
     { name: 'position', type: 'tuple[int, int]', description: 'Top-left corner (row, col) of the bounding box.', default: '(0, 0)' },

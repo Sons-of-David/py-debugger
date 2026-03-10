@@ -186,7 +186,6 @@ export class Array1D implements VisualBuilderElementBase {
 
 export const ARRAY_SCHEMA: ClassDoc = {
   className: 'Array',
-  constructorParams: 'arr=None',
   docstring: 'Displays an array of values as square cells on the grid.',
   properties: [
     { name: 'var_name', type: 'str', description: 'Name of the array variable (e.g. "arr", "nums").', default: '""' },
@@ -272,7 +271,6 @@ export class Array2D implements VisualBuilderElementBase {
 
 export const ARRAY2D_SCHEMA: ClassDoc = {
   className: 'Array2D',
-  constructorParams: 'var_name=""',
   docstring: 'Displays a 2D array of values as a grid of square cells.',
   properties: [
     { name: 'var_name', type: 'str', description: 'Name of the 2D array variable.', default: '""' },

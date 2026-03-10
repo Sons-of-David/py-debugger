@@ -110,7 +110,7 @@ export function CodeEditor({
           items.push({
             label: cls.className,
             kind: monaco.languages.CompletionItemKind.Class,
-            detail: `(${cls.constructorParams})`,
+            detail: `(${cls.properties.filter(p => p.default !== undefined).map(p => `${p.name}=${p.default}`).join(', ')})`,
             documentation: cls.docstring,
             insertText: cls.className,
             range,
@@ -130,9 +130,9 @@ export function CodeEditor({
         for (const cls of VISUAL_ELEM_SCHEMA) {
           if (cls.className === name) {
             const content = [
-              `**${cls.className}**(${cls.constructorParams})`,
+              `**${cls.className}**`,
               cls.docstring,
-              ...cls.properties.map((p) => `- \`${p.name}\`: ${p.type} — ${p.description}`),
+              ...cls.properties.map((p) => `- \`${p.name}\`: ${p.type}${p.default !== undefined ? ` = ${p.default}` : ''} — ${p.description}`),
               ...(cls.methods ?? []).map((m) => `- \`${m.signature}\` — ${m.docstring}`),
             ].join('\n\n');
             return {
@@ -143,7 +143,7 @@ export function CodeEditor({
           for (const p of cls.properties) {
             if (p.name === name) {
               return {
-                contents: [{ value: `\`${p.name}\`: ${p.type}\n\n${p.description}` }],
+                contents: [{ value: `\`${p.name}\`: ${p.type}${p.default !== undefined ? ` = ${p.default}` : ''}\n\n${p.description}` }],
                 range: new monaco.Range(position.lineNumber, wordAt.startColumn, position.lineNumber, wordAt.endColumn),
               };
             }

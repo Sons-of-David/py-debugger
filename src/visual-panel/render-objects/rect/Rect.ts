@@ -22,7 +22,6 @@ export class Rect extends BasicShape {
 
 export const RECT_SCHEMA: ClassDoc = {
   className: 'Rect',
-  constructorParams: 'pos=(0, 0)',
   docstring: 'A rectangle shape on the grid.',
   properties: [
     { name: 'position', type: 'tuple[int, int]', description: 'Top-left corner (row, col) of the rectangle.', default: '(0, 0)' },

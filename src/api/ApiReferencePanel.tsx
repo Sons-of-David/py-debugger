@@ -67,7 +67,7 @@ export function ApiReferencePanel({ onClose }: ApiReferencePanelProps) {
               className="border-b border-gray-300 dark:border-gray-600 pb-2 last:border-0"
             >
               <div className="font-mono font-medium text-gray-900 dark:text-gray-200">
-                {cls.className}({cls.constructorParams})
+                {cls.className}
               </div>
 
               <div className="text-gray-500 dark:text-gray-400 text-xs mt-0.5">
@@ -83,6 +83,11 @@ export function ApiReferencePanel({ onClose }: ApiReferencePanelProps) {
                     <span className="text-gray-400 dark:text-gray-500">
                       : {p.type}
                     </span>
+                    {p.default !== undefined && (
+                      <span className="text-indigo-500 dark:text-indigo-400">
+                        {' '}= {p.default}
+                      </span>
+                    )}
                     <div className="text-gray-500 dark:text-gray-400 pl-2">
                       {p.description}
                     </div>

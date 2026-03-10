@@ -44,14 +44,13 @@ registerRenderer<PanelCell>('panel', (element) => (
 
 export const PANEL_SCHEMA: ClassDoc = {
   className: 'Panel',
-  constructorParams: 'name: str = "Panel"',
   docstring: 'Container for grouping visual elements. Use add(elem) and remove(elem) to manage children.',
   properties: [
-    { name: 'name', type: 'str', description: 'Panel title.' },
-    { name: 'position', type: 'tuple[int, int]', description: 'Top-left corner (row, col).' },
-    { name: 'width', type: 'int', description: 'Width in grid cells.' },
-    { name: 'height', type: 'int', description: 'Height in grid cells.' },
-    { name: 'visible', type: 'bool', description: 'Whether the panel is shown.' },
+    { name: 'name', type: 'str', description: 'Panel title.', default: '"Panel"' },
+    { name: 'position', type: 'tuple[int, int]', description: 'Top-left corner (row, col).', default: '(0, 0)' },
+    { name: 'width', type: 'int', description: 'Width in grid cells.', default: '5' },
+    { name: 'height', type: 'int', description: 'Height in grid cells.', default: '5' },
+    { name: 'visible', type: 'bool', description: 'Whether the panel is shown.', default: 'True' },
   ],
   methods: [
     { name: 'add', signature: 'add(elem: VisualElem)', docstring: 'Add a visual element to this panel.' },

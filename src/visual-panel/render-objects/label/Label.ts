@@ -48,7 +48,6 @@ export class Label implements VisualBuilderElementBase {
 
 export const LABEL_SCHEMA: ClassDoc = {
   className: 'Label',
-  constructorParams: 'label=""',
   docstring: 'Text label.',
   properties: [
     { name: 'label', type: 'str', description: 'Display text.', default: '""' },

@@ -2,9 +2,9 @@
 
 
 class Rect(VisualElem):
-    def __init__(self, pos=(0, 0), width=1, height=1, color=(34, 197, 94), visible=True):
+    def __init__(self, position=(0, 0), width=1, height=1, color=(34, 197, 94), visible=True):
         super().__init__()
-        self.position = pos
+        self.position = position
         self.width = width
         self.height = height
         self.color = color
@@ -20,9 +20,9 @@ class Rect(VisualElem):
 
 
 class Circle(VisualElem):
-    def __init__(self, pos=(0, 0), width=1, height=1, color=(59, 130, 246), visible=True):
+    def __init__(self, position=(0, 0), width=1, height=1, color=(59, 130, 246), visible=True):
         super().__init__()
-        self.position = pos
+        self.position = position
         self.width = width
         self.height = height
         self.color = color
@@ -38,9 +38,9 @@ class Circle(VisualElem):
 
 
 class Arrow(VisualElem):
-    def __init__(self, pos=(0, 0), width=1, height=1, color=(16, 185, 129), orientation="up", rotation=0, visible=True):
+    def __init__(self, position=(0, 0), width=1, height=1, color=(16, 185, 129), orientation="up", rotation=0, visible=True):
         super().__init__()
-        self.position = pos
+        self.position = position
         self.width = width
         self.height = height
         self.color = color

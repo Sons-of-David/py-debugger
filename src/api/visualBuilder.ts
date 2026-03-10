@@ -21,7 +21,6 @@ export interface PropertyDoc {
 
 export interface ClassDoc {
   className: string;
-  constructorParams: string;
   docstring: string;
   properties: PropertyDoc[];
   methods?: { name: string; signature: string; docstring: string }[];
