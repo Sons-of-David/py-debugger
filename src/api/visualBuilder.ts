@@ -16,6 +16,7 @@ export interface PropertyDoc {
   name: string;
   type: string;
   description: string;
+  default?: string;
 }
 
 export interface ClassDoc {

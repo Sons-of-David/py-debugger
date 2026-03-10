@@ -30,16 +30,16 @@ export class Arrow extends BasicShape {
 
 export const ARROW_SCHEMA: ClassDoc = {
   className: 'Arrow',
-  constructorParams: 'pos: tuple[int, int] = (0, 0)',
+  constructorParams: 'pos=(0,0), width=1, height=1, color=(16,185,129), orientation="up", rotation=0, visible=True',
   docstring: 'An arrow shape on the grid. Points in the given orientation and can be rotated.',
   properties: [
-    { name: 'position', type: 'tuple[int, int]', description: 'Top-left corner (row, col) of the bounding box.' },
-    { name: 'width', type: 'int', description: 'Width in grid cells.' },
-    { name: 'height', type: 'int', description: 'Height in grid cells.' },
-    { name: 'color', type: 'tuple[int, int, int]', description: 'RGB fill color (0-255 per channel).' },
-    { name: 'orientation', type: 'str', description: '"up", "down", "left", or "right". Default "up".' },
-    { name: 'rotation', type: 'int', description: 'Additional rotation in degrees. Default 0.' },
-    { name: 'visible', type: 'bool', description: 'Show or hide the arrow.' },
+    { name: 'position', type: 'tuple[int, int]', description: 'Top-left corner (row, col) of the bounding box.', default: '(0, 0)' },
+    { name: 'width', type: 'int', description: 'Width in grid cells.', default: '1' },
+    { name: 'height', type: 'int', description: 'Height in grid cells.', default: '1' },
+    { name: 'color', type: 'tuple[int, int, int]', description: 'RGB fill color (0-255 per channel).', default: '(16, 185, 129)' },
+    { name: 'orientation', type: 'str', description: '"up", "down", "left", or "right".', default: '"up"' },
+    { name: 'rotation', type: 'int', description: 'Additional rotation in degrees.', default: '0' },
+    { name: 'visible', type: 'bool', description: 'Show or hide the arrow.', default: 'True' },
   ],
 };
 

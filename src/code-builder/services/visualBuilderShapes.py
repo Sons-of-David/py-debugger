@@ -2,13 +2,13 @@
 
 
 class Rect(VisualElem):
-    def __init__(self, pos=(0, 0)):
+    def __init__(self, pos=(0, 0), width=1, height=1, color=(34, 197, 94), visible=True):
         super().__init__()
         self.position = pos
-        self.width = 1
-        self.height = 1
-        self.color = (34, 197, 94)
-        self.visible = True
+        self.width = width
+        self.height = height
+        self.color = color
+        self.visible = visible
 
     def _serialize(self):
         out = self._serialize_base()
@@ -20,13 +20,13 @@ class Rect(VisualElem):
 
 
 class Circle(VisualElem):
-    def __init__(self, pos=(0, 0)):
+    def __init__(self, pos=(0, 0), width=1, height=1, color=(59, 130, 246), visible=True):
         super().__init__()
         self.position = pos
-        self.width = 1
-        self.height = 1
-        self.color = (59, 130, 246)
-        self.visible = True
+        self.width = width
+        self.height = height
+        self.color = color
+        self.visible = visible
 
     def _serialize(self):
         out = self._serialize_base()
@@ -38,15 +38,15 @@ class Circle(VisualElem):
 
 
 class Arrow(VisualElem):
-    def __init__(self, pos=(0, 0)):
+    def __init__(self, pos=(0, 0), width=1, height=1, color=(16, 185, 129), orientation="up", rotation=0, visible=True):
         super().__init__()
         self.position = pos
-        self.width = 1
-        self.height = 1
-        self.color = (16, 185, 129)
-        self.orientation = "up"
-        self.rotation = 0
-        self.visible = True
+        self.width = width
+        self.height = height
+        self.color = color
+        self.orientation = orientation
+        self.rotation = rotation
+        self.visible = visible
 
     def _serialize(self):
         out = self._serialize_base()

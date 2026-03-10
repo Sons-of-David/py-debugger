@@ -22,14 +22,14 @@ export class Rect extends BasicShape {
 
 export const RECT_SCHEMA: ClassDoc = {
   className: 'Rect',
-  constructorParams: 'pos: tuple[int, int] = (0, 0)',
+  constructorParams: 'pos=(0,0), width=1, height=1, color=(34,197,94), visible=True',
   docstring: 'A rectangle shape on the grid.',
   properties: [
-    { name: 'position', type: 'tuple[int, int]', description: 'Top-left corner (row, col) of the rectangle.' },
-    { name: 'width', type: 'int', description: 'Width in grid cells.' },
-    { name: 'height', type: 'int', description: 'Height in grid cells.' },
-    { name: 'color', type: 'tuple[int, int, int]', description: 'RGB fill color (0-255 per channel).' },
-    { name: 'visible', type: 'bool', description: 'Show or hide the rectangle.' },
+    { name: 'position', type: 'tuple[int, int]', description: 'Top-left corner (row, col) of the rectangle.', default: '(0, 0)' },
+    { name: 'width', type: 'int', description: 'Width in grid cells.', default: '1' },
+    { name: 'height', type: 'int', description: 'Height in grid cells.', default: '1' },
+    { name: 'color', type: 'tuple[int, int, int]', description: 'RGB fill color (0-255 per channel).', default: '(34, 197, 94)' },
+    { name: 'visible', type: 'bool', description: 'Show or hide the rectangle.', default: 'True' },
   ],
 };
 
