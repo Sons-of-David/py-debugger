@@ -4,7 +4,7 @@ import { Group, Panel, Separator } from 'react-resizable-panels';
 import { CodeEditorArea } from './CodeEditorArea';
 import { useTheme } from '../contexts/ThemeContext';
 import { loadPyodide, isPyodideLoaded, executePythonCode, executeDebugCall } from '../code-builder/services/pythonExecutor';
-import { clearAll as clearTerminal } from '../output-terminal/terminalState';
+import { clearAll as clearTerminal, commitCurrentSegment, appendMarker } from '../output-terminal/terminalState';
 import { ApiReferencePanel } from '../api/ApiReferencePanel';
 import { TimelineControls } from '../timeline/TimelineControls';
 import { GridArea, type GridAreaHandle } from './GridArea';
@@ -202,6 +202,7 @@ function App() {
 
   const handleEnterInteractive = useCallback(() => {
     goToStep(getMaxTime());
+    commitCurrentSegment('----- end trace -----');
     setAppMode('interactive');
   }, [goToStep]);
 
@@ -211,6 +212,7 @@ function App() {
     const suffix = `\n\ndef debug_call():\n${indented}`;
     setDebugCallSuffix(suffix);
     const lineOffset = debuggerCode.split('\n').length + 2;
+    appendMarker(`----- debug call: ${expression} -----`);
     const result = await executeDebugCall(expression, lineOffset);
     if (result?.error) {
       setAnalyzeError(result.error);
@@ -233,6 +235,7 @@ function App() {
   const handleBackToInteractive = useCallback(() => {
     setDebugCallSuffix(null);
     goToStep(getMaxTime());
+    commitCurrentSegment('----- end debug call -----');
     setAppMode('interactive');
   }, [goToStep]);
 

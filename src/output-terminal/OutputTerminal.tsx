@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { getDebuggerOutputUpToStep } from './terminalState';
+import { getTerminalOutput } from './terminalState';
 
 interface OutputTerminalProps {
   currentStep: number;
@@ -11,7 +11,7 @@ export function OutputTerminal({ currentStep, appMode }: OutputTerminalProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const isAtBottomRef = useRef(true);
 
-  const output = getDebuggerOutputUpToStep(currentStep);
+  const output = getTerminalOutput(currentStep);
   const lines = output ? output.split('\n') : [];
   // Remove trailing empty line from a final newline
   if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
