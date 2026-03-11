@@ -2,13 +2,15 @@ interface CircleProps {
   color?: string;
   opacity?: number;
   strokeWidth?: number;
+  animate?: boolean;
 }
 
-export function Circle({ color = '#10b981', opacity = 1, strokeWidth = 2 }: CircleProps) {
+export function Circle({ color = '#10b981', opacity = 1, strokeWidth = 2, animate = false }: CircleProps) {
   const fill = color;
   const fillOpacity = opacity;
   const stroke = strokeWidth > 0 ? color : 'none';
   const radius = 50 - strokeWidth / 2;
+  const transition = animate ? 'fill 250ms ease, fill-opacity 250ms ease, stroke 250ms ease' : undefined;
 
   return (
     <svg
@@ -25,6 +27,7 @@ export function Circle({ color = '#10b981', opacity = 1, strokeWidth = 2 }: Circ
         fillOpacity={fillOpacity}
         stroke={stroke}
         strokeWidth={strokeWidth}
+        style={{ transition }}
       />
     </svg>
   );

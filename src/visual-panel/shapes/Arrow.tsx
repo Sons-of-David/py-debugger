@@ -6,6 +6,7 @@ interface ArrowProps {
   strokeWidth?: number;
   orientation?: ArrowOrientation;
   rotation?: number;
+  animate?: boolean;
 }
 
 const ORIENTATION_DEGREES: Record<ArrowOrientation, number> = {
@@ -21,11 +22,13 @@ export function Arrow({
   strokeWidth = 0,
   orientation = 'up',
   rotation = 0,
+  animate = false,
 }: ArrowProps) {
   const baseRotation = ORIENTATION_DEGREES[orientation] ?? 0;
   const fill = color;
   const fillOpacity = opacity;
   const stroke = strokeWidth > 0 ? color : 'none';
+  const transition = animate ? 'fill 250ms ease, fill-opacity 250ms ease, stroke 250ms ease' : undefined;
 
   return (
     <svg
@@ -39,6 +42,7 @@ export function Arrow({
         fillOpacity={fillOpacity}
         stroke={stroke}
         strokeWidth={strokeWidth}
+        style={{ transition }}
       />
     </svg>
   );

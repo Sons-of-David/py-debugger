@@ -2,13 +2,15 @@ interface SquareProps {
   color?: string;
   opacity?: number;
   strokeWidth?: number;
+  animate?: boolean;
 }
 
-export function Square({ color = '#10b981', opacity = 1, strokeWidth = 2 }: SquareProps) {
+export function Square({ color = '#10b981', opacity = 1, strokeWidth = 2, animate = false }: SquareProps) {
   const fill = color;
   const fillOpacity = opacity;
   // Use stroke color at full opacity for the perimeter
   const stroke = strokeWidth > 0 ? color : 'none';
+  const transition = animate ? 'fill 250ms ease, fill-opacity 250ms ease, stroke 250ms ease' : undefined;
 
   return (
     <svg
@@ -25,6 +27,7 @@ export function Square({ color = '#10b981', opacity = 1, strokeWidth = 2 }: Squa
         fillOpacity={fillOpacity}
         stroke={stroke}
         strokeWidth={strokeWidth}
+        style={{ transition }}
       />
     </svg>
   );

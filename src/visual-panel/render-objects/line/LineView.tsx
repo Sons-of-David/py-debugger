@@ -1,9 +1,11 @@
 import { registerRenderer } from '../../views/rendererRegistry';
 import type { Line } from './Line';
+import { useAnimationEnabled } from '../../../animation/animationContext';
 
 const CELL = 40; // must match CELL_SIZE in Grid.tsx
 
 function LineView({ line }: { line: Line }) {
+  const animate = useAnimationEnabled();
   const sx = line.startOffset[0] * CELL;
   const sy = line.startOffset[1] * CELL;
   const ex = (line.end[1] - line.start[1] + line.endOffset[0]) * CELL;
@@ -77,6 +79,7 @@ function LineView({ line }: { line: Line }) {
         strokeLinecap="round"
         markerEnd={line.endCap === 'arrow' ? `url(#${endMarkerId})` : undefined}
         markerStart={line.startCap === 'arrow' ? `url(#${startMarkerId})` : undefined}
+        style={animate ? { transition: 'stroke 250ms ease, opacity 250ms ease' } : undefined}
       />
     </svg>
   );
