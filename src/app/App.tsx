@@ -14,6 +14,15 @@ import SAMPLE_VISUAL_BUILDER from '../code-builder/sample.py?raw';
 import SAMPLE_DEBUGGER from '../debugger-panel/debuggerSample.py?raw';
 import type { TextBox } from '../text-boxes/types';
 
+const SAMPLE_MODULES = import.meta.glob('../samples/*.json', { eager: true }) as Record<
+  string,
+  { builderCode?: string; debuggerCode?: string; breakpoints?: number[]; textBoxes?: TextBox[] }
+>;
+const SAMPLES = Object.entries(SAMPLE_MODULES).map(([path, data]) => {
+  const filename = path.split('/').pop() ?? path;
+  return { name: filename.replace(/\.json$/, ''), data };
+});
+
 /* ---------- Shared Tailwind class groups ---------- */
 
 const buttonBase =
@@ -27,6 +36,8 @@ function App() {
   const { darkMode, toggleDarkMode } = useTheme();
 
   const gridAreaRef = useRef<GridAreaHandle>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [samplesOpen, setSamplesOpen] = useState(false);
 
   // Visual builder state
   const [visualBuilderCode, setVisualBuilderCode] = useState(SAMPLE_VISUAL_BUILDER);
@@ -243,6 +254,22 @@ function App() {
     setAppMode('interactive');
   }, [goToStep]);
 
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target?.result as string);
+        handleLoad(data);
+      } catch {
+        console.error('Failed to parse JSON file');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  }, [handleLoad]);
+
   return (
     <div className="w-screen h-screen overflow-hidden flex flex-col bg-gray-100 dark:bg-gray-900 dark:text-gray-100">
       {/* Header */}
@@ -256,6 +283,33 @@ function App() {
           >
             About
           </Link>
+
+          {/* Save / Load / Samples */}
+          <button type="button" onClick={handleSave} className={buttonNeutral}>Save</button>
+          <button type="button" onClick={() => fileInputRef.current?.click()} className={buttonNeutral}>Load</button>
+          <input ref={fileInputRef} type="file" accept=".json" onChange={handleFileChange} className="hidden" />
+          <div className="relative">
+            <button type="button" onClick={() => setSamplesOpen((o) => !o)} className={buttonNeutral}>
+              Samples
+            </button>
+            {samplesOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setSamplesOpen(false)} />
+                <div className="absolute left-0 top-full mt-1 z-50 min-w-[160px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded shadow-lg">
+                  {SAMPLES.map(({ name, data }) => (
+                    <button
+                      key={name}
+                      type="button"
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      onClick={() => { handleLoad(data); setSamplesOpen(false); }}
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Header right */}
@@ -274,8 +328,8 @@ function App() {
             </span>
           )}
 
-          {/* Timeline controls — hidden in interactive mode */}
-          {appMode !== 'interactive' && (
+          {/* Timeline controls — invisible in interactive mode to keep header height stable */}
+          <div className={appMode === 'interactive' ? 'invisible' : ''}>
             <TimelineControls
               currentStep={currentStep}
               stepCount={stepCount}
@@ -287,7 +341,7 @@ function App() {
               hasPrevBreakpoint={hasPrevBreakpoint}
               hasNextBreakpoint={hasNextBreakpoint}
             />
-          )}
+          </div>
 
           {/* Dark mode toggle */}
           <button
@@ -321,8 +375,6 @@ function App() {
                 onDebuggerCodeChange={appMode === 'debug_in_event' ? () => {} : setDebuggerCode}
                 onAnalyze={handleAnalyze}
                 onEdit={handleEdit}
-                onSave={handleSave}
-                onLoad={handleLoad}
                 isAnalyzing={isAnalyzing}
                 analyzeStatus={analyzeStatus}
                 error={analyzeError}
@@ -362,12 +414,9 @@ function App() {
           </Panel>
         </Group>
       </main>
-
+      
       {/* Footer */}
       <footer className="flex-shrink-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
-        <span className="mr-4">1. Write code to debug in the Code tab</span>
-        <span className="mr-4">2. Set up visuals in the Visual Builder tab</span>
-        <span>3. Click "Analyze" to trace and step through execution</span>
       </footer>
     </div>
   );

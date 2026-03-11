@@ -23,14 +23,10 @@ Project management file — not linked from dev-notes.md.
 1. App - Check if `setDebugCallSuffix` can be handled at `CodeEditorArea` level instead of `App.tsx` (see [sharp-edges.md → debugCallSuffix](./sharp-edges.md))
 2. App - Evaluate whether both `'dirty'` and `'idle'` states are still needed for the Analyze button (`analyzeStatus`)
 3. Flow - If debugger code is empty (only blank lines or comments), skip the initial trace step and jump directly to interactive mode
-4. UI - Move save\load to top row, instad of the code panel.
-5. UI - Make variables panel collapsible as well
-6. UI - remove footer
-7. UI - When the timeline buttons are hidden, the top row becomes shorter and it jumps the whole app. Keep the height constant in all modes.
-8. python - Improve error viewing to be relative to the code itself, and not to the python engine. Also, jump automatically to the editor tab with the error.
-9. python - defend against infinite loops in the builder code. Don't let the program freeze.
-10. python - event handling output doesn't update automatically, only when switching between the output tabs
-11. python - In the Mouse handling, does python have access to global variables?
+4. python - Improve error viewing to be relative to the code itself, and not to the python engine. Also, jump automatically to the editor tab with the error.
+5. python - defend against infinite loops in the builder code. Don't let the program freeze.
+6. python - event handling output doesn't update automatically, only when switching between the output tabs
+7. python - In the Mouse handling, does python have access to global variables?
 
 ---
 
@@ -43,3 +39,8 @@ Project management file — not linked from dev-notes.md.
 ## Completed
 
 <!-- Move items here when done, with a one-line note on how they were resolved -->
+
+- UI - Move save/load to top row — moved Save, Load, Samples buttons from CodeEditorArea header into App.tsx header
+- UI - Make variables panel collapsible — added collapse/expand toggle button to VariablePanel header
+- UI - Remove footer — removed instructional text; kept an empty footer as a visual bottom margin
+- UI - Keep top row height constant — wrapped TimelineControls in an always-rendered div, using `invisible` in interactive mode instead of conditional render

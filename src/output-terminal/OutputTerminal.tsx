@@ -82,8 +82,8 @@ export function OutputTerminal({ currentStep }: OutputTerminalProps) {
       onClick={() => setActiveTab(tab)}
       className={`px-2 py-0.5 text-xs rounded transition-colors ${
         activeTab === tab
-          ? 'bg-gray-600 text-gray-100'
-          : 'text-gray-400 hover:text-gray-200'
+          ? 'bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-100'
+          : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
       }`}
     >
       {label}
@@ -97,31 +97,31 @@ export function OutputTerminal({ currentStep }: OutputTerminalProps) {
     ));
 
   const colorFor = (source: TerminalLine['source']) => {
-    if (source === 'builder') return 'text-emerald-400';
-    if (source === 'marker') return 'text-gray-500';
-    return 'text-gray-200';
+    if (source === 'builder') return 'text-emerald-600 dark:text-emerald-400';
+    if (source === 'marker') return 'text-gray-400 dark:text-gray-500';
+    return 'text-gray-700 dark:text-gray-200';
   };
 
   const renderBuilderTab = () => {
     const initLines = splitLines(builderInit);
     const stepLines = splitLines(builderSteps);
     const hasContent = initLines.length > 0 || stepLines.length > 0;
-    if (!hasContent) return <div className="text-gray-600 italic">No builder output.</div>;
+    if (!hasContent) return <div className="text-gray-400 dark:text-gray-600 italic">No builder output.</div>;
     return (
       <>
-        {renderLines(initLines, 'text-emerald-400')}
+        {renderLines(initLines, 'text-emerald-600 dark:text-emerald-400')}
         {initLines.length > 0 && stepLines.length > 0 && (
-          <div className="border-t border-gray-700 my-1" />
+          <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
         )}
-        {renderLines(stepLines, 'text-emerald-400')}
+        {renderLines(stepLines, 'text-emerald-600 dark:text-emerald-400')}
       </>
     );
   };
 
   const renderDebuggerTab = () => {
     const lines = splitLines(debuggerText);
-    if (!lines.length) return <div className="text-gray-600 italic">No debugger output.</div>;
-    return renderLines(lines, 'text-gray-200');
+    if (!lines.length) return <div className="text-gray-400 dark:text-gray-600 italic">No debugger output.</div>;
+    return renderLines(lines, 'text-gray-700 dark:text-gray-200');
   };
 
   const renderCombinedTab = () => {
@@ -130,13 +130,13 @@ export function OutputTerminal({ currentStep }: OutputTerminalProps) {
     const hasStream = combinedLines.length > 0;
 
     if (!hasInit && !hasStream) {
-      return <div className="text-gray-600 italic">No output.</div>;
+      return <div className="text-gray-400 dark:text-gray-600 italic">No output.</div>;
     }
 
     return (
       <>
-        {renderLines(initLines, 'text-emerald-400')}
-        {hasInit && hasStream && <div className="border-t border-gray-700 my-1" />}
+        {renderLines(initLines, 'text-emerald-600 dark:text-emerald-400')}
+        {hasInit && hasStream && <div className="border-t border-gray-200 dark:border-gray-700 my-1" />}
         {combinedLines.map((line, i) => (
           <div key={i} className={`whitespace-pre ${colorFor(line.source)}`}>
             {line.text || '\u00A0'}
@@ -157,14 +157,14 @@ export function OutputTerminal({ currentStep }: OutputTerminalProps) {
       {/* Drag handle */}
       <div
         onMouseDown={onDragHandleMouseDown}
-        className="h-1 bg-gray-700 hover:bg-indigo-500 cursor-row-resize transition-colors flex-shrink-0"
+        className="h-1 bg-gray-200 dark:bg-gray-700 hover:bg-indigo-400 dark:hover:bg-indigo-500 cursor-row-resize transition-colors flex-shrink-0"
         title="Drag to resize output panel"
       />
 
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-1 bg-gray-800 select-none flex-shrink-0">
+      <div className="flex items-center justify-between px-3 py-1 bg-gray-100 dark:bg-gray-800 select-none flex-shrink-0">
         <div className="flex items-center gap-1">
-          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider mr-2">
+          <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mr-2">
             Output
           </span>
           {tabBtn('builder', 'Builder')}
@@ -174,7 +174,7 @@ export function OutputTerminal({ currentStep }: OutputTerminalProps) {
         <button
           type="button"
           onClick={() => setCollapsed((c) => !c)}
-          className="text-gray-400 hover:text-gray-200 transition-colors text-xs px-1"
+          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors text-xs px-1"
           title={collapsed ? 'Expand output' : 'Collapse output'}
         >
           {collapsed ? '▲' : '▼'}
@@ -187,7 +187,7 @@ export function OutputTerminal({ currentStep }: OutputTerminalProps) {
           ref={scrollRef}
           onScroll={handleScroll}
           style={{ height }}
-          className="overflow-y-auto p-2 font-mono text-xs leading-relaxed bg-gray-950"
+          className="overflow-y-auto p-2 font-mono text-xs leading-relaxed bg-white dark:bg-gray-950"
         >
           {renderContent()}
         </div>

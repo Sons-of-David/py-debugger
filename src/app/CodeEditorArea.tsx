@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { Group, Panel, Separator } from 'react-resizable-panels';
 import { CodeEditor } from '../code-builder/CodeEditor';
 import { DebuggerCodeEditor } from '../debugger-panel/DebuggerCodeEditor';
@@ -16,8 +16,6 @@ interface CodeEditorAreaProps {
   onDebuggerCodeChange: (code: string) => void;
   onAnalyze: () => void;
   onEdit: () => void;
-  onSave: () => void;
-  onLoad: (data: { builderCode?: string; debuggerCode?: string; breakpoints?: number[] }) => void;
   isAnalyzing: boolean;
   analyzeStatus?: 'idle' | 'success' | 'error' | 'dirty';
   error?: string;
@@ -36,19 +34,6 @@ const tabBtnBase = 'px-4 py-2 text-sm font-medium border-b-2 transition-colors';
 const tabActive = `${tabBtnBase} border-indigo-500 text-indigo-600 dark:text-indigo-400`;
 const tabInactive = `${tabBtnBase} border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300`;
 
-// Load all sample JSON files from src/samples/ at build time via Vite glob import.
-// Keys are like "/src/samples/bubble-sort.json"; values are the parsed JSON objects.
-const SAMPLE_MODULES = import.meta.glob('../samples/*.json', { eager: true }) as Record<
-  string,
-  { code?: string; debuggerCode?: string }
->;
-
-const SAMPLES: { name: string; data: { code?: string; debuggerCode?: string } }[] =
-  Object.entries(SAMPLE_MODULES).map(([path, data]) => {
-    const filename = path.split('/').pop() ?? path;
-    const name = filename.replace(/\.json$/, '');
-    return { name, data };
-  });
 
 export function CodeEditorArea({
   code,
@@ -57,8 +42,6 @@ export function CodeEditorArea({
   onDebuggerCodeChange,
   onAnalyze,
   onEdit,
-  onSave,
-  onLoad,
   isAnalyzing,
   analyzeStatus = 'idle',
   error,
@@ -72,25 +55,8 @@ export function CodeEditorArea({
   onBackToInteractive,
   currentStep,
 }: CodeEditorAreaProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab>('code');
-  const [samplesOpen, setSamplesOpen] = useState(false);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const data = JSON.parse(event.target?.result as string);
-        onLoad(data);
-      } catch {
-        console.error('Failed to parse JSON file');
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  };
+  const [varPanelCollapsed, setVarPanelCollapsed] = useState(false);
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-gray-900">
@@ -156,58 +122,6 @@ export function CodeEditorArea({
               Back to Interactive
             </button>
           )}
-          <button
-            type="button"
-            onClick={onSave}
-            className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-          >
-            Save
-          </button>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-          >
-            Load
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json"
-            onChange={handleFileChange}
-            className="hidden"
-          />
-
-          {/* Samples dropdown */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setSamplesOpen((o) => !o)}
-              className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-            >
-              Samples
-            </button>
-            {samplesOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setSamplesOpen(false)} />
-                <div className="absolute right-0 top-full mt-1 z-50 min-w-[160px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded shadow-lg">
-                  {SAMPLES.map(({ name, data }) => (
-                    <button
-                      key={name}
-                      type="button"
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                      onClick={() => {
-                        onLoad(data);
-                        setSamplesOpen(false);
-                      }}
-                    >
-                      {name}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
 
           {analyzeStatus === 'success' ? (
             <button
@@ -241,33 +155,60 @@ export function CodeEditorArea({
       {/* Editor */}
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
         <div className="flex-1 min-h-0 overflow-hidden">
-        {activeTab === 'code' ? (
-          (() => {
-            const editor = (
-              <DebuggerCodeEditor
-                code={debuggerCode}
-                onChange={onDebuggerCodeChange}
-                highlightedLines={highlightedLines}
-                breakpoints={breakpoints}
-                onBreakpointsChange={onBreakpointsChange}
-                readOnly={readOnly}
-              />
-            );
-            if (appMode === 'interactive') return editor;
-            return (
-              <Group orientation="vertical" className="h-full">
-                <Panel defaultSize={70} minSize={30}>{editor}</Panel>
-                <Separator className="h-1 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 cursor-row-resize" />
-                <Panel defaultSize={30} minSize={10}>
-                  <VariablePanel variables={currentVariables} />
-                </Panel>
-              </Group>
-            );
-          })()
-        ) : (
-          <CodeEditor code={code} onChange={onChange} error={error} readOnly={readOnly} />
-        )}
+          {activeTab === 'code' ? (
+            (() => {
+              const editor = (
+                <DebuggerCodeEditor
+                  code={debuggerCode}
+                  onChange={onDebuggerCodeChange}
+                  highlightedLines={highlightedLines}
+                  breakpoints={breakpoints}
+                  onBreakpointsChange={onBreakpointsChange}
+                  readOnly={readOnly}
+                />
+              );
+              if (appMode === 'interactive' || varPanelCollapsed) return editor;
+              return (
+                <Group orientation="vertical" className="h-full">
+                  <Panel defaultSize={70} minSize={30}>{editor}</Panel>
+                  <Separator className="h-1 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 cursor-row-resize" />
+                  <Panel defaultSize={30} minSize={10}>
+                    <div className="h-full flex flex-col">
+                      <div className="flex-shrink-0 flex items-center justify-between px-3 py-1 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 select-none">
+                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Variables</span>
+                        <button
+                          type="button"
+                          onClick={() => setVarPanelCollapsed(true)}
+                          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors text-xs px-1"
+                          title="Collapse variables"
+                        >▼</button>
+                      </div>
+                      <div className="flex-1 min-h-0">
+                        <VariablePanel variables={currentVariables} />
+                      </div>
+                    </div>
+                  </Panel>
+                </Group>
+              );
+            })()
+          ) : (
+            <CodeEditor code={code} onChange={onChange} error={error} readOnly={readOnly} />
+          )}
         </div>
+
+        {/* Variables header — only when collapsed, keeps button above OutputTerminal header */}
+        {activeTab === 'code' && appMode !== 'interactive' && varPanelCollapsed && (
+          <div className="flex-shrink-0 flex items-center justify-between px-3 py-1 bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 select-none">
+            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Variables</span>
+            <button
+              type="button"
+              onClick={() => setVarPanelCollapsed(false)}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors text-xs px-1"
+              title="Expand variables"
+            >▲</button>
+          </div>
+        )}
+
         <OutputTerminal currentStep={currentStep} appMode={appMode} />
       </div>
     </div>

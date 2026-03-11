@@ -14,9 +14,6 @@ export function VariablePanel({ variables }: VariablePanelProps) {
 
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
-      <div className="flex-shrink-0 px-3 py-1 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-        Variables
-      </div>
       <div className="flex-1 overflow-auto">
         {entries.length === 0 ? (
           <div className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500 italic">
