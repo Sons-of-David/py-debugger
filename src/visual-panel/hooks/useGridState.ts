@@ -282,7 +282,8 @@ export function useGridState() {
       // Second pass: add non-panel elements
       for (const el of elements) {
         if (el.type === 'panel') continue;
-        const gridId = `${VB_PREFIX}${idx++}`;
+        const rawElemId = (el as any)._elemId as number | undefined;
+        const gridId = rawElemId != null ? `${VB_PREFIX}elem-${rawElemId}` : `${VB_PREFIX}${idx++}`;
         let row = el.position[0];
         let col = el.position[1];
         let parentPanelId: string | undefined;
