@@ -2,6 +2,7 @@ import React from "react";
 
 export interface RenderableElement {
   type: string;
+  visible?: boolean;
 }
 
 type ElementRenderFn<T extends RenderableElement> = (element: T) => React.ReactElement;
