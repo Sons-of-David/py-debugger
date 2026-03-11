@@ -1,4 +1,4 @@
-export type LineSource = 'debugger' | 'builder' | 'marker';
+export type LineSource = 'debugger' | 'builder' | 'marker' | 'error';
 
 export interface TerminalLine {
   text: string;
@@ -68,6 +68,16 @@ export function appendClickOutput(text: string): void {
   if (!text) return;
   _committedBuilder = ensureNewline(_committedBuilder) + text;
   _committedCombinedLines.push(...toLines(text, 'builder'));
+  _notify();
+}
+
+/**
+ * Append a click-handler error to the terminal in red.
+ */
+export function appendClickError(text: string): void {
+  if (!text) return;
+  _committedBuilder = ensureNewline(_committedBuilder) + text + '\n';
+  _committedCombinedLines.push(...toLines(text, 'error'));
   _notify();
 }
 

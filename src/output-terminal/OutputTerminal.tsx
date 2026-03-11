@@ -102,6 +102,7 @@ export function OutputTerminal({ currentStep }: OutputTerminalProps) {
   const colorFor = (source: TerminalLine['source']) => {
     if (source === 'builder') return 'text-emerald-600 dark:text-emerald-400';
     if (source === 'marker') return 'text-gray-400 dark:text-gray-500';
+    if (source === 'error') return 'text-red-600 dark:text-red-400';
     return 'text-gray-700 dark:text-gray-200';
   };
 

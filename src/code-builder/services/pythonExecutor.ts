@@ -74,8 +74,31 @@ async function loadPythonRuntime(): Promise<any> {
   return py;
 }
 
+function cleanPythonError(error: unknown): string {
+  const msg = error instanceof Error ? error.message : String(error);
+  return msg.includes('PythonError:')
+    ? msg.split('PythonError:')[1]?.trim() ?? msg
+    : msg;
+}
+
+type TraceStep_WithOutput = TraceStep & { output?: string; builder_output?: string };
+
+type TraceResult = {
+  code_timeline: TraceStep_WithOutput[];
+  visual_timeline: VisualBuilderElementBase[][];
+  handlers: Record<string, string[]>;
+};
+
+function applyTimeline(parsed: TraceResult): void {
+  setHandlers(parsed.handlers ?? {});
+  setCodeTimeline(parsed.code_timeline);
+  hydrateTimelineFromArray(parsed.visual_timeline);
+  setCurrentStepOutputs(parsed.code_timeline.map((s) => s.output ?? ''));
+  setBuilderStepOutputs(parsed.code_timeline.map((s) => s.builder_output ?? ''));
+}
+
 // ---------------------------------------------------------------------------
-// Python executor
+// Python executors
 // ---------------------------------------------------------------------------
 
 export interface DebuggerExecuteResult {
@@ -101,11 +124,7 @@ export async function executePythonCode(
       `_visual_code_trace('''${escapedCode}''')`,
     );
 
-    const parsed = JSON.parse(resultJson) as {
-      code_timeline: TraceStep[];
-      visual_timeline: VisualBuilderElementBase[][];
-      handlers: Record<string, string[]>;
-    };
+    const parsed = JSON.parse(resultJson) as TraceResult;
 
     if (parsed.code_timeline.length !== parsed.visual_timeline.length) {
       return {
@@ -114,49 +133,11 @@ export async function executePythonCode(
       };
     }
 
-    setHandlers(parsed.handlers ?? {});
-    setCodeTimeline(parsed.code_timeline);
-    hydrateTimelineFromArray(parsed.visual_timeline);
-    setCurrentStepOutputs(parsed.code_timeline.map((s) => (s as any).output ?? ''));
-    setBuilderStepOutputs(parsed.code_timeline.map((s) => (s as any).builder_output ?? ''));
-
+    applyTimeline(parsed);
     return { success: true };
   } catch (error) {
     console.error('Execution error:', error);
-    const msg = error instanceof Error ? error.message : String(error);
-    const clean = msg.includes('PythonError:')
-      ? msg.split('PythonError:')[1]?.trim() ?? msg
-      : msg;
-    return { success: false, error: clean };
-  }
-}
-
-export type ClickHandlerResult = {
-  snapshot: VisualBuilderElementBase[];
-  debugCall?: string;
-} | null;
-
-export async function executeClickHandler(
-  elemId: number,
-  row: number,
-  col: number,
-): Promise<ClickHandlerResult> {
-  if (!pyodide) return null;
-  try {
-    const clickResultJson: string = await pyodide.runPythonAsync(
-      `_handle_click_with_output(${elemId}, ${row}, ${col})`,
-    );
-    const clickResult = JSON.parse(clickResultJson) as { debugCall: string | null; output: string };
-    appendClickOutput(clickResult.output);
-    const debugCall = clickResult.debugCall;
-    const snapshotJson: string = await pyodide.runPythonAsync(`_serialize_visual_builder()`);
-    const snapshot = JSON.parse(snapshotJson) as VisualBuilderElementBase[];
-    const handlersJson: string = await pyodide.runPythonAsync(`_serialize_handlers_json()`);
-    setHandlers(JSON.parse(handlersJson));
-    return debugCall ? { snapshot, debugCall } : { snapshot };
-  } catch (error) {
-    console.error('Click handler error:', error);
-    return null;
+    return { success: false, error: cleanPythonError(error) };
   }
 }
 
@@ -172,24 +153,40 @@ export async function executeDebugCall(expression: string, lineOffset: number): 
     const resultJson: string = await pyodide.runPythonAsync(
       `_prepare_and_trace_debug_call('''${escapedExpr}''', ${lineOffset})`,
     );
-    const parsed = JSON.parse(resultJson) as {
-      code_timeline: TraceStep[];
-      visual_timeline: VisualBuilderElementBase[][];
-      handlers: Record<string, string[]>;
-    };
-
-    setHandlers(parsed.handlers ?? {});
-    setCodeTimeline(parsed.code_timeline);
-    hydrateTimelineFromArray(parsed.visual_timeline);
-    setCurrentStepOutputs(parsed.code_timeline.map((s) => (s as any).output ?? ''));
-    setBuilderStepOutputs(parsed.code_timeline.map((s) => (s as any).builder_output ?? ''));
-
+    const parsed = JSON.parse(resultJson) as TraceResult;
+    applyTimeline(parsed);
     return { stepCount: parsed.code_timeline.length };
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
-    const clean = msg.includes('PythonError:')
-      ? msg.split('PythonError:')[1]?.trim() ?? msg
-      : msg;
-    return { stepCount: 0, error: clean };
+    return { stepCount: 0, error: cleanPythonError(error) };
+  }
+}
+
+export type ClickHandlerResult = {
+  snapshot: VisualBuilderElementBase[];
+  debugCall?: string;
+  error?: string;
+} | null;
+
+export async function executeClickHandler(
+  elemId: number,
+  row: number,
+  col: number,
+): Promise<ClickHandlerResult> {
+  if (!pyodide) return null;
+  try {
+    const clickResultJson: string = await pyodide.runPythonAsync(
+      `_handle_click_with_output(${elemId}, ${row}, ${col})`,
+    );
+    const clickResult = JSON.parse(clickResultJson) as { debugCall: string | null; output: string };
+    appendClickOutput(clickResult.output);
+    const snapshotJson: string = await pyodide.runPythonAsync(`_serialize_visual_builder()`);
+    const snapshot = JSON.parse(snapshotJson) as VisualBuilderElementBase[];
+    const handlersJson: string = await pyodide.runPythonAsync(`_serialize_handlers_json()`);
+    setHandlers(JSON.parse(handlersJson));
+    const debugCall = clickResult.debugCall;
+    return debugCall ? { snapshot, debugCall } : { snapshot };
+  } catch (error) {
+    console.error('Click handler error:', error);
+    return { snapshot: [], error: cleanPythonError(error) };
   }
 }
