@@ -1,4 +1,5 @@
 import { useRef, useCallback, useMemo, memo, forwardRef, useImperativeHandle, useState } from 'react';
+import { useAnimationEnabled } from '../../animation/animationContext';
 import { GridCell } from './GridCell';
 import type { RenderableObjectData, PanelStyle } from '../types/grid';
 import { PANEL_STYLE_DEFAULT } from '../types/grid';
@@ -71,6 +72,7 @@ const GridSingleObject = memo(function GridSingleObject({
 }) {
   const { widthCells, heightCells } = obj;
   const [flashing, setFlashing] = useState(false);
+  const animationsEnabled = useAnimationEnabled();
 
   if (widthCells <= 0 || heightCells <= 0) return null;
 
@@ -94,7 +96,7 @@ const GridSingleObject = memo(function GridSingleObject({
 
   return (
     <div
-      className={`absolute transition-all duration-300 ease-out${isClickable ? ' cursor-pointer pointer-events-auto' : ''}`}
+      className={`absolute${animationsEnabled ? ' transition-all duration-300 ease-out' : ''}${isClickable ? ' cursor-pointer pointer-events-auto' : ''}`}
       style={{
         left: obj.col * CELL_SIZE,
         top: obj.row * CELL_SIZE,
