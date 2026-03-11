@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Group, Panel, Separator } from 'react-resizable-panels';
 import { CodeEditorArea } from './CodeEditorArea';
 import { useTheme } from '../contexts/ThemeContext';
+import { AnimationContext } from '../animation/animationContext';
 import { loadPyodide, isPyodideLoaded, executePythonCode, executeDebugCall } from '../code-builder/services/pythonExecutor';
 import { clearAll as clearTerminal, commitCurrentSegment, appendMarker } from '../output-terminal/terminalState';
 import { ApiReferencePanel } from '../api/ApiReferencePanel';
@@ -52,6 +53,7 @@ function App() {
 
   const [debugCallSuffix, setDebugCallSuffix] = useState<string | null>(null);
   const [textBoxes, setTextBoxes] = useState<TextBox[]>([]);
+  const [animationsEnabled, setAnimationsEnabled] = useState(true);
 
   type AppMode = 'idle' | 'trace' | 'interactive' | 'debug_in_event';
   const [appMode, setAppMode] = useState<AppMode>('idle');
@@ -271,6 +273,7 @@ function App() {
   }, [handleLoad]);
 
   return (
+    <AnimationContext.Provider value={animationsEnabled}>
     <div className="w-screen h-screen overflow-hidden flex flex-col bg-gray-100 dark:bg-gray-900 dark:text-gray-100">
       {/* Header */}
       <header className="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex items-center justify-between shadow-sm">
@@ -342,6 +345,15 @@ function App() {
               hasNextBreakpoint={hasNextBreakpoint}
             />
           </div>
+
+          {/* Animation mode toggle */}
+          <button
+            onClick={() => setAnimationsEnabled((v) => !v)}
+            className={buttonNeutral}
+            title={animationsEnabled ? 'Switch to instant jumps' : 'Switch to smooth animations'}
+          >
+            {animationsEnabled ? 'Animated' : 'Jump'}
+          </button>
 
           {/* Dark mode toggle */}
           <button
@@ -419,6 +431,7 @@ function App() {
       <footer className="flex-shrink-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
       </footer>
     </div>
+    </AnimationContext.Provider>
   );
 }
 
