@@ -177,8 +177,26 @@ export async function executeClickHandler(
     const clickResultJson: string = await pyodide.runPythonAsync(
       `_handle_click_with_output(${elemId}, ${row}, ${col})`,
     );
-    const clickResult = JSON.parse(clickResultJson) as { debugCall: string | null; output: string };
+    const clickResult = JSON.parse(clickResultJson) as {
+      debugCall: string | null;
+      runCall: string | null;
+      output: string;
+    };
     appendClickOutput(clickResult.output);
+    if (clickResult.runCall) {
+      const escaped = escapeForTripleQuote(clickResult.runCall);
+      const runResultJson: string = await pyodide.runPythonAsync(
+        `_execute_run_call('''${escaped}''')`,
+      );
+      const runResult = JSON.parse(runResultJson) as {
+        snapshot: VisualBuilderElementBase[];
+        handlers: Record<string, string[]>;
+        output: string;
+      };
+      appendClickOutput(runResult.output);
+      setHandlers(runResult.handlers ?? {});
+      return { snapshot: runResult.snapshot };
+    }
     const snapshotJson: string = await pyodide.runPythonAsync(`_serialize_visual_builder()`);
     const snapshot = JSON.parse(snapshotJson) as VisualBuilderElementBase[];
     const handlersJson: string = await pyodide.runPythonAsync(`_serialize_handlers_json()`);
