@@ -260,6 +260,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
       ref={containerRef}
       className="w-full h-full overflow-auto bg-gray-100 dark:bg-gray-900"
       onWheel={handleWheel}
+      onMouseDown={() => { if (selectedTextBoxId) onSelectTextBox?.(null); }}
     >
       <div
         ref={gridContentRef}
@@ -306,10 +307,6 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
         <div
           className="absolute inset-0"
           style={{ pointerEvents: addingTextBox ? 'auto' : 'none' }}
-          onMouseDown={!addingTextBox ? (e) => {
-            // Deselect when clicking the grid background (not a text box)
-            if (e.target === e.currentTarget) onSelectTextBox?.(null);
-          } : undefined}
         >
           <div className="relative w-full h-full">
             <TextBoxesLayer

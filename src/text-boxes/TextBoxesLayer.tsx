@@ -83,7 +83,6 @@ export function TextBoxesLayer({
         heightCells,
         text: '',
         fontSize: 14,
-        color: '#111827',
       };
 
       setDrawing(null);

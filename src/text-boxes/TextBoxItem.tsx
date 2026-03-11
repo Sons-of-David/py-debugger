@@ -1,6 +1,7 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 import type { TextBox } from './types';
 import { TextBoxFormatToolbar } from './TextBoxFormatToolbar';
+import { useTheme } from '../contexts/ThemeContext';
 
 export const CELL_SIZE = 40;
 const MIN_CELLS = 2;
@@ -25,13 +26,23 @@ const handlePositions: Record<ResizeHandle, React.CSSProperties> = {
 };
 
 export function TextBoxItem({ box, zoom, selected, onSelect, onChange, onDelete }: TextBoxItemProps) {
+  const { darkMode } = useTheme();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [editing, setEditing] = useState(false);
 
+  // Reset editing mode when deselected
   useEffect(() => {
-    if (selected && textareaRef.current) {
-      textareaRef.current.focus();
+    if (!selected) {
+      setEditing(false);
     }
   }, [selected]);
+
+  // Focus textarea when entering edit mode
+  useEffect(() => {
+    if (editing && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [editing]);
 
   // ── Drag to move ──────────────────────────────────────────────────────────
 
@@ -39,6 +50,9 @@ export function TextBoxItem({ box, zoom, selected, onSelect, onChange, onDelete 
     (e: React.MouseEvent) => {
       e.stopPropagation();
       onSelect(box.id);
+
+      // Don't start drag when in edit mode
+      if (editing) return;
 
       const startClientX = e.clientX;
       const startClientY = e.clientY;
@@ -61,7 +75,7 @@ export function TextBoxItem({ box, zoom, selected, onSelect, onChange, onDelete 
       window.addEventListener('mousemove', onMouseMove);
       window.addEventListener('mouseup', onMouseUp);
     },
-    [box, zoom, onSelect, onChange]
+    [box, zoom, onSelect, onChange, editing]
   );
 
   // ── Drag to resize ────────────────────────────────────────────────────────
@@ -128,12 +142,12 @@ export function TextBoxItem({ box, zoom, selected, onSelect, onChange, onDelete 
         width: box.widthCells * CELL_SIZE,
         height: box.heightCells * CELL_SIZE,
         backgroundColor: box.bgColor ?? 'transparent',
-        border: selected ? '2px solid #6366f1' : '1px dashed #9ca3af',
+        border: selected ? '2px solid #6366f1' : `1px dashed ${darkMode ? '#6b7280' : '#9ca3af'}`,
         boxSizing: 'border-box',
         zIndex: 50,
         overflow: 'visible',
         pointerEvents: 'auto',
-        cursor: selected ? 'move' : 'default',
+        cursor: selected && !editing ? 'move' : 'default',
       }}
       onMouseDown={handleBodyMouseDown}
     >
@@ -141,8 +155,11 @@ export function TextBoxItem({ box, zoom, selected, onSelect, onChange, onDelete 
       {selected && (
         <TextBoxFormatToolbar
           box={box}
+          effectiveColor={box.color ?? (darkMode ? '#f9fafb' : '#111827')}
           onChange={(patch) => onChange({ ...box, ...patch })}
           onDelete={() => onDelete(box.id)}
+          editing={editing}
+          onToggleEditing={() => setEditing((e) => !e)}
         />
       )}
 
@@ -150,9 +167,6 @@ export function TextBoxItem({ box, zoom, selected, onSelect, onChange, onDelete 
         ref={textareaRef}
         value={box.text}
         onChange={(e) => onChange({ ...box, text: e.target.value })}
-        onMouseDown={(e) => {
-          if (selected) e.stopPropagation(); // prevent move drag when editing
-        }}
         style={{
           width: '100%',
           height: '100%',
@@ -160,19 +174,19 @@ export function TextBoxItem({ box, zoom, selected, onSelect, onChange, onDelete 
           border: 'none',
           outline: 'none',
           background: 'transparent',
-          color: box.color,
+          color: box.color ?? (darkMode ? '#f9fafb' : '#111827'),
           fontSize: box.fontSize,
           fontFamily: 'inherit',
           padding: '4px',
           boxSizing: 'border-box',
-          cursor: selected ? 'text' : 'default',
-          pointerEvents: selected ? 'auto' : 'none',
+          cursor: editing ? 'text' : 'default',
+          pointerEvents: editing ? 'auto' : 'none',
         }}
-        placeholder={selected ? 'Type here...' : ''}
+        placeholder={editing ? 'Type here...' : ''}
       />
 
-      {/* Corner resize handles */}
-      {selected &&
+      {/* Corner resize handles — only shown in move mode */}
+      {selected && !editing &&
         (Object.entries(handlePositions) as [ResizeHandle, React.CSSProperties][]).map(
           ([handle, style]) => (
             <div

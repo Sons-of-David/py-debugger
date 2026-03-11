@@ -6,6 +6,6 @@ export interface TextBox {
   heightCells: number;  // min 2
   text: string;
   fontSize: number;     // px, default 14
-  color: string;        // hex text color
+  color?: string;       // hex text color (undefined = use theme default)
   bgColor?: string;     // hex background color (undefined = transparent)
 }
