@@ -1,4 +1,4 @@
-import { useRef, useCallback, useMemo, memo, forwardRef, useImperativeHandle, useState } from 'react';
+import { useRef, useCallback, useMemo, memo, forwardRef, useImperativeHandle, useState, useEffect } from 'react';
 import { useAnimationEnabled } from '../../animation/animationContext';
 import { GridCell } from './GridCell';
 import type { RenderableObjectData, PanelStyle } from '../types/grid';
@@ -73,8 +73,17 @@ const GridSingleObject = memo(function GridSingleObject({
   const { widthCells, heightCells } = obj;
   const [flashing, setFlashing] = useState(false);
   const animationsEnabled = useAnimationEnabled();
+  // Start invisible so newly-appearing elements can fade in
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    if (!animationsEnabled) { setMounted(true); return; }
+    const raf = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(raf);
+  }, []); // intentionally only on first mount
 
   if (widthCells <= 0 || heightCells <= 0) return null;
+
+  const elemVisible = obj.cellData.elementInfo?.visible !== false;
 
   const { clickData } = obj.cellData;
   const isClickable = mouseEnabled && !!clickData && !!onElementClick;
@@ -103,6 +112,8 @@ const GridSingleObject = memo(function GridSingleObject({
         width: CELL_SIZE * widthCells,
         height: CELL_SIZE * heightCells,
         zIndex: 10,
+        opacity: mounted && elemVisible ? 1 : 0,
+        pointerEvents: elemVisible ? undefined : 'none',
       }}
       onClick={handleClick}
     >
