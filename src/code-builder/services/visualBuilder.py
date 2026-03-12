@@ -314,15 +314,35 @@ def _serialize_handlers_json():
     return json.dumps(_serialize_handlers())
 
 
+_MAX_BUILDER_STEPS = 100_000
+
+class _BuilderLoopError(Exception):
+    pass
+
 def _exec_builder_code(code):
-    """Execute visual builder code with stdout capture. Returns captured output string."""
+    """Execute visual builder code with stdout capture and infinite loop protection."""
     import io as _io, sys as _sys
+    _step_count = [0]
+
+    def _guard(frame, event, arg):
+        _step_count[0] += 1
+        if _step_count[0] > _MAX_BUILDER_STEPS:
+            raise _BuilderLoopError(
+                f"Builder code exceeded {_MAX_BUILDER_STEPS} steps — "
+                "possible infinite loop. Execution stopped."
+            )
+        return _guard
+
     _old_stdout = _sys.stdout
     _sys.stdout = _io.StringIO()
     try:
+        _sys.settrace(_guard)
         exec(code, globals())
         return _sys.stdout.getvalue()
+    except _BuilderLoopError:
+        raise
     finally:
+        _sys.settrace(None)
         _sys.stdout = _old_stdout
 
 
