@@ -29,6 +29,7 @@ export const RECT_SCHEMA: ObjDoc = {
     { name: 'height', type: 'int', description: 'Height in grid cells.', default: '1' },
     { name: 'color', type: 'tuple[int, int, int]', description: 'RGB fill color (0-255 per channel).', default: '(34, 197, 94)' },
     { name: 'visible', type: 'bool', description: 'Show or hide the rectangle.', default: 'True' },
+    { name: 'z', type: 'int', description: 'Depth layer. Lower z renders on top of higher z.', default: '0' },
   ],
 };
 

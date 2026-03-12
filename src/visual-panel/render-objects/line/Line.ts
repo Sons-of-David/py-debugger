@@ -60,6 +60,7 @@ export const LINE_SCHEMA: ObjDoc = {
     { name: 'end_offset', type: 'tuple[float, float]', description: 'Offset within end cell; (0,0)=top-left, (1,1)=bottom-right.', default: '(0.5, 0.5)' },
     { name: 'start_cap', type: "'none' | 'arrow'", description: 'Cap style at the start endpoint.', default: "'none'" },
     { name: 'end_cap', type: "'none' | 'arrow'", description: 'Cap style at the end endpoint.', default: "'arrow'" },
+    { name: 'z', type: 'int', description: 'Depth layer. Lower z renders on top of higher z.', default: '0' },
   ],
 };
 

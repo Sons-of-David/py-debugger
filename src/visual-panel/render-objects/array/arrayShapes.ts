@@ -196,6 +196,7 @@ export const ARRAY_SCHEMA: ObjDoc = {
     { name: 'length', type: 'int', description: 'Number of cells (read-only, derived from arr).', default: '5' },
     { name: 'show_index', type: 'bool', description: 'Whether to show [i] index labels.', default: 'True' },
     { name: 'visible', type: 'bool', description: 'Show or hide the array.', default: 'True' },
+    { name: 'z', type: 'int', description: 'Depth layer. Lower z renders on top of higher z.', default: '0' },
   ],
 };
 
@@ -283,6 +284,7 @@ export const ARRAY2D_SCHEMA: ObjDoc = {
     { name: 'num_cols', type: 'int', description: 'Number of columns.', default: '3' },
     { name: 'show_index', type: 'bool', description: 'Whether to show [i][j] index labels.', default: 'True' },
     { name: 'visible', type: 'bool', description: 'Show or hide the array.', default: 'True' },
+    { name: 'z', type: 'int', description: 'Depth layer. Lower z renders on top of higher z.', default: '0' },
   ],
 };
 
