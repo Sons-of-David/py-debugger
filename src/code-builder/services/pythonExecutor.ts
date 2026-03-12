@@ -59,6 +59,16 @@ const BUILDER_IMPORT_FILES = import.meta.glob(
   { eager: true, as: 'raw' },
 ) as Record<string, string>;
 
+// Debugger import files: same mechanism as builder imports but for debugger/algorithm code.
+// Functions defined in these files are silently skipped by the tracer (which only records
+// steps for frames with co_filename in ('<exec>', '<string>')), so they execute normally
+// without appearing as trace steps.
+// TODO: future enhancement — same online upload as builder imports.
+const DEBUGGER_IMPORT_FILES = import.meta.glob(
+  '../../debugger-imports/*.py',
+  { eager: true, as: 'raw' },
+) as Record<string, string>;
+
 const PYTHON_FILES = [
   { source: VISUAL_BUILDER_PYTHON },
   { source: VISUAL_BUILDER_SHAPES_PYTHON },
@@ -78,8 +88,12 @@ function escapeForTripleQuote(code: string): string {
 async function loadPythonRuntime(): Promise<any> {
   const py = await loadPyodide();
 
-  // Write builder import files to Pyodide VFS so they are importable in builder code
+  // Write builder and debugger import files to Pyodide VFS so they are importable
   for (const [path, content] of Object.entries(BUILDER_IMPORT_FILES)) {
+    const filename = path.split('/').pop()!;
+    py.FS.writeFile(`/home/pyodide/${filename}`, content);
+  }
+  for (const [path, content] of Object.entries(DEBUGGER_IMPORT_FILES)) {
     const filename = path.split('/').pop()!;
     py.FS.writeFile(`/home/pyodide/${filename}`, content);
   }
