@@ -187,18 +187,15 @@ function App() {
     return runAnalyze(visualBuilderCode, debuggerCode);
   }, [visualBuilderCode, debuggerCode, runAnalyze]);
 
-  const handleEnterInteractive = useCallback(() => {
+  const enterInteractive = useCallback((from: 'trace' | 'debug') => {
+    if (from === 'debug') setDebugCallSuffix(null);
     goToStep(getMaxTime());
-    commitCurrentSegment('----- end trace -----');
+    commitCurrentSegment(from === 'debug' ? '----- end debug call -----' : '----- end trace -----');
     setAppMode('interactive');
   }, [goToStep]);
 
-  const handleBackToInteractive = useCallback(() => {
-    setDebugCallSuffix(null);
-    goToStep(getMaxTime());
-    commitCurrentSegment('----- end debug call -----');
-    setAppMode('interactive');
-  }, [goToStep]);
+  const handleEnterInteractive = useCallback(() => enterInteractive('trace'), [enterInteractive]);
+  const handleBackToInteractive = useCallback(() => enterInteractive('debug'), [enterInteractive]);
 
   const handleDebugCall = useCallback(async (expression: string) => {
     setAppMode('debug_in_event');
