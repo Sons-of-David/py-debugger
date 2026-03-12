@@ -25,8 +25,7 @@ Project management file — not linked from dev-notes.md.
 3. Flow - If debugger code is empty (only blank lines or comments), skip the initial trace step and jump directly to interactive mode
 4. python - Improve error viewing to be relative to the code itself, and not to the python engine. Also, jump automatically to the editor tab with the error.
 5. python - defend against infinite loops in the builder code. Don't let the program freeze.
-6. python - event handling output doesn't update automatically, only when switching between the output tabs
-7. python - In the Mouse handling, does python have access to global variables?
+6. Flow - Consider combining handleEnterInteractive and handleBackToInteractive. Either by giving it a parameter, or by setting the setDebugCallSuffix in another place (check why it is on the handleBackToInteractive at all, and not just in handleDebugCall and in handleEdit).
 
 ---
 

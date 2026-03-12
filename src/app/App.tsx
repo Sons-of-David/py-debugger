@@ -87,33 +87,21 @@ function App() {
     }
   }, []);
 
+  // ---------------------------------------------------------------------------
+  // Timeline
+  // ---------------------------------------------------------------------------
+
+  const getStepLine = (step: number) => {
+    const scope = getCodeStepAt(step)?.scope ?? [];
+    return scope.length > 0 ? scope[scope.length - 1][1] : null;
+  };
+
   const goToStep = useCallback((step: number) => {
     const clamped = Math.max(0, Math.min(getMaxTime(), step));
     const state = getStateAt(clamped);
     if (state) gridAreaRef.current?.loadVisualBuilderObjects(state);
     setCurrentStep(clamped);
   }, []);
-
-  const currentVariables = useMemo(
-    () => getCodeStepAt(currentStep)?.variables ?? {},
-    // stepCount changes when a new trace is loaded, forcing a re-compute
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [currentStep, stepCount],
-  );
-
-  const highlightedLines = useMemo(() => {
-    const scope = getCodeStepAt(currentStep)?.scope ?? [];
-    const next = scope.length > 0 ? scope[scope.length - 1][1] : null;
-    const prevScope = currentStep > 0 ? getCodeStepAt(currentStep - 1)?.scope ?? [] : [];
-    const prev = prevScope.length > 0 ? prevScope[prevScope.length - 1][1] : null;
-    return { prev, next };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStep, stepCount]);
-
-  const getStepLine = (step: number) => {
-    const scope = getCodeStepAt(step)?.scope ?? [];
-    return scope.length > 0 ? scope[scope.length - 1][1] : null;
-  };
 
   const goToNextBreakpoint = useCallback(() => {
     const max = getMaxTime();
@@ -148,6 +136,10 @@ function App() {
     return false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, stepCount, breakpoints]);
+
+  // ---------------------------------------------------------------------------
+  // Main Flow
+  // ---------------------------------------------------------------------------
 
   const handleEdit = useCallback(() => {
     setDebugCallSuffix(null);
@@ -186,6 +178,69 @@ function App() {
     return runAnalyze(visualBuilderCode, debuggerCode);
   }, [visualBuilderCode, debuggerCode, runAnalyze]);
 
+  const handleEnterInteractive = useCallback(() => {
+    goToStep(getMaxTime());
+    commitCurrentSegment('----- end trace -----');
+    setAppMode('interactive');
+  }, [goToStep]);
+
+  const handleBackToInteractive = useCallback(() => {
+    setDebugCallSuffix(null);
+    goToStep(getMaxTime());
+    commitCurrentSegment('----- end debug call -----');
+    setAppMode('interactive');
+  }, [goToStep]);
+
+  const handleDebugCall = useCallback(async (expression: string) => {
+    setAppMode('debug_in_event');
+    const indented = expression.split('\n').map(l => '    ' + l).join('\n');
+    const suffix = `\n\ndef debug_call():\n${indented}`;
+    setDebugCallSuffix(suffix);
+    const lineOffset = debuggerCode.split('\n').length + 2;
+    appendMarker(`----- debug call: ${expression} -----`);
+    const result = await executeDebugCall(expression, lineOffset);
+    if (result?.error) {
+      setAnalyzeError(result.error);
+      setAnalyzeStatus('error');
+      setDebugCallSuffix(null);
+      setAppMode('interactive');
+      return;
+    }
+    if (result && result.stepCount > 0) {
+      setStepCount(result.stepCount);
+      setCurrentStep(0);
+      const state = getStateAt(0);
+      if (state) gridAreaRef.current?.loadVisualBuilderObjects(state);
+    } else {
+      setDebugCallSuffix(null);
+      setAppMode('interactive');
+    }
+  }, [debuggerCode]);
+
+  // ---------------------------------------------------------------------------
+  // Editor state (variables, highlighted lines)
+  // ---------------------------------------------------------------------------
+
+  const currentVariables = useMemo(
+    () => getCodeStepAt(currentStep)?.variables ?? {},
+    // stepCount changes when a new trace is loaded, forcing a re-compute
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentStep, stepCount],
+  );
+
+  const highlightedLines = useMemo(() => {
+    const scope = getCodeStepAt(currentStep)?.scope ?? [];
+    const next = scope.length > 0 ? scope[scope.length - 1][1] : null;
+    const prevScope = currentStep > 0 ? getCodeStepAt(currentStep - 1)?.scope ?? [] : [];
+    const prev = prevScope.length > 0 ? prevScope[prevScope.length - 1][1] : null;
+    return { prev, next };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep, stepCount]);
+
+  // ---------------------------------------------------------------------------
+  // Load \ Save
+  // ---------------------------------------------------------------------------
+
   const handleSave = useCallback(() => {
     const data = {
       builderCode: visualBuilderCode,
@@ -217,45 +272,6 @@ function App() {
     await runAnalyze(data.builderCode, dbgCode);
   }, [runAnalyze]);
 
-  const handleEnterInteractive = useCallback(() => {
-    goToStep(getMaxTime());
-    commitCurrentSegment('----- end trace -----');
-    setAppMode('interactive');
-  }, [goToStep]);
-
-  const handleDebugCall = useCallback(async (expression: string) => {
-    setAppMode('debug_in_event');
-    const indented = expression.split('\n').map(l => '    ' + l).join('\n');
-    const suffix = `\n\ndef debug_call():\n${indented}`;
-    setDebugCallSuffix(suffix);
-    const lineOffset = debuggerCode.split('\n').length + 2;
-    appendMarker(`----- debug call: ${expression} -----`);
-    const result = await executeDebugCall(expression, lineOffset);
-    if (result?.error) {
-      setAnalyzeError(result.error);
-      setAnalyzeStatus('error');
-      setDebugCallSuffix(null);
-      setAppMode('interactive');
-      return;
-    }
-    if (result && result.stepCount > 0) {
-      setStepCount(result.stepCount);
-      setCurrentStep(0);
-      const state = getStateAt(0);
-      if (state) gridAreaRef.current?.loadVisualBuilderObjects(state);
-    } else {
-      setDebugCallSuffix(null);
-      setAppMode('interactive');
-    }
-  }, [debuggerCode]);
-
-  const handleBackToInteractive = useCallback(() => {
-    setDebugCallSuffix(null);
-    goToStep(getMaxTime());
-    commitCurrentSegment('----- end debug call -----');
-    setAppMode('interactive');
-  }, [goToStep]);
-
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -271,6 +287,7 @@ function App() {
     reader.readAsText(file);
     e.target.value = '';
   }, [handleLoad]);
+
 
   return (
     <AnimationContext.Provider value={animationsEnabled}>
