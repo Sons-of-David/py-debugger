@@ -169,7 +169,7 @@ sys.settrace(None)              # always restored in finally block
 
 ### `_capture_variables(frame)`
 
-Collects all visible variables from a frame into `{ name: { type, value } }`.
+Collects all visible variables from a frame as **raw Python values**: `{ name: raw_python_value }`.
 
 **Scope walk (function frames):**
 1. `frame.f_locals` — function locals
@@ -178,19 +178,31 @@ Collects all visible variables from a frame into `{ name: { type, value } }`.
 
 This ensures `V("arr[i]")` inside a nested function correctly sees `arr` from the outer module scope.
 
-**Type serialization:**
+Variables starting with `_` are excluded. Callables and class objects are silently skipped.
 
-| Python type | Serialized as |
-|-------------|---------------|
-| `bool` | `{ type: 'int', value: 0 or 1 }` |
-| `int`, `float` | `{ type: 'int'/'float', value }` |
-| `str` | `{ type: 'str', value }` |
-| `list[int/float/bool]` | `{ type: 'arr[int]', value: [...] }` |
-| `list[str]` | `{ type: 'arr[str]', value: [...] }` |
-| `list[list[int]]` | `{ type: 'arr2d[int]', value: [[...], ...] }` |
-| everything else | **not captured** (silently skipped) |
+### Two-Step Variable Serialization
 
-Variables starting with `_` and `__builtins__`, `__name__`, `__doc__` are excluded.
+`TraceStep.variables` holds **raw Python objects** throughout the trace (backfill pass, V-expressions, builder `update()` call). Type conversion to JSON-safe `VariableValue` dicts happens only at the TypeScript boundary, right before `json.dumps`, via `_serialize_variables_for_ts()`.
+
+This means V-expressions and builder code receive actual Python objects — `V("d[0]")` works on int-keyed dicts, `V("obj.attr")` works on custom objects.
+
+**`_serialize_value_for_ts(value)`** — converts one value to `{ type, value }`:
+
+| Python type | `type` label | `value` in JSON |
+|---|---|---|
+| `bool` | `'int'` | `1` or `0` |
+| `int`, `float` | `'int'`, `'float'` | value |
+| `str` | `'str'` | value |
+| `None` | `'none'` | `null` |
+| `list[int/float/bool]` | `'arr[int]'` | `[int, ...]` |
+| `list[str]` | `'arr[str]'` | `[str, ...]` |
+| `list[list[int]]` | `'arr2d[int]'` | `[[int, ...], ...]` |
+| `tuple` | `'tuple'` | `list(value)` |
+| `dict` | `'dict'` | `{str(k): json_leaf(v), ...}` (capped at 50) |
+| `set` | `'set'` | sorted array |
+| any other object | `type(value).__name__` | `repr(value)[:200]` |
+
+Custom objects use the Python class name as the type label and `repr()` as the value — the class's `__repr__` controls display. `VariablePanel.tsx` displays known type labels with Python-syntax formatting; unknown type labels (class names) fall through to `String(value)`.
 
 ### `V()` — Lazy Expression Evaluation
 
@@ -206,8 +218,8 @@ class V:
         self.expr = expr     # Stored, not evaluated at construction
 
     def eval(self):
-        params = {k: v['value'] for k, v in V.params.items()}
-        return eval(self.expr, {"__builtins__": {}}, {**V.SAFE_GLOBALS, **params})
+        # V.params holds raw Python values (not VariableValue wrappers)
+        return eval(self.expr, {"__builtins__": {}}, {**V.SAFE_GLOBALS, **V.params})
         # On any exception: returns self.expr (the expression string unchanged)
 ```
 
@@ -229,12 +241,16 @@ Called by TypeScript for both initial trace and debug-call sub-runs.
    (Makes variables visible at steps before they're first assigned)
 3. Build visual timeline:
        for step in code_trace:
-           V.params = step['variables']
+           update(step['variables'], step['scope'])   # builder code; raw Python values
+           V.params = step['variables']               # raw Python values
            V.scope  = step['scope']
            snapshot = _serialize_visual_builder()
            timeline.append(json.loads(snapshot))
 4. Fallback: if no traceable lines → one-step timeline with current visual state
-5. Return json.dumps({ code_timeline, visual_timeline, handlers })
+5. Serialize variables for TypeScript:
+       for step in code_trace:
+           step['variables'] = _serialize_variables_for_ts(step['variables'])
+6. Return json.dumps({ code_timeline, visual_timeline, handlers })
 ```
 
 **Note on `handlers` in return:** `_serialize_handlers()` (Python dict) is embedded directly in the outer `json.dumps` — do not replace with `_serialize_handlers_json()`.
