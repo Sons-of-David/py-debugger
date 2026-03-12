@@ -45,7 +45,7 @@ function App() {
   const [debuggerCode, setDebuggerCode] = useState(SAMPLE_DEBUGGER);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | undefined>();
-  const [analyzeStatus, setAnalyzeStatus] = useState<'idle' | 'success' | 'error' | 'dirty'>('idle');
+  const [analyzeStatus, setAnalyzeStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const everAnalyzedRef = useRef(false);
   const [pyodideLoading, setPyodideLoading] = useState(false);
   const [pyodideReady, setPyodideReady] = useState(false);
@@ -66,7 +66,7 @@ function App() {
 
   // Mark dirty whenever code changes after a completed analysis
   useEffect(() => {
-    if (everAnalyzedRef.current) setAnalyzeStatus('dirty');
+    if (everAnalyzedRef.current) setAnalyzeStatus('idle');
   }, [visualBuilderCode, debuggerCode]);
 
   // Preload Pyodide on mount
@@ -103,49 +103,21 @@ function App() {
     setCurrentStep(clamped);
   }, []);
 
-  const goToNextBreakpoint = useCallback(() => {
-    const max = getMaxTime();
-    for (let t = currentStep + 1; t <= max; t++) {
-      const line = getStepLine(t);
-      if (line != null && breakpoints.has(line)) { goToStep(t); return; }
-    }
-  }, [currentStep, breakpoints, goToStep]);
-
-  const goToPrevBreakpoint = useCallback(() => {
-    for (let t = currentStep - 1; t >= 0; t--) {
-      const line = getStepLine(t);
-      if (line != null && breakpoints.has(line)) { goToStep(t); return; }
-    }
-  }, [currentStep, breakpoints, goToStep]);
-
-  const hasNextBreakpoint = useMemo(() => {
-    const max = getMaxTime();
-    for (let t = currentStep + 1; t <= max; t++) {
-      const line = getStepLine(t);
-      if (line != null && breakpoints.has(line)) return true;
-    }
-    return false;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStep, stepCount, breakpoints]);
-
-  const hasPrevBreakpoint = useMemo(() => {
-    for (let t = currentStep - 1; t >= 0; t--) {
-      const line = getStepLine(t);
-      if (line != null && breakpoints.has(line)) return true;
-    }
-    return false;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStep, stepCount, breakpoints]);
-
   // ---------------------------------------------------------------------------
   // Main Flow
   // ---------------------------------------------------------------------------
 
   const handleEdit = useCallback(() => {
     setDebugCallSuffix(null);
-    setAnalyzeStatus('dirty');
+    setAnalyzeStatus('idle');
     setAppMode('idle');
   }, []);
+
+  const isCodeEmpty = (code: string) =>
+    code.split('\n').every((line) => {
+      const trimmed = line.trim();
+      return trimmed === '' || trimmed.startsWith('#');
+    });
 
   const runAnalyze = useCallback(async (vbCode: string, dbgCode: string) => {
     setIsAnalyzing(true);
@@ -156,11 +128,14 @@ function App() {
       const result = await executePythonCode(vbCode, dbgCode);
 
       if (result.success) {
+        const skipTrace = isCodeEmpty(dbgCode);
         setStepCount(getMaxTime() + 1);
-        setCurrentStep(0);
-        gridAreaRef.current?.loadVisualBuilderObjects(getTimeline()[0]);
+        setCurrentStep(skipTrace ? getMaxTime() : 0);
+        gridAreaRef.current?.loadVisualBuilderObjects(
+          skipTrace ? getTimeline()[getMaxTime()] ?? getTimeline()[0] : getTimeline()[0]
+        );
         setAnalyzeStatus('success');
-        setAppMode('trace');
+        setAppMode(skipTrace ? 'interactive' : 'trace');
       } else {
         setAnalyzeError(result.error);
         setAnalyzeStatus('error');
@@ -178,18 +153,15 @@ function App() {
     return runAnalyze(visualBuilderCode, debuggerCode);
   }, [visualBuilderCode, debuggerCode, runAnalyze]);
 
-  const handleEnterInteractive = useCallback(() => {
+  const enterInteractive = useCallback((from: 'trace' | 'debug') => {
+    if (from === 'debug') setDebugCallSuffix(null);
     goToStep(getMaxTime());
-    commitCurrentSegment('----- end trace -----');
+    commitCurrentSegment(from === 'debug' ? '----- end debug call -----' : '----- end trace -----');
     setAppMode('interactive');
   }, [goToStep]);
 
-  const handleBackToInteractive = useCallback(() => {
-    setDebugCallSuffix(null);
-    goToStep(getMaxTime());
-    commitCurrentSegment('----- end debug call -----');
-    setAppMode('interactive');
-  }, [goToStep]);
+  const handleEnterInteractive = useCallback(() => enterInteractive('trace'), [enterInteractive]);
+  const handleBackToInteractive = useCallback(() => enterInteractive('debug'), [enterInteractive]);
 
   const handleDebugCall = useCallback(async (expression: string) => {
     setAppMode('debug_in_event');
@@ -353,13 +325,9 @@ function App() {
             <TimelineControls
               currentStep={currentStep}
               stepCount={stepCount}
-              onPrevStep={() => goToStep(currentStep - 1)}
-              onNextStep={() => goToStep(currentStep + 1)}
               onGoToStep={goToStep}
-              onPrevBreakpoint={goToPrevBreakpoint}
-              onNextBreakpoint={goToNextBreakpoint}
-              hasPrevBreakpoint={hasPrevBreakpoint}
-              hasNextBreakpoint={hasNextBreakpoint}
+              getStepLine={getStepLine}
+              breakpoints={breakpoints}
             />
           </div>
 
