@@ -21,12 +21,7 @@ Project management file — not linked from dev-notes.md.
 ## Open Assignments / Cleanup
 
 1. App - Check if `setDebugCallSuffix` can be handled at `CodeEditorArea` level instead of `App.tsx` (see [sharp-edges.md → debugCallSuffix](./sharp-edges.md))
-2. App - Evaluate whether both `'dirty'` and `'idle'` states are still needed for the Analyze button (`analyzeStatus`)
-3. Flow - If debugger code is empty (only blank lines or comments), skip the initial trace step and jump directly to interactive mode
 4. python - Improve error viewing to be relative to the code itself, and not to the python engine. Also, jump automatically to the editor tab with the error.
-5. python - defend against infinite loops in the builder code. Don't let the program freeze.
-6. Flow - Consider combining handleEnterInteractive and handleBackToInteractive. Either by giving it a parameter, or by setting the setDebugCallSuffix in another place (check why it is on the handleBackToInteractive at all, and not just in handleDebugCall and in handleEdit).
-7. See if we can pass the goToStep, getStepLine and breakpoints from App.tsx directly to the TimelineControls component, and then implement goToNextBreakpoint and goToPrevBreakpoint there.
 
 ---
 
@@ -44,3 +39,8 @@ Project management file — not linked from dev-notes.md.
 - UI - Make variables panel collapsible — added collapse/expand toggle button to VariablePanel header
 - UI - Remove footer — removed instructional text; kept an empty footer as a visual bottom margin
 - UI - Keep top row height constant — wrapped TimelineControls in an always-rendered div, using `invisible` in interactive mode instead of conditional render
+- Cleanup 2 — Simplified analyzeStatus by removing 'dirty' state, consolidated to idle/success/error
+- Cleanup 3 — Skip trace for empty debugger code, jump directly to interactive mode
+- Cleanup 5 — Added infinite loop protection for builder code via sys.settrace step counter
+- Cleanup 6 — Combined handleEnterInteractive and handleBackToInteractive into enterInteractive(from)
+- Cleanup 7 — Moved breakpoint navigation logic from App.tsx to TimelineControls component
