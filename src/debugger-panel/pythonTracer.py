@@ -64,11 +64,20 @@ def _capture_variables(
     return result
 
 
+def _json_leaf(value: Any) -> Any:
+    """Return a JSON-safe primitive representation of a value (one level deep)."""
+    if isinstance(value, (bool, int, float, str)) or value is None:
+        return value
+    try:
+        return repr(value)[:100]
+    except Exception:
+        return '<unrepresentable>'
+
+
 def _serialize_value_for_ts(value: Any) -> Optional[VariableValue]:
     """Convert a single raw Python value to a JSON-safe VariableValue for TypeScript.
 
-    Returns None for types that should be silently skipped.
-    Extended in a second pass to support dict, set, tuple, None, and custom objects.
+    Returns None for types that should be silently skipped (callables, types).
     """
     if isinstance(value, bool):
         return {'type': 'int', 'value': 1 if value else 0}
@@ -78,6 +87,8 @@ def _serialize_value_for_ts(value: Any) -> Optional[VariableValue]:
         return {'type': 'float', 'value': value}
     if isinstance(value, str):
         return {'type': 'str', 'value': value}
+    if value is None:
+        return {'type': 'none', 'value': None}
     if isinstance(value, list):
         if len(value) > 0 and all(isinstance(row, list) for row in value):
             if all(isinstance(x, (int, float, bool)) for row in value for x in row):
@@ -90,7 +101,19 @@ def _serialize_value_for_ts(value: Any) -> Optional[VariableValue]:
             return {'type': 'arr[int]', 'value': int_values}
         elif all(isinstance(x, str) for x in value):
             return {'type': 'arr[str]', 'value': value}
-    return None
+    if isinstance(value, tuple):
+        return {'type': 'tuple', 'value': [_json_leaf(x) for x in value]}
+    if isinstance(value, dict):
+        items = list(value.items())[:50]
+        return {'type': 'dict', 'value': {str(k): _json_leaf(v) for k, v in items}}
+    if isinstance(value, set):
+        return {'type': 'set', 'value': sorted([_json_leaf(x) for x in value], key=repr)}
+    # Custom objects and anything else: use the class name as type and repr as value.
+    try:
+        type_name = type(value).__name__
+        return {'type': type_name, 'value': repr(value)[:200]}
+    except Exception:
+        return None
 
 
 def _serialize_variables_for_ts(raw_vars: Dict[str, Any]) -> Dict[str, VariableValue]:
