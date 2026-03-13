@@ -385,17 +385,22 @@ def _execute_run_call(expression: str) -> str:
 def _serialize_visual_builder():
     """Walk VisualElem._registry and return list of serialized elements."""
     import json
-    id_counter = [0]
+    panel_counter = [0]
+    elem_counter = [0]
 
-    def next_id(prefix):
-        id_counter[0] += 1
-        return prefix + "-" + str(id_counter[0])
+    def next_panel_id():
+        panel_counter[0] += 1
+        return "panel-" + str(panel_counter[0])
+
+    def next_elem_id():
+        elem_counter[0] += 1
+        return "elem-" + str(elem_counter[0])
 
     for i, elem in enumerate(VisualElem._registry):
         if isinstance(elem, Panel):
-            elem._vb_id = next_id("panel")
+            elem._vb_id = next_panel_id()
         else:
-            elem._vb_id = next_id("elem")
+            elem._vb_id = next_elem_id()
 
     panels_first = sorted(VisualElem._registry, key=lambda e: (0 if isinstance(e, Panel) else 1, type(e).__name__))
     result = []
