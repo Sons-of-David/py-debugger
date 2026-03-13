@@ -21,8 +21,16 @@ MAX_TRACE_STEPS = 1000  # TODO: make this user-configurable
 
 _trace_steps: List[TraceStep] = []
 _step_stdout_positions: List[int] = []
+_function_events: List[Tuple] = []   # (step_index, 'call'|'return', func_name, data)
 _output_capture = StringIO()
 _original_stdout = sys.stdout
+
+
+def _is_traceable_func(name: str) -> bool:
+    """True for public functions and dunder methods; False for single-underscore private."""
+    if name.startswith('__') and name.endswith('__'):
+        return True
+    return not name.startswith('_')
 
 def _capture_variables(
     frame: FrameType,
@@ -137,14 +145,35 @@ def _trace_function(
     arg: Any
 ):
     """Trace function called for each line of code."""
-    global _trace_steps, _step_stdout_positions
-
-    if event != 'line':
-        return _trace_function
+    global _trace_steps, _step_stdout_positions, _function_events
 
     code = frame.f_code
 
     if code.co_filename not in ('<exec>', '<string>'):
+        return _trace_function
+
+    if event == 'call':
+        if not _is_traceable_func(code.co_name):
+            return _trace_function
+        kwargs = {
+            name: copy.deepcopy(frame.f_locals[name])
+            for name in code.co_varnames[:code.co_argcount]
+            if name != 'self' and name in frame.f_locals
+        }
+        _function_events.append((len(_trace_steps), 'call', code.co_name, kwargs))
+        return _trace_function
+
+    if event == 'return':
+        if not _is_traceable_func(code.co_name):
+            return _trace_function
+        if code.co_name == '__init__':
+            value = frame.f_locals.get('self')
+        else:
+            value = copy.deepcopy(arg)
+        _function_events.append((len(_trace_steps), 'return', code.co_name, value))
+        return _trace_function
+
+    if event != 'line':
         return _trace_function
 
     if code.co_name.startswith('_'):
@@ -187,9 +216,10 @@ def _run_with_trace(code_str: str, persistent: bool = False) -> Dict[str, Any]:
     When persistent=True the saved dict is reused, giving the sub-run access to
     all variables and functions defined during the initial trace.
     """
-    global _trace_steps, _step_stdout_positions, _output_capture, _exec_context
+    global _trace_steps, _step_stdout_positions, _function_events, _output_capture, _exec_context
     _trace_steps = []
     _step_stdout_positions = []
+    _function_events = []
     _output_capture = StringIO()
 
     if not persistent:
@@ -254,6 +284,10 @@ def update(params: Dict[str, VariableValue], scope: List[Tuple[str, int]]):
 
 def _visual_code_trace(code: str, persistent: bool = False) -> str:
 
+    # We separate the trace first for the debugger code, and then the builder code.
+    # This way we can copy the value of variables to previous steps even before
+    # they exists, so the builder code side will not constantly hit 
+    # "variable not found" errors.
     _run_with_trace(code, persistent)
 
     code_trace: List[TraceStep] = list(_trace_steps)
