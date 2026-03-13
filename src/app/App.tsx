@@ -327,7 +327,7 @@ function App() {
           )}
 
           {/* Timeline controls — invisible in interactive mode to keep header height stable */}
-          <div className={appMode === 'interactive' ? 'invisible' : ''}>
+          <div className={appMode === 'interactive' || appMode === 'idle' ? 'invisible' : ''}>
             <TimelineControls
               currentStep={currentStep}
               stepCount={stepCount}
