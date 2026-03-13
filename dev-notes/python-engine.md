@@ -170,18 +170,28 @@ exec(compiled, _exec_context)   # fires _trace_function on each line
 sys.settrace(None)              # always restored in finally block
 ```
 
-**`_trace_function(frame, event, arg)`** — records a step when all filter conditions pass:
-1. `event == 'line'` — only line-execution events (ignores `call`, `return`, `exception`)
-2. `frame.f_code.co_filename in ('<exec>', '<string>')` — only user code, not stdlib
-3. `frame.f_code.co_name` does not start with `_` — skips internal helpers
+**`_trace_function(frame, event, arg)`** — dispatches on `event` type:
 
-**Per step, records:**
+**`'line'` events** — records a `_trace_steps` entry when:
+1. `frame.f_code.co_filename in ('<exec>', '<string>')` — only user code, not stdlib
+2. `frame.f_code.co_name` does not start with `_` — skips internal helpers
+
+Per step records:
 ```python
 {
-    'variables': _capture_variables(frame),  # All visible variables, serialized
+    'variables': _capture_variables(frame),  # All visible variables, raw Python values
     'scope': [(funcName, lineNumber), ...]   # Call stack, innermost last; <module> → _main_
 }
 ```
+
+**`'call'` and `'return'` events** — records a `_function_events` entry (separate list) when:
+1. `frame.f_code.co_filename in ('<exec>', '<string>')` — only user code
+2. `_is_traceable_func(name)` — keeps dunder methods (`__init__` etc.) and public functions; skips single-underscore private helpers
+
+Each entry is a tuple `(step_index, event_type, func_name, data)` where:
+- `step_index = len(_trace_steps)` at the time of the event (associates the event with the *next* upcoming line step)
+- `data` for `'call'`: dict of function arguments excluding `self`
+- `data` for `'return'` from `__init__`: `frame.f_locals['self']` (the constructed object); for all other functions: `copy.deepcopy(arg)` (the return value)
 
 **`MAX_TRACE_STEPS = 1000`** — after 1000 steps, raises `PopupException` to prevent infinite loops from hanging the browser.
 
@@ -245,12 +255,48 @@ class V:
 
 Example: `rect.width = V("i + 1")` → at step where `i=3`, accessing `rect.width` returns `4`.
 
+### Builder Hooks: `update`, `function_call`, `function_exit`
+
+Three stubs in `pythonTracer.py` can be overridden by builder code:
+
+```python
+def update(params, scope):           pass   # called on every line step
+def function_call(function_name, **kwargs): pass   # called on function entry
+def function_exit(function_name, value):   pass   # called on function return
+```
+
+**`update(params, scope)`** — called for every traced line, as before.
+
+**`function_call(function_name, **kwargs)`** — called just before the first line inside a function executes:
+- `function_name`: the function's `__name__` (e.g. `'__init__'`, `'sort'`)
+- `kwargs`: the function's arguments excluding `self`
+- Dunder methods (`__init__`, `__str__`, etc.) are included; single-underscore helpers are not
+
+**`function_exit(function_name, value)`** — called when a function returns:
+- `value` for `__init__`: the **constructed `self` object** (not `None`)
+- `value` for all other functions: the actual return value
+
+**Timing:** both function hooks are called *before* `update()` for the same line step, so any visual elements they create appear in that step's snapshot. `code_timeline` and `visual_timeline` stay parallel — no extra steps are added.
+
+**Typical use — track object creation:**
+```python
+def function_exit(function_name, value):
+    if function_name == '__init__' and isinstance(value, MyClass):
+        r = Rect()
+        r.position = (len(created), 0)
+        panel.add(r)
+        created.append(r)
+```
+
+See `src/samples/linked-list-creation.json` for a working example.
+
 ### `_visual_code_trace(code, persistent=False)` — Main Entry Point
 
 Called by TypeScript for both initial trace and debug-call sub-runs.
 
 ```
-1. _run_with_trace(code, persistent)   → fills _trace_steps list
+1. _run_with_trace(code, persistent)
+       → fills _trace_steps (line events) and _function_events (call/return events)
 2. Back-fill pass (reverse):
        next_params = {}
        for step in code_trace[::-1]:
@@ -258,12 +304,15 @@ Called by TypeScript for both initial trace and debug-call sub-runs.
            step['variables'].update(next_params)
    (Makes variables visible at steps before they're first assigned)
 3. Build visual timeline:
-       for step in code_trace:
+       for step_idx, step in enumerate(code_trace):
+           drain _function_events with step_index == step_idx:
+               → calls function_call() or function_exit()
            update(step['variables'], step['scope'])   # builder code; raw Python values
            V.params = step['variables']               # raw Python values
            V.scope  = step['scope']
            snapshot = _serialize_visual_builder()
            timeline.append(json.loads(snapshot))
+       drain any remaining _function_events (after the last line step)
 4. Fallback: if no traceable lines → one-step timeline with current visual state
 5. Serialize variables for TypeScript:
        for step in code_trace:
