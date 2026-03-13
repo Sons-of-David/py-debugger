@@ -1,0 +1,5 @@
+{
+  "builderCode": "panel = Panel('main')\npanel.position = (1, 1)\n\nnode_rects = {}  # id(node) -> Rect, persists across steps\n\ndef function_exit(function_name, value):\n    # When any Node.__init__ returns, create a visual rect for the new node.\n    # 'value' is the constructed self object (not None) for __init__.\n    if function_name == '__init__' and hasattr(value, 'val'):\n        idx = len(node_rects)\n        r = Rect()\n        r.width = 2\n        r.height = 1\n        r.color = (80, 140, 220)\n        r.position = (idx * 3, 0)\n        lbl = Label(str(value.val))\n        r.add(lbl)\n        panel.add(r)\n        node_rects[id(value)] = r\n\n        if idx > 0:\n            arr = Arrow()\n            arr.orientation = 'right'\n            arr.position = (idx * 3 - 1, 0)\n            panel.add(arr)\n",
+  "debuggerCode": "# Linked list construction — watch nodes appear as each __init__ returns\n\nclass Node:\n    def __init__(self, val):\n        self.val = val\n        self.next = None\n\nhead = Node(1)\ncur = head\nfor v in [2, 3, 4, 5]:\n    node = Node(v)\n    cur.next = node\n    cur = node\n",
+  "breakpoints": []
+}
