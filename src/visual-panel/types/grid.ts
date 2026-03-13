@@ -81,6 +81,8 @@ export interface RenderableObjectData {
   clickData?: InteractionData;
   // Set when the Python element has any on_drag_* handler
   dragData?: InteractionData;
+  // When false, this element always uses jump mode regardless of the global toggle.
+  animate?: boolean;
 }
 
 export interface OccupantInfo {

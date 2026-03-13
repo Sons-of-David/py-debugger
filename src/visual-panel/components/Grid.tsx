@@ -77,7 +77,9 @@ const GridSingleObject = memo(function GridSingleObject({
 }) {
   const { widthCells, heightCells } = obj;
   const [flashing, setFlashing] = useState(false);
-  const animationsEnabled = useAnimationEnabled();
+  const globalAnimationsEnabled = useAnimationEnabled();
+  // Per-element animate flag: false overrides the global toggle to force jump mode.
+  const animationsEnabled = globalAnimationsEnabled && obj.cellData.animate !== false;
   // Start invisible so newly-appearing elements can fade in
   const [mounted, setMounted] = useState(false);
   useEffect(() => {

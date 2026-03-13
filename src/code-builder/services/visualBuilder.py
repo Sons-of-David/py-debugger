@@ -21,6 +21,7 @@ class VisualElem:
         self.visible = True
         self.alpha = 1.0
         self.z = 0
+        self.animate = True
         self._parent = None
         self._elem_id = VisualElem._vis_elem_id
         VisualElem._vis_elem_id += 1
@@ -62,6 +63,7 @@ class VisualElem:
             "visible": getattr(self, 'visible', True),
             "alpha": alpha,
             "z": int(getattr(self, 'z', 0)),
+            "animate": bool(getattr(self, 'animate', True)),
             "_elem_id": self._elem_id,
         }
         if self._parent is not None:

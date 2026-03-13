@@ -11,6 +11,7 @@ export abstract class BasicShape implements VisualBuilderElementBase {
   height: number;
   color?: [number, number, number];
   _elemId?: number;
+  animate: boolean;
 
   constructor(type: string, el: any) {
     this.type = type;
@@ -24,5 +25,6 @@ export abstract class BasicShape implements VisualBuilderElementBase {
     this.height = el.height ?? 1;
     this.color = el.color ?? [1, 0, 0];
     this._elemId = el._elem_id;
+    this.animate = el.animate ?? true;
   }
 }
