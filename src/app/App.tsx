@@ -177,8 +177,8 @@ function App() {
       setAppMode('interactive');
       return;
     }
-    if (result && result.stepCount > 0) {
-      setStepCount(result.stepCount);
+    if (result?.success && getMaxTime() >= 0) {
+      setStepCount(getMaxTime() + 1);
       setCurrentStep(0);
       const state = getStateAt(0);
       if (state) gridAreaRef.current?.loadVisualBuilderObjects(state);

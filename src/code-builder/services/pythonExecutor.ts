@@ -175,18 +175,28 @@ export interface DebuggerExecuteResult {
   error?: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function initializeBuilderCode(py: any, visualBuilderCode: string): Promise<void> {
+  await py.runPythonAsync('VisualElem._clear_registry()');
+  const escapedVB = escapeForTripleQuote(visualBuilderCode);
+  const builderOutput: string = await py.runPythonAsync(`_exec_builder_code('''${escapedVB}''')`);
+  setBuilderOutput(builderOutput);
+}
+
+function validateTimeline(parsed: TraceResult): string | null {
+  if (parsed.code_timeline.length !== parsed.visual_timeline.length) {
+    return `Timeline length mismatch: code=${parsed.code_timeline.length} visual=${parsed.visual_timeline.length}`;
+  }
+  return null;
+}
+
 export async function executePythonCode(
   visualBuilderCode: string,
   debuggerCode: string,
 ): Promise<DebuggerExecuteResult> {
   try {
     const py = await loadPythonRuntime();
-
-    await py.runPythonAsync('VisualElem._clear_registry()');
-
-    const escapedVB = escapeForTripleQuote(visualBuilderCode);
-    const builderOutput: string = await py.runPythonAsync(`_exec_builder_code('''${escapedVB}''')`);
-    setBuilderOutput(builderOutput);
+    await initializeBuilderCode(py, visualBuilderCode);
 
     const escapedCode = escapeForTripleQuote(debuggerCode);
     const resultJson: string = await py.runPythonAsync(
@@ -194,13 +204,8 @@ export async function executePythonCode(
     );
 
     const parsed = JSON.parse(resultJson) as TraceResult;
-
-    if (parsed.code_timeline.length !== parsed.visual_timeline.length) {
-      return {
-        success: false,
-        error: `Timeline length mismatch: code=${parsed.code_timeline.length} visual=${parsed.visual_timeline.length}`,
-      };
-    }
+    const mismatch = validateTimeline(parsed);
+    if (mismatch) return { success: false, error: mismatch };
 
     applyTimeline(parsed);
     return { success: true };
@@ -213,7 +218,7 @@ export async function executePythonCode(
 }
 
 export type DebugCallResult = {
-  stepCount: number;
+  success: boolean;
   error?: string;
 } | null;
 
@@ -224,13 +229,18 @@ export async function executeDebugCall(expression: string, lineOffset: number): 
     const resultJson: string = await pyodide.runPythonAsync(
       `_prepare_and_trace_debug_call('''${escapedExpr}''', ${lineOffset})`,
     );
+
     const parsed = JSON.parse(resultJson) as TraceResult;
+    const mismatch = validateTimeline(parsed);
+    if (mismatch) return { success: false, error: mismatch };
+
     applyTimeline(parsed);
-    return { stepCount: parsed.code_timeline.length };
+    return { success: true };
   } catch (error) {
+    console.error('Debug call error:', error);
     const msg = filterTraceback(cleanPythonError(error));
     appendError(msg);
-    return { stepCount: 0, error: msg };
+    return { success: false, error: msg };
   }
 }
 
