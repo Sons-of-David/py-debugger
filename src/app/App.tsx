@@ -11,8 +11,6 @@ import { TimelineControls } from '../timeline/TimelineControls';
 import { GridArea, type GridAreaHandle } from './GridArea';
 import { getStateAt, getMaxTime, getTimeline } from '../timeline/timelineState';
 import { getCodeStepAt } from '../debugger-panel/codeTimelineState';
-import SAMPLE_VISUAL_BUILDER from '../code-builder/sample.py?raw';
-import SAMPLE_DEBUGGER from '../debugger-panel/debuggerSample.py?raw';
 import type { TextBox } from '../text-boxes/types';
 
 const SAMPLE_MODULES = import.meta.glob('../samples/*.json', { eager: true }) as Record<
@@ -41,12 +39,13 @@ function App() {
   const [samplesOpen, setSamplesOpen] = useState(false);
 
   // Visual builder state
-  const [visualBuilderCode, setVisualBuilderCode] = useState(SAMPLE_VISUAL_BUILDER);
-  const [debuggerCode, setDebuggerCode] = useState(SAMPLE_DEBUGGER);
+  const [visualBuilderCode, setVisualBuilderCode] = useState('');
+  const [debuggerCode, setDebuggerCode] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | undefined>();
   const [analyzeStatus, setAnalyzeStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const everAnalyzedRef = useRef(false);
+  const autoLoadedRef = useRef(false);
   const [pyodideLoading, setPyodideLoading] = useState(false);
   const [pyodideReady, setPyodideReady] = useState(false);
   const [apiReferenceOpen, setApiReferenceOpen] = useState(false);
@@ -243,6 +242,13 @@ function App() {
     setTextBoxes(data.textBoxes ?? []);
     await runAnalyze(data.builderCode, dbgCode);
   }, [runAnalyze]);
+
+  // Auto-load first sample and return to edit mode
+  useEffect(() => {
+    if (!pyodideReady || autoLoadedRef.current || SAMPLES.length === 0) return;
+    autoLoadedRef.current = true;
+    handleLoad(SAMPLES[0].data).then(handleEdit);
+  }, [pyodideReady, handleLoad, handleEdit]);
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
