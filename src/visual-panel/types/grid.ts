@@ -43,11 +43,19 @@ export const PANEL_STYLE_DEFAULT: PanelStyle = {
   titleTextClass: 'text-slate-600 dark:text-slate-300',
 };
 
+// Payload attached to elements that have interactive event handlers.
+// TODO: elemId is also encoded in objectId ("vb-elem-42") and elementInfo.
+// Consider unifying element identity so there is one source of truth.
+export interface InteractionData {
+  elemId: number;
+  position: [number, number];
+}
+
 export interface RenderableObjectData {
   // Unique identifier for this object (for tracking across position changes)
   objectId?: string;
 
-  elementInfo?: RenderableElement, 
+  elementInfo?: RenderableElement,
 
   // For panels (container)
   panel?: {
@@ -70,7 +78,9 @@ export interface RenderableObjectData {
   // User-specified depth layer (lower = closer = rendered on top)
   userZ?: number;
   // Set when the Python element has an on_click handler
-  clickData?: { elemId: number; position: [number, number] };
+  clickData?: InteractionData;
+  // Set when the Python element has any on_drag_* handler
+  dragData?: InteractionData;
 }
 
 export interface OccupantInfo {

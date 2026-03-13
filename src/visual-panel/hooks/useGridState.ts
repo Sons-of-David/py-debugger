@@ -4,6 +4,7 @@ import type {
   RenderableObjectData,
   OccupantInfo,
   PanelStyle,
+  InteractionData,
 } from '../types/grid';
 import type { VisualBuilderElementBase } from '../../api/visualBuilder';
 import { cellKey } from '../types/grid';
@@ -240,6 +241,8 @@ export function useGridState() {
 
   const VB_PREFIX = 'vb-';
 
+  // TODO: loadVisualBuilderObjects is too long — consider splitting into
+  // buildPanelMap(), resolveNonPanelElement(), and resolveArrayElement() helpers.
   const loadVisualBuilderObjects = useCallback((elements: VisualBuilderElementBase[]) => {
     setObjects((prev) => {
       const next = new Map(prev);
@@ -362,12 +365,20 @@ export function useGridState() {
             idx = nextIdx;
           } else {
             const elemId = (el as any)._elemId as number | undefined;
-            const clickData = elemId != null && hasHandler(elemId, 'on_click')
+            const clickData: InteractionData | undefined = elemId != null && hasHandler(elemId, 'on_click')
               ? { elemId, position: el.position as [number, number] }
+              : undefined;
+            const hasDrag = elemId != null && (
+              hasHandler(elemId, 'on_drag_start') ||
+              hasHandler(elemId, 'on_drag') ||
+              hasHandler(elemId, 'on_drag_end')
+            );
+            const dragData: InteractionData | undefined = hasDrag
+              ? { elemId: elemId!, position: el.position as [number, number] }
               : undefined;
             next.set(gridId, {
               id: gridId,
-              data: { ...(drawResult as RenderableObjectData), objectId: gridId, panelId: parentPanelId, zOrder: z, userZ: (el as any).z ?? 0, clickData },
+              data: { ...(drawResult as RenderableObjectData), objectId: gridId, panelId: parentPanelId, zOrder: z, userZ: (el as any).z ?? 0, clickData, dragData },
               position: targetPosition,
               zOrder: z++,
             });

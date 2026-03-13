@@ -257,24 +257,27 @@ export type ClickHandlerResult = {
   error?: string;
 } | null;
 
-export async function executeClickHandler(
+export type EventName = 'on_click' | 'on_drag_start' | 'on_drag' | 'on_drag_end';
+
+export async function executeEventHandler(
+  eventName: EventName,
   elemId: number,
   row: number,
   col: number,
 ): Promise<ClickHandlerResult> {
   if (!pyodide) return null;
   try {
-    const clickResultJson: string = await pyodide.runPythonAsync(
-      `_handle_click_with_output(${elemId}, ${row}, ${col})`,
+    const eventResultJson: string = await pyodide.runPythonAsync(
+      `_handle_event_with_output('${eventName}', ${elemId}, ${row}, ${col})`,
     );
-    const clickResult = JSON.parse(clickResultJson) as {
+    const eventResult = JSON.parse(eventResultJson) as {
       debugCall: string | null;
       runCall: string | null;
       output: string;
     };
-    appendClickOutput(clickResult.output);
-    if (clickResult.runCall) {
-      const escaped = escapeForTripleQuote(clickResult.runCall);
+    appendClickOutput(eventResult.output);
+    if (eventResult.runCall) {
+      const escaped = escapeForTripleQuote(eventResult.runCall);
       const runResultJson: string = await pyodide.runPythonAsync(
         `_execute_run_call('''${escaped}''')`,
       );
@@ -291,12 +294,17 @@ export async function executeClickHandler(
     const snapshot = JSON.parse(snapshotJson) as VisualBuilderElementBase[];
     const handlersJson: string = await pyodide.runPythonAsync(`_serialize_handlers_json()`);
     setHandlers(JSON.parse(handlersJson));
-    const debugCall = clickResult.debugCall;
+    const debugCall = eventResult.debugCall;
     return debugCall ? { snapshot, debugCall } : { snapshot };
   } catch (error) {
-    console.error('Click handler error:', error);
+    console.error('Event handler error:', error);
     const msg = filterTraceback(cleanPythonError(error));
     appendError(msg);
     return { snapshot: [], error: msg };
   }
+}
+
+/** Thin wrapper kept for call-site compatibility. */
+export function executeClickHandler(elemId: number, row: number, col: number): Promise<ClickHandlerResult> {
+  return executeEventHandler('on_click', elemId, row, col);
 }
