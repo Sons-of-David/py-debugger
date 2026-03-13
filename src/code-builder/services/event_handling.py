@@ -3,6 +3,15 @@ import inspect
 def on_click(self, position: tuple[int, int]):
     pass
 
+def on_drag_start(self, position: tuple[int, int]):
+    pass
+
+def on_drag(self, position: tuple[int, int]):
+    pass
+
+def on_drag_end(self, position: tuple[int, int]):
+    pass
+
 
 def has_same_signature(obj, func):
     """
@@ -50,40 +59,39 @@ class RunCall:
         self.expression = expression
 
 
-def _handle_click(elem_id, row, col):
-    """Call on_click on the element with the given id.
-
-    Returns a tagged tuple ('debug'|'run'|None, expression|None).
-    The caller is responsible for fetching the updated snapshot via
-    _serialize_visual_builder().
-    """
-    result = None
-    for elem in VisualElem._registry:
-        if elem._elem_id == elem_id:
-            result = elem.on_click((row, col))
-            break
-    if isinstance(result, DebugCall):
-        return ('debug', result.expression)
-    if isinstance(result, RunCall):
-        return ('run', result.expression)
-    return (None, None)
-
-
-def _handle_click_with_output(elem_id, row, col):
-    """Like _handle_click but captures stdout. Returns JSON {debugCall, runCall, output}."""
+def _handle_event_with_output(event_name, elem_id, row, col):
+    """Dispatch any named event handler (on_click, on_drag_*). Returns JSON {debugCall, runCall, output}."""
     import io as _io, sys as _sys, json as _json
     _old_stdout = _sys.stdout
     _capture = _io.StringIO()
     _sys.stdout = _capture
+    result = None
     try:
-        _kind, _expr = _handle_click(elem_id, row, col)
+        for elem in VisualElem._registry:
+            if elem._elem_id == elem_id:
+                handler = getattr(elem, event_name, None)
+                if callable(handler):
+                    result = handler((row, col))
+                break
     finally:
         _sys.stdout = _old_stdout
+    if isinstance(result, DebugCall):
+        _kind, _expr = 'debug', result.expression
+    elif isinstance(result, RunCall):
+        _kind, _expr = 'run', result.expression
+    else:
+        _kind, _expr = None, None
     return _json.dumps({
         'debugCall': _expr if _kind == 'debug' else None,
         'runCall':   _expr if _kind == 'run'   else None,
         'output': _capture.getvalue(),
     })
+
+
+def _handle_click_with_output(elem_id, row, col):
+    """Thin wrapper around _handle_event_with_output for on_click (called by TypeScript)."""
+    return _handle_event_with_output('on_click', elem_id, row, col)
+
 
 def _serialize_handlers():
     """Return event handlers for all elements as a dict (for embedding in larger JSON)."""

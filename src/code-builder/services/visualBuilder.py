@@ -35,8 +35,9 @@ class VisualElem:
 
     def _get_event_handlers(self):
         handlers = []
-        if has_same_signature(type(self), on_click):
-            handlers.append("on_click")
+        for func in [on_click, on_drag_start, on_drag, on_drag_end]:
+            if has_same_signature(type(self), func):
+                handlers.append(func.__name__)
         return handlers
 
     def _serialize_base(self):
