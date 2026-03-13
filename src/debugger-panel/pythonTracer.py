@@ -282,15 +282,33 @@ VisualElem.__getattribute__ = get_v_attr
 def update(params: Dict[str, VariableValue], scope: List[Tuple[str, int]]):
     pass
 
+def function_call(function_name: str, **kwargs) -> None:
+    """Called when the debugger code enters a function. Override in builder code.
+
+    function_name -- the function's __name__ (e.g. '__init__', 'my_func')
+    kwargs        -- the function's arguments (excluding 'self')
+    """
+    pass
+
+def function_exit(function_name: str, value: Any) -> None:
+    """Called when a function in the debugger code returns. Override in builder code.
+
+    function_name -- the function's __name__
+    value         -- for __init__: the constructed 'self' object;
+                     for other functions: the return value
+    """
+    pass
+
 def _visual_code_trace(code: str, persistent: bool = False) -> str:
 
     # We separate the trace first for the debugger code, and then the builder code.
     # This way we can copy the value of variables to previous steps even before
-    # they exists, so the builder code side will not constantly hit 
+    # they exists, so the builder code side will not constantly hit
     # "variable not found" errors.
     _run_with_trace(code, persistent)
 
     code_trace: List[TraceStep] = list(_trace_steps)
+    func_events = list(_function_events)
     timeline = []
 
     next_params = {}
@@ -298,10 +316,25 @@ def _visual_code_trace(code: str, persistent: bool = False) -> str:
         next_params.update(step['variables'])
         step['variables'].update({k: copy.deepcopy(v) for k, v in next_params.items()})
 
-    for step in code_trace:
+    fe_idx = 0
+
+    def _drain_func_events(up_to_step: int) -> None:
+        """Call function_call/function_exit for buffered events before step up_to_step.
+        Writes to whatever sys.stdout is currently set (caller's responsibility)."""
+        nonlocal fe_idx
+        while fe_idx < len(func_events) and func_events[fe_idx][0] == up_to_step:
+            _, evt, fname, data = func_events[fe_idx]
+            if evt == 'call':
+                function_call(fname, **data)
+            else:
+                function_exit(fname, data)
+            fe_idx += 1
+
+    for step_idx, step in enumerate(code_trace):
         _builder_cap = StringIO()
         sys.stdout = _builder_cap
         try:
+            _drain_func_events(step_idx)
             update(step['variables'], step['scope'])
         finally:
             sys.stdout = _original_stdout
@@ -311,6 +344,9 @@ def _visual_code_trace(code: str, persistent: bool = False) -> str:
         snapshot_json = _serialize_visual_builder()
         snapshot = json.loads(snapshot_json)
         timeline.append(snapshot)
+
+    # Drain any function events that occurred after the last line step
+    _drain_func_events(len(code_trace))
 
     # When code is empty (or has no traceable lines) still return the
     # current visual-builder state as a single step so the panel renders.
