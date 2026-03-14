@@ -50,44 +50,56 @@ Activated by the T+ button in GridArea:
 
 The zoom factor is in the denominator because `clientX` is in screen pixels while grid coordinates are in logical cells.
 
+### Rich Text Editor
+
+Text boxes use **TipTap 3** (ProseMirror-based) for rich text. The editor is always mounted per box and toggles between `editable: true` (double-click) and `editable: false` (view mode). In view mode, `pointer-events: none` is applied so drag/resize still works.
+
+**Extensions loaded:** `StarterKit`, `TextStyle`, `Color`, `FontSize` (custom — `@tiptap/extension-font-size` is pre-release), `Underline`.
+
+**Focus pattern in toolbar:** every formatting button uses `onMouseDown={e => e.preventDefault()}` to keep editor focus, then `editor.chain().focus().toggleBold().run()` etc.
+
 ### Formatting Toolbar
 
-Renders inside `TextBoxItem` at `position: absolute; bottom: 100%` (above the text box). Controls:
-- Font size select (10–48px)
-- Text color picker
-- Background color picker
+Renders inside `TextBoxItem` at `position: absolute; bottom: 100%` (above the text box). Controls (left → right):
+- Font size select (10–48px) — per-selection via `textStyle` mark
+- **B** bold / **I** italic / **U** underline toggles — per-selection
+- Text color picker — per-selection via `setColor()`
+- `•≡` bullet list / `1≡` ordered list toggles
+- Background color picker — box-level only
 - Clear background button
-- Delete button
+- Delete button (red)
 
 ### `TextBox` Interface
 
 **File:** `src/text-boxes/types.ts`
 
 ```typescript
+import type { JSONContent } from '@tiptap/react';
+
 interface TextBox {
     id: string;           // "text-{timestamp}"
     row: number;
     col: number;
     widthCells: number;
     heightCells: number;
-    text: string;
-    fontSize: number;     // px
-    color: string;        // CSS color string
-    bgColor: string;      // CSS color string (or "" for transparent)
+    content: JSONContent; // TipTap document node — all text formatting lives here
+    bgColor?: string;     // hex; box-level only (undefined = transparent)
 }
 ```
+
+**Migration:** `migrateTextBox(raw)` in `types.ts` upgrades old saves that used `text`/`fontSize`/`color` fields. Called in `App.tsx` on load via `.map(migrateTextBox)`.
 
 ### Components
 
 | Component | File | Responsibility |
 |-----------|------|----------------|
 | `TextBoxesLayer` | `src/text-boxes/TextBoxesLayer.tsx` | Drawing mode overlay; renders all `TextBoxItem` children |
-| `TextBoxItem` | `src/text-boxes/TextBoxItem.tsx` | Single text box: drag, resize, edit, format toolbar |
-| `TextBoxFormatToolbar` | `src/text-boxes/TextBoxFormatToolbar.tsx` | Formatting controls |
+| `TextBoxItem` | `src/text-boxes/TextBoxItem.tsx` | Single text box: drag, resize, TipTap editor, format toolbar |
+| `TextBoxFormatToolbar` | `src/text-boxes/TextBoxFormatToolbar.tsx` | Rich formatting controls; receives `editor: Editor \| null` prop |
+| `FontSizeExtension` | `src/text-boxes/FontSizeExtension.ts` | Custom TipTap extension for `fontSize` on `textStyle` mark |
 
 ### Future Work
 
-- Rich/structured text (title + bullet list runs)
 - Hebrew RTL support
 - Inline LaTeX / center-aligned LaTeX block
 
@@ -109,14 +121,31 @@ Projects are saved as JSON files. Loading a project restores both editors, break
       "id": "text-1234",
       "row": 1, "col": 2,
       "widthCells": 8, "heightCells": 3,
-      "text": "Title",
-      "fontSize": 18,
-      "color": "#111827",
-      "bgColor": "#ffffff"
+      "bgColor": "#ffffff",
+      "content": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Title",
+                "marks": [
+                  { "type": "bold" },
+                  { "type": "textStyle", "attrs": { "fontSize": "18px", "color": "#111827" } }
+                ]
+              }
+            ]
+          }
+        ]
+      }
     }
   ]
 }
 ```
+
+**Old format (pre-rich-text):** saves with `text`/`fontSize`/`color` fields at the box level are automatically migrated to `content: JSONContent` via `migrateTextBox()` on load.
 
 ### Fields
 
@@ -125,7 +154,7 @@ Projects are saved as JSON files. Loading a project restores both editors, break
 | `builderCode` | `string` | Builder Code editor content |
 | `debuggerCode` | `string` | Debugger Code editor content |
 | `breakpoints` | `number[]` | Restored as `new Set(...)` on load |
-| `textBoxes` | `TextBox[]` | Defaults to `[]` for saves that predate this field |
+| `textBoxes` | `TextBox[]` | Defaults to `[]` for saves that predate this field; old format auto-migrated |
 
 ### On Load Behavior
 
@@ -149,7 +178,8 @@ The filename (without `.json`) becomes the sample name shown in the Samples drop
 | File | Purpose |
 |------|---------|
 | `src/app/App.tsx` | `handleSave`, `handleLoad` — JSON serialization/deserialization |
-| `src/text-boxes/types.ts` | `TextBox` interface |
+| `src/text-boxes/types.ts` | `TextBox` interface + `migrateTextBox()` |
+| `src/text-boxes/FontSizeExtension.ts` | Custom TipTap font-size extension |
 | `src/samples/*.json` | Bundled sample projects |
 
 ---
