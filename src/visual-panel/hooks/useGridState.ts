@@ -188,6 +188,7 @@ export function useGridState() {
       height: number;
       title?: string;
       panelStyle?: PanelStyle;
+      showBorder?: boolean;
       invalidReason?: string;
     }> = [];
 
@@ -221,6 +222,7 @@ export function useGridState() {
         height: autoSize?.height ?? 1,
         title: obj.data.panel.title,
         panelStyle: obj.data.panel.panelStyle,
+        showBorder: obj.data.panel.showBorder,
       });
     }
 
@@ -263,13 +265,13 @@ export function useGridState() {
         const height = elAny.height ?? 5;
         const gridId = `${VB_PREFIX}panel-${idx++}`;
         panelIdMap.set(gridId, { gridId, origin: { row, col } });
-        const panelCell = new PanelCell({ id: gridId, title: elAny.name });
+        const panelCell = new PanelCell({ id: gridId, title: elAny.name, showBorder: elAny.show_border ?? false });
         next.set(gridId, {
           id: gridId,
           data: {
             objectId: gridId,
             elementInfo: panelCell as any,
-            panel: { id: gridId, width, height, title: elAny.name },
+            panel: { id: gridId, width, height, title: elAny.name, showBorder: elAny.show_border ?? false },
             shapeProps: { width, height },
             zOrder: z,
           },

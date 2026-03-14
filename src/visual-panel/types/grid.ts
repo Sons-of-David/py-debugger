@@ -64,6 +64,7 @@ export interface RenderableObjectData {
     height: number;
     title?: string;
     panelStyle?: PanelStyle;
+    showBorder?: boolean;
   };
   // Optional panel association for non-panel objects
   panelId?: string;

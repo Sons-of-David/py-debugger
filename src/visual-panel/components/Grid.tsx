@@ -48,6 +48,7 @@ export interface PanelInfo {
   height: number;
   title?: string;
   panelStyle?: PanelStyle;
+  showBorder?: boolean;
   invalidReason?: string;
 }
 
@@ -318,7 +319,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
   };
 
   const renderedPanelBackgrounds = useMemo(() => {
-    return panels.map((panel) => (
+    return panels.filter((p) => p.showBorder !== false).map((panel) => (
       <div
         key={panel.id}
         className={getPanelClasses(panel)}
@@ -334,7 +335,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
   }, [panels]);
 
   const renderedPanelHandles = useMemo(() => {
-    return panels.map((panel) => {
+    return panels.filter((p) => p.showBorder !== false).map((panel) => {
       const style = panel.panelStyle ?? PANEL_STYLE_DEFAULT;
       const textClass = panel.title ? style.titleTextClass : 'text-slate-400 dark:text-slate-500';
       return (

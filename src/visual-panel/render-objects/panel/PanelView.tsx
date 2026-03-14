@@ -8,11 +8,13 @@ export class PanelCell {
   id: string;
   title?: string;
   style?: CellStyle;
+  showBorder?: boolean;
 
-  constructor(opts: { id: string; title?: string; style?: CellStyle }) {
+  constructor(opts: { id: string; title?: string; style?: CellStyle; showBorder?: boolean }) {
     this.id = opts.id;
     this.title = opts.title;
     this.style = opts.style;
+    this.showBorder = opts.showBorder;
   }
 }
 
@@ -22,6 +24,9 @@ interface PanelCellViewProps {
 
 export function PanelCellView({ panel }: PanelCellViewProps) {
   const { darkMode } = useTheme();
+
+  if (!panel.showBorder) return null;
+
   const titleColor = panel.style?.color || (darkMode ? '#cbd5e1' : '#64748b');
 
   return (
@@ -51,9 +56,10 @@ export const PANEL_SCHEMA: ObjDoc = {
     { name: 'width', type: 'int', description: 'Width in grid cells.', default: '5' },
     { name: 'height', type: 'int', description: 'Height in grid cells.', default: '5' },
     { name: 'visible', type: 'bool', description: 'Whether the panel is shown.', default: 'True' },
+    { name: 'show_border', type: 'bool', description: 'Whether to show the panel border and name label.', default: 'False' },
   ],
   methods: [
-    { name: 'add', signature: 'add(elem: VisualElem)', docstring: 'Add a visual element to this panel.' },
+    { name: 'add', signature: 'add(*elems: VisualElem)', docstring: 'Add one or more visual elements to this panel.' },
     { name: 'remove', signature: 'remove(elem: VisualElem)', docstring: 'Remove a visual element from this panel.' },
   ],
 };

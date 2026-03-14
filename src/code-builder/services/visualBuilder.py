@@ -93,15 +93,17 @@ class Panel(VisualElem):
         self.name = name
         self.width = 5
         self.height = 5
+        self.show_border = False
         self._children = []
 
-    def add(self, elem):
-        if elem._parent is not None:
-            elem._parent.remove(elem)
+    def add(self, *elems):
+        for elem in elems:
+            if elem._parent is not None:
+                elem._parent.remove(elem)
 
-        if elem not in self._children:
-            self._children.append(elem)
-            elem._parent = self
+            if elem not in self._children:
+                self._children.append(elem)
+                elem._parent = self
 
     def remove(self, elem):
         if elem in self._children:
@@ -114,6 +116,7 @@ class Panel(VisualElem):
         out["name"] = getattr(self, 'name', 'Panel')
         out["width"] = int(getattr(self, 'width', 5))
         out["height"] = int(getattr(self, 'height', 5))
+        out["show_border"] = bool(getattr(self, 'show_border', False))
         return out
 
 
