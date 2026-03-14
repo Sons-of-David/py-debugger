@@ -46,19 +46,18 @@ export function TextBoxItem({ box, zoom, selected, autoEdit, onSelect, onChange,
   const editor = useEditor({
     extensions: [StarterKit, TextStyle, Color, FontSize, Underline],
     content: box.content,
-    editable: editing,
+    // Always editable — interaction is controlled via CSS (pointerEvents + caretColor).
+    // Using setEditable() to toggle causes TipTap v3's onRender effect to call
+    // view.updateState twice in one cycle for list-content boxes, which crashes.
+    editable: true,
     immediatelyRender: false,
     onUpdate: ({ editor }) => {
       onChangeRef.current({ ...boxRef.current, content: editor.getJSON() });
     },
   });
 
-  // Sync editable mode with editing state.
-  // Pass false as second arg to suppress the spurious onUpdate that TipTap
-  // emits on setEditable — it normalises list nodes during the transition
-  // which causes a stale-content crash for bullet/ordered list boxes.
+  // Focus when entering edit mode (no setEditable needed — editor is always editable)
   useEffect(() => {
-    if (editor) editor.setEditable(editing, false);
     if (editing) editor?.commands.focus();
   }, [editor, editing]);
 
@@ -212,6 +211,7 @@ export function TextBoxItem({ box, zoom, selected, autoEdit, onSelect, onChange,
           fontSize: 14,
           pointerEvents: editing ? 'auto' : 'none',
           cursor: editing ? 'text' : 'default',
+          caretColor: editing ? 'auto' : 'transparent',
         }}
       >
         <EditorContent editor={editor} style={{ height: '100%' }} />
