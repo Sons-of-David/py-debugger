@@ -69,7 +69,7 @@ export function TextBoxItem({ box, zoom, selected, autoEdit, onSelect, onChange,
   // Sync content when switching between boxes
   useEffect(() => {
     if (editor && box.id !== prevBoxId.current) {
-      editor.commands.setContent(box.content, false);
+      editor.commands.setContent(box.content, { emitUpdate: false });
       prevBoxId.current = box.id;
     }
   }, [editor, box.id, box.content]);
