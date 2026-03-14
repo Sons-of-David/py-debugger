@@ -195,7 +195,7 @@ Each entry is a tuple `(step_index, event_type, func_name, data)` where:
 
 **`MAX_TRACE_STEPS = 1000`** — after 1000 steps, raises `PopupException` to prevent infinite loops from hanging the browser.
 
-### `_capture_variables(frame)`
+### `_capture_variables(frame, exclude_vars, memo)`
 
 Collects all visible variables from a frame as **raw Python values**: `{ name: raw_python_value }`.
 
@@ -207,6 +207,8 @@ Collects all visible variables from a frame as **raw Python values**: `{ name: r
 This ensures `V("arr[i]")` inside a nested function correctly sees `arr` from the outer module scope.
 
 Variables starting with `_` are excluded. Callables and class objects are silently skipped.
+
+**`memo` parameter:** an optional dict shared across all `deepcopy` calls in one step. Passing the same `memo` ensures the same original object always maps to the same copy within a step. The trace loop passes a fresh `memo` each step and exposes it as `R.registry` afterwards.
 
 ### Two-Step Variable Serialization
 
@@ -255,6 +257,56 @@ class V:
 
 Example: `rect.width = V("i + 1")` → at step where `i=3`, accessing `rect.width` returns `4`.
 
+### `R` — Stable Object Reference Across Steps
+
+Each `deepcopy` step creates new Python objects, so an object captured at step 3 and an object at step 5 have different `id()`s even if they represent the same logical node. `R` bridges this by storing the **original id** and re-resolving to the current step's copy on every attribute access.
+
+```python
+# Builder never constructs R directly — it receives R from params (a TrackedDict)
+slow_ref = None
+
+def update(params, scope):
+    global slow_ref
+    slow_r = params.get('slow')   # params is a TrackedDict; values are R objects
+    if slow_r is not None:
+        slow_ref = slow_r          # store once — re-resolves every step automatically
+
+    if slow_ref is not None:
+        node = slow_ref.resolve()  # current step's copy of the tracked node
+        if node is not None:
+            highlight.position = panels[node.val].position
+```
+
+**How it works:**
+
+| Component | Role |
+|-----------|------|
+| `R.registry` | `{id(original_obj): current_step_copy}` — set per step from `deepcopy` memo |
+| `R.inv_registry` | `{id(current_step_copy): id(original_obj)}` — used to wrap objects into R |
+| `R._wrap(obj)` | Returns `R(orig_id)` if obj is in registry, raw value for primitives |
+| `R.resolve()` | Returns `R.registry[self._orig_id]` — the copy for the current step |
+| `R.__getattr__` | Resolves, then calls `R._wrap()` on the result — auto-wraps traversal |
+| `TrackedDict` | Wraps the `params` dict passed to `update()`; values auto-wrapped in R |
+
+**Attribute traversal is transparent:**
+```python
+val = params['root'].left.right.val   # each step: resolves root → left → right → .val
+```
+Primitives (`int`, `float`, `str`, `bool`, `None`) are always returned unwrapped.
+
+**`R` vs `V`:**
+
+| | `V("expr")` | `R` (from params) |
+|---|---|---|
+| Stored | expression string | `id` of original object |
+| Resolved via | `eval(expr, V.params)` | `R.registry[orig_id]` |
+| Good for | computed properties (`V("i+1")`) | tracking a specific object |
+| Lives on element property | Yes | Yes (unwrapped at serialization) |
+
+The `__getattribute__` patch on `VisualElem` handles both: `V` objects call `.eval()`; `R` objects call `.resolve()`.
+
+See `src/samples/r-tracking-demo.json` for a working example.
+
 ### Builder Hooks: `update`, `function_call`, `function_exit`
 
 Three stubs in `pythonTracer.py` can be overridden by builder code:
@@ -265,7 +317,7 @@ def function_call(function_name, **kwargs): pass   # called on function entry
 def function_exit(function_name, value):   pass   # called on function return
 ```
 
-**`update(params, scope)`** — called for every traced line, as before.
+**`update(params, scope)`** — called for every traced line. `params` is a `TrackedDict` wrapping the raw variables dict. Accessing any key returns an `R` object (or a raw primitive) so the builder can hold references that re-resolve automatically each step.
 
 **`function_call(function_name, **kwargs)`** — called just before the first line inside a function executes:
 - `function_name`: the function's `__name__` (e.g. `'__init__'`, `'sort'`)
