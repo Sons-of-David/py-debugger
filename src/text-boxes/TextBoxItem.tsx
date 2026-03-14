@@ -1,7 +1,14 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import { TextStyle } from '@tiptap/extension-text-style';
+import { Color } from '@tiptap/extension-color';
+import { Underline } from '@tiptap/extension-underline';
 import type { TextBox } from './types';
+import { FontSize } from './FontSizeExtension';
 import { TextBoxFormatToolbar } from './TextBoxFormatToolbar';
 import { useTheme } from '../contexts/ThemeContext';
+import './tiptap.css';
 
 export const CELL_SIZE = 40;
 const MIN_CELLS = 2;
@@ -27,22 +34,37 @@ const handlePositions: Record<ResizeHandle, React.CSSProperties> = {
 
 export function TextBoxItem({ box, zoom, selected, onSelect, onChange, onDelete }: TextBoxItemProps) {
   const { darkMode } = useTheme();
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [editing, setEditing] = useState(false);
+  const prevBoxId = useRef(box.id);
 
-  // Reset editing mode when deselected
+  const editor = useEditor({
+    extensions: [StarterKit, TextStyle, Color, FontSize, Underline],
+    content: box.content,
+    editable: editing,
+    immediatelyRender: false,
+    onUpdate: ({ editor }) => {
+      onChange({ ...box, content: editor.getJSON() });
+    },
+  });
+
+  // Sync editable mode with editing state
   useEffect(() => {
-    if (!selected) {
-      setEditing(false);
-    }
+    if (editor) editor.setEditable(editing);
+    if (editing) editor?.commands.focus();
+  }, [editor, editing]);
+
+  // Reset editing when deselected
+  useEffect(() => {
+    if (!selected) setEditing(false);
   }, [selected]);
 
-  // Focus textarea when entering edit mode
+  // Sync content when switching between boxes
   useEffect(() => {
-    if (editing && textareaRef.current) {
-      textareaRef.current.focus();
+    if (editor && box.id !== prevBoxId.current) {
+      editor.commands.setContent(box.content, false);
+      prevBoxId.current = box.id;
     }
-  }, [editing]);
+  }, [editor, box.id, box.content]);
 
   // ── Drag to move ──────────────────────────────────────────────────────────
 
@@ -51,7 +73,6 @@ export function TextBoxItem({ box, zoom, selected, onSelect, onChange, onDelete 
       e.stopPropagation();
       onSelect(box.id);
 
-      // Don't start drag when in edit mode
       if (editing) return;
 
       const startClientX = e.clientX;
@@ -148,47 +169,42 @@ export function TextBoxItem({ box, zoom, selected, onSelect, onChange, onDelete 
         overflow: 'visible',
         pointerEvents: 'auto',
         cursor: selected && !editing ? 'move' : 'default',
+        color: darkMode ? '#f9fafb' : '#111827',
       }}
       onMouseDown={handleBodyMouseDown}
       onDoubleClick={() => setEditing(true)}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape' && editing) {
+          setEditing(false);
+          e.preventDefault();
+        }
+      }}
     >
       {/* Formatting toolbar — shown above the box when selected */}
       {selected && (
         <TextBoxFormatToolbar
+          editor={editor}
           box={box}
-          effectiveColor={box.color ?? (darkMode ? '#f9fafb' : '#111827')}
           onChange={(patch) => onChange({ ...box, ...patch })}
           onDelete={() => onDelete(box.id)}
         />
       )}
 
-      <textarea
-        ref={textareaRef}
-        value={box.text}
-        onChange={(e) => onChange({ ...box, text: e.target.value })}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape') {
-            setEditing(false);
-            e.preventDefault();
-          }
-        }}
+      {/* Rich text editor */}
+      <div
         style={{
           width: '100%',
           height: '100%',
-          resize: 'none',
-          border: 'none',
-          outline: 'none',
-          background: 'transparent',
-          color: box.color ?? (darkMode ? '#f9fafb' : '#111827'),
-          fontSize: box.fontSize,
-          fontFamily: 'inherit',
+          overflow: 'auto',
           padding: '4px',
           boxSizing: 'border-box',
-          cursor: editing ? 'text' : 'default',
+          fontSize: 14,
           pointerEvents: editing ? 'auto' : 'none',
+          cursor: editing ? 'text' : 'default',
         }}
-        placeholder={editing ? 'Type here...' : ''}
-      />
+      >
+        <EditorContent editor={editor} style={{ height: '100%' }} />
+      </div>
 
       {/* Corner resize handles — only shown in move mode */}
       {selected && !editing &&

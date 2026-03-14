@@ -81,8 +81,7 @@ export function TextBoxesLayer({
         col: minCol,
         widthCells,
         heightCells,
-        text: '',
-        fontSize: 14,
+        content: { type: 'doc', content: [{ type: 'paragraph' }] },
       };
 
       setDrawing(null);

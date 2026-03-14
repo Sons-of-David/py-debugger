@@ -12,6 +12,7 @@ import { GridArea, type GridAreaHandle } from './GridArea';
 import { getStateAt, getMaxTime, getTimeline } from '../timeline/timelineState';
 import { getCodeStepAt } from '../debugger-panel/codeTimelineState';
 import type { TextBox } from '../text-boxes/types';
+import { migrateTextBox } from '../text-boxes/types';
 
 const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
@@ -258,7 +259,7 @@ function App() {
     setVisualBuilderCode(data.builderCode);
     setDebuggerCode(dbgCode);
     setBreakpoints(data.breakpoints ? new Set(data.breakpoints) : new Set());
-    setTextBoxes(data.textBoxes ?? []);
+    setTextBoxes((data.textBoxes ?? [] as unknown[]).map((raw) => migrateTextBox(raw as Record<string, unknown>)));
     await runAnalyze(data.builderCode, dbgCode);
   }, [runAnalyze]);
 
