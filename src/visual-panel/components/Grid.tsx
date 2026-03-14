@@ -1,5 +1,5 @@
 import { useRef, useCallback, useMemo, memo, forwardRef, useImperativeHandle, useState, useEffect } from 'react';
-import { useAnimationEnabled } from '../../animation/animationContext';
+import { useAnimationEnabled, useAnimationDuration } from '../../animation/animationContext';
 import { GridCell } from './GridCell';
 import type { RenderableObjectData, PanelStyle } from '../types/grid';
 import { PANEL_STYLE_DEFAULT } from '../types/grid';
@@ -77,6 +77,7 @@ const GridSingleObject = memo(function GridSingleObject({
   const { widthCells, heightCells } = obj;
   const [flashing, setFlashing] = useState(false);
   const globalAnimationsEnabled = useAnimationEnabled();
+  const animationDuration = useAnimationDuration();
   // Per-element animate flag: false overrides the global toggle to force jump mode.
   const animationsEnabled = globalAnimationsEnabled && obj.cellData.animate !== false;
   // Start invisible so newly-appearing elements can fade in
@@ -127,7 +128,7 @@ const GridSingleObject = memo(function GridSingleObject({
 
   return (
     <div
-      className={`absolute${animationsEnabled ? ' transition-all duration-300 ease-out' : ''}${cursorClass}`}
+      className={`absolute${animationsEnabled ? ' transition-all ease-out' : ''}${cursorClass}`}
       style={{
         left: obj.col * CELL_SIZE,
         top: obj.row * CELL_SIZE,
@@ -136,6 +137,7 @@ const GridSingleObject = memo(function GridSingleObject({
         zIndex: 10,
         opacity: mounted && elemVisible ? 1 : 0,
         pointerEvents: elemVisible ? undefined : 'none',
+        transitionDuration: animationsEnabled ? `${animationDuration}ms` : undefined,
       }}
       onClick={handleClick}
       onMouseDown={handleMouseDown}
@@ -178,6 +180,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
 }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const gridContentRef = useRef<HTMLDivElement>(null);
+  const animationDuration = useAnimationDuration();
 
   // ── Drag state ──────────────────────────────────────────────────────────
   const dragStateRef = useRef<{ elemId: number; lastRow: number; lastCol: number } | null>(null);
@@ -311,7 +314,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
   }, [objectsToRender, mouseEnabled, onElementClick, handleDragStart]);
 
   const getPanelClasses = (panel: PanelInfo): string => {
-    const base = 'absolute transition-all duration-300 ease-out';
+    const base = 'absolute transition-all ease-out';
     const invalid = panel.invalidReason ? 'opacity-50 grayscale' : '';
     const style = panel.panelStyle ?? PANEL_STYLE_DEFAULT;
 
@@ -329,6 +332,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
           width: panel.width * CELL_SIZE,
           height: panel.height * CELL_SIZE,
           zIndex: 5,
+          transitionDuration: `${animationDuration}ms`,
         }}
       />
     ));

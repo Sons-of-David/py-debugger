@@ -62,6 +62,7 @@ function App() {
   const [debugCallSuffix, setDebugCallSuffix] = useState<string | null>(null);
   const [textBoxes, setTextBoxes] = useState<TextBox[]>([]);
   const [animationsEnabled, setAnimationsEnabled] = useState(true);
+  const [animationDuration, setAnimationDuration] = useState(600); // ms
 
   type AppMode = 'idle' | 'trace' | 'interactive' | 'debug_in_event';
   const [appMode, setAppMode] = useState<AppMode>('idle');
@@ -298,7 +299,7 @@ function App() {
 
 
   return (
-    <AnimationContext.Provider value={animationsEnabled}>
+    <AnimationContext.Provider value={{ enabled: animationsEnabled, duration: animationDuration }}>
     <div className="w-screen h-screen overflow-hidden flex flex-col bg-gray-100 dark:bg-gray-900 dark:text-gray-100">
       {/* Header */}
       <header className="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex items-center justify-between shadow-sm">
@@ -384,6 +385,21 @@ function App() {
           >
             {animationsEnabled ? 'Animated' : 'Jump'}
           </button>
+
+          {/* Animation speed slider — only shown in animated step mode */}
+          {animationsEnabled && (appMode !== 'idle' ) && (
+            <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+              <input
+                type="range"
+                min={100} max={2000} step={100}
+                value={animationDuration}
+                onChange={(e) => setAnimationDuration(Number(e.target.value))}
+                className="w-24 accent-blue-500"
+                title="Animation duration"
+              />
+              <span className="w-10 text-right">{(animationDuration / 1000).toFixed(1)}s</span>
+            </div>
+          )}
 
           {/* Dark mode toggle */}
           <button
