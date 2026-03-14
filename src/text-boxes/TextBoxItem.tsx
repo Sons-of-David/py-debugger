@@ -56,9 +56,16 @@ export function TextBoxItem({ box, zoom, selected, autoEdit, onSelect, onChange,
     },
   });
 
-  // Focus when entering edit mode (no setEditable needed — editor is always editable)
+  // Focus when entering edit mode (no setEditable needed — editor is always editable).
+  // Deferred via requestAnimationFrame so Safari's double-click selection pipeline
+  // fully settles before ProseMirror reads the selection — otherwise it crashes on
+  // list-content boxes because the selection anchor is in flux during the dblclick event.
   useEffect(() => {
-    if (editing) editor?.commands.focus();
+    if (!editing || !editor) return;
+    const id = requestAnimationFrame(() => {
+      try { editor.commands.focus(); } catch (err) { console.error('TipTap focus error:', err); }
+    });
+    return () => cancelAnimationFrame(id);
   }, [editor, editing]);
 
   // Reset editing when deselected
@@ -182,7 +189,7 @@ export function TextBoxItem({ box, zoom, selected, autoEdit, onSelect, onChange,
         userSelect: editing ? 'text' : 'none',
       }}
       onMouseDown={handleBodyMouseDown}
-      onDoubleClick={() => setEditing(true)}
+      onDoubleClick={(e) => { e.preventDefault(); setEditing(true); }}
       onKeyDown={(e) => {
         if (e.key === 'Escape' && editing) {
           setEditing(false);

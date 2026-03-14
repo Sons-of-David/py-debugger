@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import type { TextBox } from './types';
 import { TextBoxItem, CELL_SIZE } from './TextBoxItem';
+import { TextBoxErrorBoundary } from './TextBoxErrorBoundary';
 
 interface DrawState {
   startRow: number;
@@ -118,16 +119,17 @@ export function TextBoxesLayer({
     <>
       {/* Text box items */}
       {textBoxes.map((box) => (
-        <TextBoxItem
-          key={box.id}
-          box={box}
-          zoom={zoom}
-          selected={selectedId === box.id}
-          autoEdit={box.id === latestCreatedId}
-          onSelect={onSelectTextBox}
-          onChange={onTextBoxChange}
-          onDelete={onTextBoxDelete}
-        />
+        <TextBoxErrorBoundary key={box.id} boxId={box.id} onDelete={onTextBoxDelete}>
+          <TextBoxItem
+            box={box}
+            zoom={zoom}
+            selected={selectedId === box.id}
+            autoEdit={box.id === latestCreatedId}
+            onSelect={onSelectTextBox}
+            onChange={onTextBoxChange}
+            onDelete={onTextBoxDelete}
+          />
+        </TextBoxErrorBoundary>
       ))}
 
       {/* Drawing preview */}
