@@ -1,33 +1,33 @@
+import { motion } from 'framer-motion';
+
 interface SquareProps {
   color?: string;
   opacity?: number;
   strokeWidth?: number;
   animate?: boolean;
+  animationDuration?: number;
 }
 
-export function Square({ color = '#10b981', opacity = 1, strokeWidth = 2, animate = false }: SquareProps) {
+export function Square({
+  color = '#10b981',
+  opacity = 1,
+  strokeWidth = 2,
+  animate = false,
+  animationDuration = 300,
+}: SquareProps) {
   const fill = color;
-  const fillOpacity = opacity;
-  // Use stroke color at full opacity for the perimeter
   const stroke = strokeWidth > 0 ? color : 'none';
-  const transition = animate ? 'fill 250ms ease, fill-opacity 250ms ease, stroke 250ms ease' : undefined;
+  const transition = animate ? { duration: animationDuration / 1000, ease: 'easeOut' as const } : { duration: 0 };
 
   return (
-    <svg
-      viewBox="0 0 100 100"
-      preserveAspectRatio="none"
-      className="w-full h-full"
-    >
-      <rect
+    <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full">
+      <motion.rect
         x={strokeWidth / 2}
         y={strokeWidth / 2}
         width={100 - strokeWidth}
         height={100 - strokeWidth}
-        fill={fill}
-        fillOpacity={fillOpacity}
-        stroke={stroke}
-        strokeWidth={strokeWidth}
-        style={{ transition }}
+        animate={{ fill, fillOpacity: opacity, stroke }}
+        transition={transition}
       />
     </svg>
   );

@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import type { ArrowOrientation } from '../types/grid';
 
 interface ArrowProps {
@@ -7,6 +8,7 @@ interface ArrowProps {
   orientation?: ArrowOrientation;
   rotation?: number;
   animate?: boolean;
+  animationDuration?: number;
 }
 
 const ORIENTATION_DEGREES: Record<ArrowOrientation, number> = {
@@ -23,27 +25,25 @@ export function Arrow({
   orientation = 'up',
   rotation = 0,
   animate = false,
+  animationDuration = 300,
 }: ArrowProps) {
   const baseRotation = ORIENTATION_DEGREES[orientation] ?? 0;
   const fill = color;
-  const fillOpacity = opacity;
   const stroke = strokeWidth > 0 ? color : 'none';
-  const transition = animate ? 'fill 250ms ease, fill-opacity 250ms ease, stroke 250ms ease' : undefined;
+  const transition = animate ? { duration: animationDuration / 1000, ease: 'easeOut' as const } : { duration: 0 };
 
   return (
-    <svg
+    <motion.svg
       viewBox="0 0 100 100"
       className="w-full h-full"
-      style={{ transform: `rotate(${baseRotation + rotation}deg)` }}
+      animate={{ rotate: baseRotation + rotation }}
+      transition={transition}
     >
-      <polygon
+      <motion.polygon
         points="50,80 20,30 40,30 40,10 60,10 60,30 80,30"
-        fill={fill}
-        fillOpacity={fillOpacity}
-        stroke={stroke}
-        strokeWidth={strokeWidth}
-        style={{ transition }}
+        animate={{ fill, fillOpacity: opacity, stroke }}
+        transition={transition}
       />
-    </svg>
+    </motion.svg>
   );
 }

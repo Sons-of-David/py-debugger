@@ -2,7 +2,7 @@ import { Circle as CircleShape } from '../../shapes';
 import { rgbToHex } from '../../../api/visualBuilder';
 import type { Circle } from './Circle';
 import { registerRenderer } from '../../views/rendererRegistry';
-import { useAnimationEnabled } from '../../../animation/animationContext';
+import { useAnimationEnabled, useAnimationDuration } from '../../../animation/animationContext';
 
 interface CircleViewProps {
   circle: Circle;
@@ -10,6 +10,7 @@ interface CircleViewProps {
 
 export function CircleView({ circle }: CircleViewProps) {
   const animate = useAnimationEnabled();
+  const animationDuration = useAnimationDuration();
   return (
     <div style={{ width: '100%', height: '100%' }}>
       <CircleShape
@@ -17,6 +18,7 @@ export function CircleView({ circle }: CircleViewProps) {
         opacity={circle.alpha}
         strokeWidth={1}
         animate={animate}
+        animationDuration={animationDuration}
       />
     </div>
   );

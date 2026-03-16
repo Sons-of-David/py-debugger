@@ -2,7 +2,7 @@ import { Arrow as ArrowShape } from '../../shapes';
 import { rgbToHex } from '../../../api/visualBuilder';
 import type { Arrow } from './Arrow';
 import { registerRenderer } from '../../views/rendererRegistry';
-import { useAnimationEnabled } from '../../../animation/animationContext';
+import { useAnimationEnabled, useAnimationDuration } from '../../../animation/animationContext';
 
 interface ArrowViewProps {
   arrow: Arrow;
@@ -10,6 +10,7 @@ interface ArrowViewProps {
 
 export function ArrowView({ arrow }: ArrowViewProps) {
   const animate = useAnimationEnabled();
+  const animationDuration = useAnimationDuration();
   return (
     <ArrowShape
       color={rgbToHex(arrow.color, '#10b981')}
@@ -18,6 +19,7 @@ export function ArrowView({ arrow }: ArrowViewProps) {
       orientation={arrow.orientation}
       rotation={arrow.rotation}
       animate={animate}
+      animationDuration={animationDuration}
     />
   );
 }
