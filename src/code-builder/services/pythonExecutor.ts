@@ -1,4 +1,5 @@
 import type { VisualBuilderElementBase } from '../../api/visualBuilder';
+import VB_ENGINE_PYTHON from './_vb_engine.py?raw';
 import VISUAL_BUILDER_PYTHON from './visualBuilder.py?raw';
 import EVENT_HANDLING_PYTHON from './event_handling.py?raw';
 import VISUAL_BUILDER_SHAPES_PYTHON from './visualBuilderShapes.py?raw';
@@ -102,6 +103,8 @@ async function loadPythonRuntime(): Promise<PyodideRuntime> {
 
   if (!pythonRuntimeReady) {
     // Write builder and debugger import files to Pyodide VFS so they are importable
+    py.FS.writeFile('/home/pyodide/_vb_engine.py', VB_ENGINE_PYTHON);
+
     for (const [path, content] of Object.entries(BUILDER_IMPORT_FILES)) {
       const filename = path.split('/').pop()!;
       py.FS.writeFile(`/home/pyodide/${filename}`, content);
