@@ -1,7 +1,8 @@
+import { motion } from 'framer-motion';
 import type { Label } from './Label';
 import { rgbToHex } from '../../../api/visualBuilder';
 import { registerRenderer } from '../../views/rendererRegistry';
-import { useAnimationEnabled } from '../../../animation/animationContext';
+import { useAnimationEnabled, useAnimationDuration } from '../../../animation/animationContext';
 
 interface LabelViewProps {
   label: Label;
@@ -9,19 +10,19 @@ interface LabelViewProps {
 
 export function LabelView({ label }: LabelViewProps) {
   const animate = useAnimationEnabled();
-  const style: React.CSSProperties = { opacity: label.alpha };
-  if (animate) style.transition = 'color 250ms ease, opacity 250ms ease';
-  if (label.color) style.color = rgbToHex(label.color);
-  if (label.fontSize != null) style.fontSize = label.fontSize;
+  const animationDuration = useAnimationDuration();
+  const transition = animate ? { duration: animationDuration / 1000, ease: 'easeOut' as const } : { duration: 0 };
+  const color = label.color ? rgbToHex(label.color) : undefined;
 
   return (
     <div className="absolute inset-0 flex items-center justify-center">
-      <span
+      <motion.span
         className="font-mono text-center whitespace-pre-wrap"
-        style={style}
+        animate={{ opacity: label.alpha, color, fontSize: label.fontSize ?? undefined }}
+        transition={transition}
       >
         {label.label ?? ''}
-      </span>
+      </motion.span>
     </div>
   );
 }
