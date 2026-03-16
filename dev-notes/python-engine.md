@@ -2,17 +2,31 @@
 
 [← dev-notes](./dev-notes.md)
 
-Python runs entirely in-browser via **Pyodide** (WebAssembly, loaded once per page session). Three Python files are loaded at startup and remain active for the session. There is no server-side Python.
+Python runs entirely in-browser via **Pyodide** (WebAssembly, loaded once per page session). There is no server-side Python.
 
 ---
 
 ## Part 1: General Description
 
+### Three-Layer Architecture
+
+The Python side is split into three layers, each in a separate file:
+
+| Layer | File | What lives here |
+|-------|------|-----------------|
+| **Hidden engine types** | `_vb_engine.py` | `VisualElem`, `V`, `R`, `TrackedDict`, `PopupException` |
+| **User-facing API** | `user_api.py` | `Panel`, all shapes, `DebugCall`, `RunCall`, `on_click`, `on_drag`, `update`, `function_call`, `function_exit`, `V` shorthand |
+| **Engine** | `visualBuilder.py`, `event_handling.py`, `pythonTracer.py` | Serialization, tracing, click dispatch, sandbox execution |
+
+`_vb_engine.py` and `user_api.py` are **Python VFS modules** — written to `/home/pyodide/` at startup and imported via standard `import`. They are never exec'd into globals.
+
+The three engine files are exec'd into **Pyodide globals** and share that namespace with each other. User builder code runs in a completely separate **`_user_code_ns`** dict (a sandbox) that contains only the `user_api` items. User code cannot reach engine functions in Pyodide globals.
+
 ### The Two Python Sides
 
 **Builder side** defines the visual elements and how they animate:
 - User writes builder code declaring `Panel`, `Rect`, `Circle`, etc., binding properties to `V("expression")` objects
-- At Analyze time, builder code runs via `exec()` in Pyodide globals — this populates `VisualElem._registry` with live element objects
+- At Analyze time, builder code runs via `exec()` in `_user_code_ns` (a sandbox seeded from `user_api`) — this populates `VisualElem._registry` with live element objects
 - The builder code is re-run at every Analyze (the registry is cleared first)
 
 **Debugger side** traces the algorithm:
@@ -42,8 +56,10 @@ All TypeScript-to-Python calls go through `src/code-builder/services/pythonExecu
 
 | File | Purpose |
 |------|---------|
-| `src/code-builder/services/visualBuilder.py` | `VisualElem` base class, `Panel`, `DebugCall`, `PopupException`, `_handle_click`, serialization functions |
-| `src/code-builder/services/visualBuilderShapes.py` | Concrete shape subclasses with `_serialize()` |
+| `src/code-builder/services/_vb_engine.py` | Hidden engine types: `VisualElem`, `V`, `R`, `TrackedDict`, `PopupException` |
+| `src/code-builder/services/user_api.py` | User-facing API: `Panel`, all shapes, `DebugCall`, `RunCall`, event stubs, hook stubs, `V` shorthand |
+| `src/code-builder/services/visualBuilder.py` | Sandbox exec (`_exec_builder_code`), `_user_code_ns`, `_serialize_visual_builder`, `_execute_run_call` |
+| `src/code-builder/services/event_handling.py` | Click/drag dispatch, handler serialization |
 
 ### `VisualElem` — Base Class
 
@@ -435,12 +451,14 @@ Both builder and debugger import files are bundled at build time and written to 
 
 ### Key Files Summary
 
-| File | Purpose |
-|------|---------|
-| `src/code-builder/services/visualBuilder.py` | VisualElem, Panel, DebugCall, serialization, click dispatch |
-| `src/code-builder/services/visualBuilderShapes.py` | Concrete shape subclasses |
-| `src/debugger-panel/pythonTracer.py` | Tracer, V(), _exec_context, timeline building |
-| `src/code-builder/services/pythonExecutor.ts` | All TypeScript↔Pyodide calls |
-| `src/output-terminal/terminalState.ts` | Output capture and tab segmentation |
-| `src/builder-imports/*.py` | User-extendable Python helpers importable in builder code |
-| `src/debugger-imports/*.py` | User-extendable Python helpers importable in debugger code |
+| File | Type | Purpose |
+|------|------|---------|
+| `src/code-builder/services/_vb_engine.py` | VFS module | Hidden engine types: VisualElem, V, R, TrackedDict, PopupException |
+| `src/code-builder/services/user_api.py` | VFS module | User-facing API: Panel, shapes, hooks, event stubs, V shorthand |
+| `src/code-builder/services/visualBuilder.py` | exec'd | Sandbox exec, _user_code_ns, serialization, _execute_run_call |
+| `src/code-builder/services/event_handling.py` | exec'd | Click/drag dispatch, handler serialization |
+| `src/debugger-panel/pythonTracer.py` | exec'd | Tracer, _exec_context, variable serialization, timeline building |
+| `src/code-builder/services/pythonExecutor.ts` | TypeScript | All TypeScript↔Pyodide calls |
+| `src/output-terminal/terminalState.ts` | TypeScript | Output capture and tab segmentation |
+| `src/builder-imports/*.py` | VFS | User-extendable Python helpers importable in builder code |
+| `src/debugger-imports/*.py` | VFS | User-extendable Python helpers importable in debugger code |
