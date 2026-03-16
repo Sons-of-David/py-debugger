@@ -1,93 +1,8 @@
 
-from typing import get_type_hints
+import _vb_engine as _engine
 
 
-class PopupException(Exception):
-    """Exception type used to signal user-facing popup messages."""
-    pass
-
-
-class VisualElem:
-    _registry = []
-    _vis_elem_id = 0
-
-    @staticmethod
-    def _clear_registry():
-        VisualElem._registry.clear()
-        VisualElem._vis_elem_id = 0
-
-    def __init__(self):
-        self.position = (0, 0)
-        self.visible = True
-        self.alpha = 1.0
-        self.z = 0
-        self.animate = True
-        self._parent = None
-        self._elem_id = VisualElem._vis_elem_id
-        VisualElem._vis_elem_id += 1
-        VisualElem._registry.append(self)
-
-    def delete(self):
-        """Remove this element from the registry and its parent panel."""
-        if self in VisualElem._registry:
-            VisualElem._registry.remove(self)
-        if self._parent is not None:
-            self._parent.remove(self)
-
-    def _get_event_handlers(self):
-        handlers = []
-        for func in [on_click, on_drag]:
-            if has_same_signature(type(self), func):
-                handlers.append(func.__name__)
-        return handlers
-
-    def _serialize_base(self):
-        """Return base serialization dict with common properties."""
-        pos = getattr(self, 'position', (0, 0))
-        if not isinstance(pos, (list, tuple)) or len(pos) < 2:
-            pos = (0, 0)
-        try:
-            row, col = int(pos[0]), int(pos[1])
-        except (ValueError, TypeError):
-            row, col = 0, 0
-
-        alpha = getattr(self, 'alpha', 1.0)
-        try:
-            alpha = float(alpha)
-        except (ValueError, TypeError):
-            alpha = 1.0
-
-
-        out = {
-            "position": [row, col],
-            "visible": getattr(self, 'visible', True),
-            "alpha": alpha,
-            "z": int(getattr(self, 'z', 0)),
-            "animate": bool(getattr(self, 'animate', True)),
-            "_elem_id": self._elem_id,
-        }
-        if self._parent is not None:
-            out["panelId"] = str(self._parent._elem_id)
-        return out
-
-    def _serialize(self):
-        """Override in subclasses to provide type-specific serialization."""
-        out = self._serialize_base()
-        out["type"] = "rect"
-        out["width"] = 1
-        out["height"] = 1
-        out["color"] = [34, 197, 94]
-        return out
-
-    @staticmethod
-    def _serialize_color(color, default):
-        """Helper to serialize RGB color tuple."""
-        if isinstance(color, (list, tuple)) and len(color) >= 3:
-            return [int(color[0]), int(color[1]), int(color[2])]
-        return list(default)
-
-
-class Panel(VisualElem):
+class Panel(_engine.VisualElem):
     def __init__(self, name="Panel"):
         super().__init__()
         self.name = name
@@ -124,7 +39,7 @@ class Panel(VisualElem):
 def _serialize_visual_builder():
     """Walk VisualElem._registry and return list of serialized elements."""
     import json
-    return json.dumps([elem._serialize() for elem in VisualElem._registry])
+    return json.dumps([elem._serialize() for elem in _engine.VisualElem._registry])
 
 
 
