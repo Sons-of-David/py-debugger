@@ -1,7 +1,8 @@
 # Basic shapes that extend VisualElem (must be loaded after visualBuilder.py)
+import _vb_engine as _engine
 
 
-class Rect(VisualElem):
+class Rect(_engine.VisualElem):
     def __init__(self, position=(0, 0), width=1, height=1, color=(34, 197, 94), visible=True, z=0):
         super().__init__()
         self.position = position
@@ -20,7 +21,7 @@ class Rect(VisualElem):
         return out
 
 
-class Circle(VisualElem):
+class Circle(_engine.VisualElem):
     def __init__(self, position=(0, 0), width=1, height=1, color=(59, 130, 246), visible=True, z=0):
         super().__init__()
         self.position = position
@@ -39,7 +40,7 @@ class Circle(VisualElem):
         return out
 
 
-class Arrow(VisualElem):
+class Arrow(_engine.VisualElem):
     def __init__(self, position=(0, 0), width=1, height=1, color=(16, 185, 129), orientation="up", rotation=0, visible=True, z=0):
         super().__init__()
         self.position = position
@@ -62,7 +63,7 @@ class Arrow(VisualElem):
         return out
 
 
-class Line(VisualElem):
+class Line(_engine.VisualElem):
     def __init__(self, start=(0, 0), end=(1, 1), color=(239, 68, 68),
                  stroke_weight=2, start_offset=(0.5, 0.5), end_offset=(0.5, 0.5),
                  start_cap='none', end_cap='arrow', z=0):
@@ -99,7 +100,7 @@ class Line(VisualElem):
         return out
 
 
-class Label(VisualElem):
+class Label(_engine.VisualElem):
     def __init__(self, label="", position=(0, 0), width=1, height=1, font_size=14, color=None, visible=True, z=0):
         super().__init__()
         self.label = label
@@ -124,7 +125,7 @@ class Label(VisualElem):
         return out
 
 
-class Array(VisualElem):
+class Array(_engine.VisualElem):
     def __init__(self, arr=None, var_name="", position=(0, 0), direction="right", show_index=True, visible=True, z=0):
         super().__init__()
         if arr is None:
@@ -158,7 +159,7 @@ class Array(VisualElem):
         return out
 
 
-class Array2D(VisualElem):
+class Array2D(_engine.VisualElem):
     """Display a 2D list variable as a matrix on the grid."""
     def __init__(self, var_name="", position=(0, 0), num_rows=3, num_cols=3, show_index=True, visible=True, z=0):
         super().__init__()
