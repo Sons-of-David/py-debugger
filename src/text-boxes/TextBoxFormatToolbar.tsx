@@ -57,7 +57,6 @@ export function TextBoxFormatToolbar({ editor, box, onChange, onDelete }: TextBo
       <select
         value={currentFontSize}
         onChange={(e) => editor?.chain().focus().setFontSize(e.target.value).run()}
-        onMouseDown={(e) => e.preventDefault()}
         title="Font size"
         style={{
           background: '#374151',
