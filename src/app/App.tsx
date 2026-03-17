@@ -4,13 +4,13 @@ import { Group, Panel, Separator } from 'react-resizable-panels';
 import { CodeEditorArea } from './CodeEditorArea';
 import { useTheme } from '../contexts/ThemeContext';
 import { AnimationContext } from '../animation/animationContext';
-import { loadPyodide, isPyodideLoaded, executePythonCode, executeDebugCall, resetPythonState } from '../code-builder/services/pythonExecutor';
+import { loadPyodide, isPyodideLoaded, executePythonCode, executeDebugCall, resetPythonState } from '../python-engine/code-builder/services/pythonExecutor';
 import { clearAll as clearTerminal, commitCurrentSegment, appendMarker } from '../output-terminal/terminalState';
 import { ApiReferencePanel } from '../api/ApiReferencePanel';
 import { TimelineControls } from '../timeline/TimelineControls';
 import { GridArea, type GridAreaHandle } from './GridArea';
 import { getStateAt, getMaxTime, getTimeline } from '../timeline/timelineState';
-import { getCodeStepAt } from '../debugger-panel/codeTimelineState';
+import { getCodeStepAt } from '../python-engine/debugger-panel/codeTimelineState';
 import type { TextBox } from '../text-boxes/types';
 import { migrateTextBox } from '../text-boxes/types';
 

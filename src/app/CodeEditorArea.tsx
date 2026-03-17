@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Group, Panel, Separator } from 'react-resizable-panels';
-import { CodeEditor } from '../code-builder/CodeEditor';
-import { DebuggerCodeEditor } from '../debugger-panel/DebuggerCodeEditor';
-import type { HighlightedLines } from '../debugger-panel/DebuggerCodeEditor';
-import { VariablePanel } from '../debugger-panel/VariablePanel';
-import type { VariableValue } from '../debugger-panel/codeTimelineState';
+import { CodeEditor } from '../python-engine/code-builder/CodeEditor';
+import { DebuggerCodeEditor } from '../python-engine/debugger-panel/DebuggerCodeEditor';
+import type { HighlightedLines } from '../python-engine/debugger-panel/DebuggerCodeEditor';
+import { VariablePanel } from '../python-engine/debugger-panel/VariablePanel';
+import type { VariableValue } from '../python-engine/debugger-panel/codeTimelineState';
 import { OutputTerminal } from '../output-terminal/OutputTerminal';
 
 type ActiveTab = 'code' | 'visual-builder';

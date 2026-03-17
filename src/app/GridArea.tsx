@@ -3,7 +3,7 @@ import { toPng } from 'html-to-image';
 import { Grid, type GridHandle } from '../visual-panel/components/Grid';
 import { useGridState } from '../visual-panel/hooks/useGridState';
 import type { VisualBuilderElementBase } from '../api/visualBuilder';
-import { executeClickHandler, executeEventHandler, type ClickHandlerResult, type DragType } from '../code-builder/services/pythonExecutor';
+import { executeClickHandler, executeEventHandler, type ClickHandlerResult, type DragType } from '../python-engine/code-builder/services/pythonExecutor';
 import { appendError } from '../output-terminal/terminalState';
 import { getConstructor } from '../visual-panel/types/elementRegistry';
 import type { TextBox } from '../text-boxes/types';

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import Editor, { type Monaco } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import type * as MonacoTypes from 'monaco-editor';
-import { useTheme } from '../contexts/ThemeContext';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export interface HighlightedLines {
   prev: number | null;

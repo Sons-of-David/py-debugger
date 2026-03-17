@@ -1,13 +1,13 @@
-import type { VisualBuilderElementBase } from '../../api/visualBuilder';
+import type { VisualBuilderElementBase } from '../../../api/visualBuilder';
 import VB_ENGINE_PYTHON from './_vb_engine.py?raw';
 import USER_API_PYTHON from './user_api.py?raw';
 import VISUAL_BUILDER_PYTHON from './visualBuilder.py?raw';
 import EVENT_HANDLING_PYTHON from './event_handling.py?raw';
 import PYTHON_TRACER from '../../debugger-panel/pythonTracer.py?raw';
-import { hydrateTimelineFromArray } from '../../timeline/timelineState';
+import { hydrateTimelineFromArray } from '../../../timeline/timelineState';
 import { setCodeTimeline, type TraceStep } from '../../debugger-panel/codeTimelineState';
-import { setHandlers } from '../../visual-panel/handlersState';
-import { setCurrentStepOutputs, setBuilderStepOutputs, setBuilderOutput, appendClickOutput, appendError } from '../../output-terminal/terminalState';
+import { setHandlers } from '../../../visual-panel/handlersState';
+import { setCurrentStepOutputs, setBuilderStepOutputs, setBuilderOutput, appendClickOutput, appendError } from '../../../output-terminal/terminalState';
 
 // ---------------------------------------------------------------------------
 // Pyodide runtime

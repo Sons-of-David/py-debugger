@@ -2,8 +2,8 @@ import { useEffect, useRef } from 'react';
 import Editor, { type Monaco } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import type * as MonacoTypes from 'monaco-editor';
-import { VISUAL_ELEM_SCHEMA } from '../api/visualBuilder';
-import { useTheme } from '../contexts/ThemeContext';
+import { VISUAL_ELEM_SCHEMA } from '../../api/visualBuilder';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface CodeEditorProps {
   code: string;

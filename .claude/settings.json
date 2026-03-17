@@ -3,7 +3,16 @@
     "allow": [
       "Bash(npx tsc --noEmit)",
       "Bash(git add src/App.tsx src/code-builder/sample.py)",
-      "Bash(git add src/App.tsx src/CodeEditorArea.tsx)"
+      "Bash(git add src/App.tsx src/CodeEditorArea.tsx)",
+      "Bash(git add src/debugger-panel/pythonTracer.py)",
+      "Bash(git add src/samples/linked-list-creation.json)",
+      "Bash(git add dev-notes/python-engine.md)",
+      "Bash(ls /workspaces/py-debugger/node_modules/pyodide/*.d.ts)",
+      "Bash(npx eslint src/code-builder/services/pythonExecutor.ts)",
+      "Bash(git add src/code-builder/services/event_handling.py src/code-builder/services/visualBuilder.py)",
+      "Bash(git add src/visual-panel/components/Grid.tsx src/app/GridArea.tsx)",
+      "Bash(git add src/samples/drag-demo.json)",
+      "Bash(git add src/visual-panel/hooks/useGridState.ts)"
     ]
   }
 }
