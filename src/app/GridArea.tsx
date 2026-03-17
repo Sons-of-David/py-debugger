@@ -4,7 +4,6 @@ import { Grid, type GridHandle } from '../visual-panel/components/Grid';
 import { useGridState } from '../visual-panel/hooks/useGridState';
 import type { VisualBuilderElementBase } from '../api/visualBuilder';
 import { executeClickHandler, executeEventHandler, type ClickHandlerResult, type DragType } from '../python-engine/code-builder/services/pythonExecutor';
-import { appendError } from '../output-terminal/terminalState';
 import { getConstructor } from '../visual-panel/types/elementRegistry';
 import type { TextBox } from '../text-boxes/types';
 
@@ -70,7 +69,6 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
       const result: ClickHandlerResult = await executeClickHandler(elemId, position[0], position[1]);
       if (!result) return;
       if (result.error) {
-        appendError(result.error);
         return;
       }
       const hydrated = result.snapshot.map((el) => {
@@ -85,7 +83,6 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
 
     const applyEventResult = useCallback((result: ClickHandlerResult) => {
       if (!result || result.error) {
-        if (result?.error) appendError(result.error);
         return;
       }
       const hydrated = result.snapshot.map((el) => {
