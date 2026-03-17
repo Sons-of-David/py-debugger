@@ -58,6 +58,7 @@ function App() {
   const [pyodideLoading, setPyodideLoading] = useState(false);
   const [pyodideReady, setPyodideReady] = useState(false);
   const [apiReferenceOpen, setApiReferenceOpen] = useState(false);
+  const [saveSampleStatus, setSaveSampleStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   const [debugCallSuffix, setDebugCallSuffix] = useState<string | null>(null);
   const [textBoxes, setTextBoxes] = useState<TextBox[]>([]);
@@ -252,33 +253,39 @@ function App() {
       textBoxes,
     };
     const content = JSON.stringify(data, null, 2);
-    await fetch('/api/save-sample', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, content }),
-    });
+    setSaveSampleStatus('saving');
+    try {
+      const res = await fetch('/api/save-sample', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, content }),
+      });
+      setSaveSampleStatus(res.ok ? 'saved' : 'error');
+    } catch {
+      setSaveSampleStatus('error');
+    }
+    setTimeout(() => setSaveSampleStatus('idle'), 2000);
   }, [visualBuilderCode, debuggerCode, breakpoints, textBoxes, projectName]);
 
-  const handleLoad = useCallback(async (data: { builderCode?: string; debuggerCode?: string; breakpoints?: number[]; textBoxes?: TextBox[] }, name: string) => {
+  const handleLoad = useCallback((data: { builderCode?: string; debuggerCode?: string; breakpoints?: number[]; textBoxes?: TextBox[] }, name: string) => {
     if (!data.builderCode) {
       setAnalyzeError('Invalid file: missing builderCode field');
       return;
     }
     setProjectName(name);
-    const dbgCode = data.debuggerCode ?? '';
     setVisualBuilderCode(data.builderCode);
-    setDebuggerCode(dbgCode);
+    setDebuggerCode(data.debuggerCode ?? '');
     setBreakpoints(data.breakpoints ? new Set(data.breakpoints) : new Set());
     setTextBoxes((data.textBoxes ?? [] as unknown[]).map((raw) => migrateTextBox(raw as Record<string, unknown>)));
-    await runAnalyze(data.builderCode, dbgCode);
-  }, [runAnalyze]);
+    handleEdit();
+  }, [handleEdit]);
 
   // Auto-load first sample and return to edit mode
   useEffect(() => {
     if (!pyodideReady || autoLoadedRef.current || SAMPLES.length === 0) return;
     autoLoadedRef.current = true;
-    handleLoad(SAMPLES[0].data, SAMPLES[0].name).then(handleEdit);
-  }, [pyodideReady, handleLoad, handleEdit]);
+    handleLoad(SAMPLES[0].data, SAMPLES[0].name);
+  }, [pyodideReady, handleLoad]);
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -324,7 +331,15 @@ function App() {
           {/* Save / Load / Samples */}
           <button type="button" onClick={handleSave} className={buttonNeutral}>Save</button>
           <button type="button" onClick={() => fileInputRef.current?.click()} className={buttonNeutral}>Load</button>
-          {IS_LOCAL && <button type="button" onClick={handleSaveToSamples} className={buttonLocal}>Save to Samples</button>}
+          {IS_LOCAL && (
+            <>
+              <button type="button" onClick={handleSaveToSamples} disabled={saveSampleStatus === 'saving'} className={buttonLocal}>
+                {saveSampleStatus === 'saving' ? 'Saving…' : 'Save to Samples'}
+              </button>
+              {saveSampleStatus === 'saved' && <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Saved!</span>}
+              {saveSampleStatus === 'error' && <span className="text-xs text-red-600 dark:text-red-400 font-medium">Error</span>}
+            </>
+          )}
           <input ref={fileInputRef} type="file" accept=".json" onChange={handleFileChange} className="hidden" />
           <div className="relative">
             <button type="button" onClick={() => setSamplesOpen((o) => !o)} className={buttonNeutral}>
