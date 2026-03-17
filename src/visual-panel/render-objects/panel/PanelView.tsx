@@ -57,9 +57,12 @@ export const PANEL_SCHEMA: ObjDoc = {
     { name: 'height', type: 'int', description: 'Height in grid cells.', default: '5' },
     { name: 'visible', type: 'bool', description: 'Whether the panel is shown.', default: 'True' },
     { name: 'show_border', type: 'bool', description: 'Whether to show the panel border and name label.', default: 'False' },
+    { name: 'alpha', type: 'float', description: 'Opacity, 0.0 (transparent) to 1.0 (opaque).', default: '1.0' },
+    { name: 'animate', type: 'bool', description: 'Animate transitions to this state. Set to False for instant updates.', default: 'True' },
   ],
   methods: [
     { name: 'add', signature: 'add(*elems: VisualElem)', docstring: 'Add one or more visual elements to this panel.' },
-    { name: 'remove', signature: 'remove(elem: VisualElem)', docstring: 'Remove a visual element from this panel.' },
+    { name: 'remove', signature: 'remove(elem: VisualElem)', docstring: 'Remove a visual element from this panel (does not delete it).' },
+    { name: 'delete', signature: 'delete()', docstring: 'Remove this panel from the canvas.' },
   ],
 };

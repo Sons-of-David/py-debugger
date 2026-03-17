@@ -39,7 +39,12 @@ export const ARROW_SCHEMA: ObjDoc = {
     { name: 'orientation', type: 'str', description: '"up", "down", "left", or "right".', default: '"up"' },
     { name: 'rotation', type: 'int', description: 'Additional rotation in degrees.', default: '0' },
     { name: 'visible', type: 'bool', description: 'Show or hide the arrow.', default: 'True' },
+    { name: 'alpha', type: 'float', description: 'Opacity, 0.0 (transparent) to 1.0 (opaque).', default: '1.0' },
+    { name: 'animate', type: 'bool', description: 'Animate transitions to this state. Set to False for instant updates.', default: 'True' },
     { name: 'z', type: 'int', description: 'Depth layer. Lower z renders on top of higher z.', default: '0' },
+  ],
+  methods: [
+    { name: 'delete', signature: 'delete()', docstring: 'Remove this element from the canvas and its parent panel.' },
   ],
 };
 

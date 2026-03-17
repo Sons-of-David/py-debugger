@@ -60,7 +60,13 @@ export const LINE_SCHEMA: ObjDoc = {
     { name: 'end_offset', type: 'tuple[float, float]', description: 'Offset within end cell; (0,0)=top-left, (1,1)=bottom-right.', default: '(0.5, 0.5)' },
     { name: 'start_cap', type: "'none' | 'arrow'", description: 'Cap style at the start endpoint.', default: "'none'" },
     { name: 'end_cap', type: "'none' | 'arrow'", description: 'Cap style at the end endpoint.', default: "'arrow'" },
+    { name: 'visible', type: 'bool', description: 'Show or hide the line.', default: 'True' },
+    { name: 'alpha', type: 'float', description: 'Opacity, 0.0 (transparent) to 1.0 (opaque).', default: '1.0' },
+    { name: 'animate', type: 'bool', description: 'Animate transitions to this state. Set to False for instant updates.', default: 'True' },
     { name: 'z', type: 'int', description: 'Depth layer. Lower z renders on top of higher z.', default: '0' },
+  ],
+  methods: [
+    { name: 'delete', signature: 'delete()', docstring: 'Remove this element from the canvas and its parent panel.' },
   ],
 };
 
