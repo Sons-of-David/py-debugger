@@ -90,7 +90,7 @@ def _capture_scope(frame: FrameType) -> List[Tuple[str, int]]:
         name = f.f_code.co_name
         if name == '<module>':
             name = '_main_'
-        is_priv = name.startswith('_') and not (name.startswith('__') and name.endswith('__'))
+        is_priv = name != '_main_' and name.startswith('_') and not (name.startswith('__') and name.endswith('__'))
         if not is_priv:
             scope.insert(0, (name, f.f_lineno))
         f = f.f_back

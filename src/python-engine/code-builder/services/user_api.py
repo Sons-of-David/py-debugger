@@ -189,6 +189,8 @@ class Array(_engine.VisualElem):
         if c is not None:
             out["color"] = self._serialize_color(c, (0, 0, 0))
         cells = getattr(self, '_cells', [])
+        if isinstance(cells, _engine.R):
+            cells = cells.resolve() or []
         out["values"] = list(cells) if isinstance(cells, (list, tuple)) else []
         return out
 
