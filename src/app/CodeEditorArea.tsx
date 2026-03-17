@@ -18,7 +18,6 @@ interface CodeEditorAreaProps {
   onEdit: () => void;
   isAnalyzing: boolean;
   analyzeStatus?: 'idle' | 'success' | 'error';
-  error?: string;
   highlightedLines?: HighlightedLines;
   currentVariables?: Record<string, VariableValue>;
   breakpoints?: Set<number>;
@@ -44,7 +43,6 @@ export function CodeEditorArea({
   onEdit,
   isAnalyzing,
   analyzeStatus = 'idle',
-  error,
   highlightedLines,
   currentVariables = {},
   breakpoints,
@@ -190,7 +188,7 @@ export function CodeEditorArea({
               );
             })()
           ) : (
-            <CodeEditor code={code} onChange={onChange} error={error} readOnly={readOnly} />
+            <CodeEditor code={code} onChange={onChange} readOnly={readOnly} />
           )}
         </div>
 

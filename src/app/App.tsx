@@ -5,7 +5,7 @@ import { CodeEditorArea } from './CodeEditorArea';
 import { useTheme } from '../contexts/ThemeContext';
 import { AnimationContext } from '../animation/animationContext';
 import { loadPyodide, isPyodideLoaded, executePythonCode, executeDebugCall, resetPythonState } from '../python-engine/code-builder/services/pythonExecutor';
-import { clearAll as clearTerminal, commitCurrentSegment, appendMarker } from '../output-terminal/terminalState';
+import { clearAll as clearTerminal, commitCurrentSegment, appendMarker, appendError } from '../output-terminal/terminalState';
 import { ApiReferencePanel } from '../api/ApiReferencePanel';
 import { TimelineControls } from '../timeline/TimelineControls';
 import { GridArea, type GridAreaHandle } from './GridArea';
@@ -51,7 +51,6 @@ function App() {
   const [visualBuilderCode, setVisualBuilderCode] = useState('');
   const [debuggerCode, setDebuggerCode] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analyzeError, setAnalyzeError] = useState<string | undefined>();
   const [analyzeStatus, setAnalyzeStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const everAnalyzedRef = useRef(false);
   const autoLoadedRef = useRef(false);
@@ -133,7 +132,6 @@ function App() {
 
   const runAnalyze = useCallback(async (vbCode: string, dbgCode: string) => {
     setIsAnalyzing(true);
-    setAnalyzeError(undefined);
     clearTerminal();
 
     try {
@@ -149,11 +147,9 @@ function App() {
         setAnalyzeStatus('success');
         setAppMode(skipTrace ? 'interactive' : 'trace');
       } else {
-        setAnalyzeError(result.error);
         setAnalyzeStatus('error');
       }
     } catch (err) {
-      setAnalyzeError(err instanceof Error ? err.message : 'Unknown error');
       setAnalyzeStatus('error');
     } finally {
       everAnalyzedRef.current = true;
@@ -183,7 +179,6 @@ function App() {
     appendMarker(`----- debug call: ${expression} -----`);
     const result = await executeDebugCall(expression);
     if (result.error) {
-      setAnalyzeError(result.error);
       setAnalyzeStatus('error');
       setDebugCallSuffix(null);
       setAppMode('interactive');
@@ -269,7 +264,7 @@ function App() {
 
   const handleLoad = useCallback((data: { builderCode?: string; debuggerCode?: string; breakpoints?: number[]; textBoxes?: TextBox[] }, name: string) => {
     if (!data.builderCode) {
-      setAnalyzeError('Invalid file: missing builderCode field');
+      appendError('Invalid file: missing builderCode field');
       return;
     }
     setProjectName(name);
@@ -450,7 +445,7 @@ function App() {
                 onEdit={handleEdit}
                 isAnalyzing={isAnalyzing}
                 analyzeStatus={analyzeStatus}
-                error={analyzeError}
+
                 currentVariables={currentVariables}
                 highlightedLines={highlightedLines}
                 breakpoints={breakpoints}

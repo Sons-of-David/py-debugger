@@ -8,14 +8,12 @@ import { useTheme } from '../../contexts/ThemeContext';
 interface CodeEditorProps {
   code: string;
   onChange: (code: string) => void;
-  error?: string;
   readOnly?: boolean;
 }
 
 export function CodeEditor({
   code,
   onChange,
-  error,
   readOnly = false,
 }: CodeEditorProps) {
 
@@ -197,14 +195,6 @@ export function CodeEditor({
         />
       </div>
 
-      {error && (
-        <div className="flex-shrink-0 border-t border-gray-300 dark:border-gray-700 max-h-40 overflow-auto">
-          <div className="px-4 py-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm font-mono">
-            <span className="font-semibold">Error: </span>
-            {error}
-          </div>
-        </div>
-      )}
 
     </div>
   );
