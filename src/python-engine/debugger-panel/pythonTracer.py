@@ -167,15 +167,16 @@ _last_code_line_count: int = 0
 _debug_enabled: bool = True
 
 
-def set_debug(value: bool) -> None:
+def _set_debug(value: bool) -> None:
     global _debug_enabled
     _debug_enabled = value
 
 
 def _visual_code_trace(code: str, persistent: bool = False) -> str:
-    global _last_code_line_count, _exec_context
+    global _last_code_line_count, _exec_context, _debug_enabled
     if not persistent:
         _last_code_line_count = len(code.splitlines())
+        _debug_enabled = True
 
     code_trace: List[TraceStep] = []
     visual_timeline = []
@@ -202,7 +203,7 @@ def _visual_code_trace(code: str, persistent: bool = False) -> str:
             return trace_fn
 
         if event == 'call':
-            if not _is_traceable_func(code_obj.co_name):
+            if not _is_traceable_func(code_obj.co_name) or not _debug_enabled:
                 return trace_fn
             func_name = code_obj.co_qualname
             # Arguments are the same live objects already in R.registry from the last
@@ -218,7 +219,7 @@ def _visual_code_trace(code: str, persistent: bool = False) -> str:
             return trace_fn
 
         if event == 'return':
-            if not _is_traceable_func(code_obj.co_name):
+            if not _is_traceable_func(code_obj.co_name) or not _debug_enabled:
                 return trace_fn
             func_name = code_obj.co_qualname
             # For __init__, self was traced as a variable inside the function so its
@@ -238,6 +239,8 @@ def _visual_code_trace(code: str, persistent: bool = False) -> str:
             code_obj.co_name.startswith('__') and code_obj.co_name.endswith('__')
         )
         if is_private:
+            return trace_fn
+        if not _debug_enabled:
             return trace_fn
 
         # Preparing variables and scope
@@ -278,7 +281,7 @@ def _visual_code_trace(code: str, persistent: bool = False) -> str:
         return trace_fn
 
     exec_ctx = _exec_context if persistent else {'__builtins__': __builtins__}
-    exec_ctx['set_debug'] = set_debug
+    exec_ctx['set_debug'] = _set_debug
     if not persistent:
         _exec_context = exec_ctx
 
