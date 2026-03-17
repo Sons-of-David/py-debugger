@@ -156,6 +156,12 @@ Projects are saved as JSON files. Loading a project restores both editors, break
 | `breakpoints` | `number[]` | Restored as `new Set(...)` on load |
 | `textBoxes` | `TextBox[]` | Defaults to `[]` for saves that predate this field; old format auto-migrated |
 
+### Local Save Mode
+
+`IS_LOCAL = hostname === 'localhost' || '127.0.0.1'`. When running locally, Save POSTs to `/api/save-sample` (served by a Vite dev plugin) to write directly into `src/samples/`. A separate **Save to Samples** button (only visible locally) saves with the current project name as the filename. In non-local mode, Save downloads a `.json` file as usual.
+
+The app header always shows a project name input (`projectName` state in `App.tsx`). On load, the name is set from the loaded filename.
+
 ### On Load Behavior
 
 1. Both editors are updated with loaded code

@@ -56,10 +56,10 @@ All TypeScript-to-Python calls go through `src/code-builder/services/pythonExecu
 
 | File | Purpose |
 |------|---------|
-| `src/code-builder/services/_vb_engine.py` | Hidden engine types: `VisualElem`, `V`, `R`, `TrackedDict`, `PopupException` |
-| `src/code-builder/services/user_api.py` | User-facing API: `Panel`, all shapes, `DebugCall`, `RunCall`, event stubs, hook stubs, `V` shorthand |
-| `src/code-builder/services/visualBuilder.py` | Sandbox exec (`_exec_builder_code`), `_user_code_ns`, `_serialize_visual_builder`, `_execute_run_call` |
-| `src/code-builder/services/event_handling.py` | Click/drag dispatch, handler serialization |
+| `src/python-engine/code-builder/services/_vb_engine.py` | Hidden engine types: `VisualElem`, `V`, `R`, `TrackedDict`, `PopupException` |
+| `src/python-engine/code-builder/services/user_api.py` | User-facing API: `Panel`, all shapes, `DebugCall`, `RunCall`, event stubs, hook stubs, `V` shorthand |
+| `src/python-engine/code-builder/services/visualBuilder.py` | Sandbox exec (`_exec_builder_code`), `_user_code_ns`, `_serialize_visual_builder`, `_execute_run_call` |
+| `src/python-engine/code-builder/services/event_handling.py` | Click/drag dispatch, handler serialization |
 
 ### `VisualElem` — Base Class
 
@@ -91,7 +91,7 @@ class VisualElem:
 
 **`__getattribute__` patch** — `pythonTracer.py` replaces `VisualElem.__getattribute__` with `get_v_attr`. Any property access on a `VisualElem` subclass automatically calls `.eval()` on `V()` objects. This is what makes `V("i+1")` bindings work during serialization.
 
-### Shape Classes (`visualBuilderShapes.py`)
+### Shape Classes (`user_api.py`)
 
 All shape constructors accept `z=0` as a keyword argument (see z-depth ordering below).
 
@@ -103,9 +103,11 @@ All shape constructors accept `z=0` as a keyword argument (see z-depth ordering 
 | `Line` | `start, end, color, stroke_weight, start_offset, end_offset, start_cap, end_cap` | No (implements `VisualBuilderElementBase` directly in TS) |
 | `Label` | `panel, row, col, text` | No (TS does not set `_elemId`) |
 | `Array` | `panel, row, col, values` | No |
-| `Array2D` | `panel, row, col, values` | No |
+| `Array2D` | `panel, row, col, arr` (2D list) | No |
 
 `Line` has no `panel` argument — it specifies absolute start/end grid cells. `start_offset` and `end_offset` are `(row_frac, col_frac)` fractions within the cell (0.0–1.0). `start_cap`/`end_cap` can be `'none'` or `'arrow'`.
+
+`Array2D` takes `arr=[[...]]`, a 2D list of primitives. Dimensions are derived at render time from the data — there are no `num_rows`, `num_cols`, or `set_dims()`. The `rectangular` property (default `True`) controls jagged-row rendering: `True` pads shorter rows to the bounding rectangle; `False` only draws cells that exist, leaving the rest bare (and hides the panel background). Values serialize via `list2d_r` (a serialization type that R-unwraps each row).
 
 ### `Panel`
 
@@ -158,7 +160,7 @@ A user-facing error. Raised when `MAX_TRACE_STEPS` is exceeded or for other user
 
 | File | Purpose |
 |------|---------|
-| `src/debugger-panel/pythonTracer.py` | Tracer, `_exec_context`, `V()` class, timeline building |
+| `src/python-engine/debugger-panel/pythonTracer.py` | Tracer, `_exec_context`, `V()` class, timeline building |
 
 ### `_exec_context` — The Persistent Namespace
 
@@ -419,7 +421,7 @@ TypeScript computes the offset: `const lineOffset = debuggerCode.split('\n').len
 
 ## Part 4: Python ↔ TypeScript Bridge
 
-All calls go through `src/code-builder/services/pythonExecutor.ts`.
+All calls go through `src/python-engine/code-builder/services/pythonExecutor.ts`.
 
 | TypeScript function | Python call | Returns |
 |--------------------|-------------|---------|
@@ -439,8 +441,8 @@ Python `print()` output is captured by redirecting `sys.stdout` before each exec
 Both builder and debugger import files are bundled at build time and written to Pyodide's VFS during `loadPythonRuntime()`, making them importable with standard Python `import` syntax.
 
 **How it works:**
-- Files in `src/builder-imports/*.py` → importable in builder code
-- Files in `src/debugger-imports/*.py` → importable in debugger code
+- Files in `src/python-engine/builder-imports/*.py` → importable in builder code
+- Files in `src/python-engine/debugger-imports/*.py` → importable in debugger code
 - Vite's `import.meta.glob('.../*.py', { eager: true, as: 'raw' })` bundles the files at build time
 - `py.FS.writeFile('/home/pyodide/<filename>', content)` writes each file to the Pyodide VFS
 - `/home/pyodide` is in `sys.path` by default, so `import my_module` works normally
@@ -453,12 +455,12 @@ Both builder and debugger import files are bundled at build time and written to 
 
 | File | Type | Purpose |
 |------|------|---------|
-| `src/code-builder/services/_vb_engine.py` | VFS module | Hidden engine types: VisualElem, V, R, TrackedDict, PopupException |
-| `src/code-builder/services/user_api.py` | VFS module | User-facing API: Panel, shapes, hooks, event stubs, V shorthand |
-| `src/code-builder/services/visualBuilder.py` | exec'd | Sandbox exec, _user_code_ns, serialization, _execute_run_call |
-| `src/code-builder/services/event_handling.py` | exec'd | Click/drag dispatch, handler serialization |
-| `src/debugger-panel/pythonTracer.py` | exec'd | Tracer, _exec_context, variable serialization, timeline building |
-| `src/code-builder/services/pythonExecutor.ts` | TypeScript | All TypeScript↔Pyodide calls |
+| `src/python-engine/code-builder/services/_vb_engine.py` | VFS module | Hidden engine types: VisualElem, V, R, TrackedDict, PopupException |
+| `src/python-engine/code-builder/services/user_api.py` | VFS module | User-facing API: Panel, shapes, hooks, event stubs, V shorthand |
+| `src/python-engine/code-builder/services/visualBuilder.py` | exec'd | Sandbox exec, _user_code_ns, serialization, _execute_run_call |
+| `src/python-engine/code-builder/services/event_handling.py` | exec'd | Click/drag dispatch, handler serialization |
+| `src/python-engine/debugger-panel/pythonTracer.py` | exec'd | Tracer, _exec_context, variable serialization, timeline building |
+| `src/python-engine/code-builder/services/pythonExecutor.ts` | TypeScript | All TypeScript↔Pyodide calls |
 | `src/output-terminal/terminalState.ts` | TypeScript | Output capture and tab segmentation |
-| `src/builder-imports/*.py` | VFS | User-extendable Python helpers importable in builder code |
-| `src/debugger-imports/*.py` | VFS | User-extendable Python helpers importable in debugger code |
+| `src/python-engine/builder-imports/*.py` | VFS | User-extendable Python helpers importable in builder code |
+| `src/python-engine/debugger-imports/*.py` | VFS | User-extendable Python helpers importable in debugger code |

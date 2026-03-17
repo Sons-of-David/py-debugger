@@ -131,18 +131,22 @@ src/
 │   ├── CodeEditorArea.tsx          # Code Panel: tabs, buttons, variable panel layout
 │   └── GridArea.tsx                # Visual Panel: grid container, click dispatch, screenshot
 │
-├── code-builder/
-│   └── services/
-│       ├── pythonExecutor.ts       # TypeScript ↔ Pyodide bridge (all Pyodide calls)
-│       ├── visualBuilder.py        # VisualElem base class, Panel, DebugCall, _handle_click, serialization
-│       └── visualBuilderShapes.py  # Shape subclasses: Rect, Circle, Arrow, Line, Label, Array, Array2D
-│
-├── debugger-panel/
-│   ├── pythonTracer.py             # sys.settrace tracing, _exec_context, V(), timelines
-│   ├── DebuggerCodeEditor.tsx      # Monaco editor with breakpoint gutter
-│   ├── VariablePanel.tsx           # Live variable viewer (shown in trace/debug_in_event)
-│   ├── codeTimelineState.ts        # Store for code-side trace steps (variables + scope)
-│   └── debuggerSample.py           # Default debugger code loaded on startup
+├── python-engine/                  # All Python-related files (engine + TS bridge)
+│   ├── code-builder/
+│   │   ├── CodeEditor.tsx          # Monaco wrapper component
+│   │   └── services/
+│   │       ├── pythonExecutor.ts   # TypeScript ↔ Pyodide bridge (all Pyodide calls)
+│   │       ├── _vb_engine.py       # VFS module: VisualElem, V, R, TrackedDict, PopupException
+│   │       ├── user_api.py         # VFS module: user-facing API (Panel, shapes, hooks, V shorthand)
+│   │       ├── visualBuilder.py    # Sandbox exec, _user_code_ns, serialization, _execute_run_call
+│   │       └── event_handling.py   # Click/drag dispatch, handler serialization
+│   ├── debugger-panel/
+│   │   ├── pythonTracer.py         # sys.settrace tracing, _exec_context, V(), timelines
+│   │   ├── DebuggerCodeEditor.tsx  # Monaco editor with breakpoint gutter
+│   │   ├── VariablePanel.tsx       # Live variable viewer (shown in trace/debug_in_event)
+│   │   └── codeTimelineState.ts    # Store for code-side trace steps (variables + scope)
+│   ├── builder-imports/            # *.py files importable in builder code (written to Pyodide VFS)
+│   └── debugger-imports/           # *.py files importable in debugger code (written to Pyodide VFS)
 │
 ├── timeline/
 │   ├── TimelineControls.tsx        # Prev/next/breakpoint navigation (rendered in header)
@@ -202,7 +206,8 @@ See diagram in Part 1. Derived values:
 | `visualBuilderCode` | `string` | Builder Code editor content |
 | `debuggerCode` | `string` | Debugger Code editor content (clean, no suffix) |
 | `debugCallSuffix` | `string \| null` | Appended to editor display only during `debug_in_event`; must be cleared on Edit/BackToInteractive |
-| `analyzeStatus` | `'idle'\|'success'\|'error'\|'dirty'` | Controls Analyze/Edit button appearance |
+| `analyzeStatus` | `'idle'\|'success'\|'error'` | Controls Analyze/Edit button appearance |
+| `projectName` | `string` | Current project name; used as filename for Save |
 | `currentStep` | `number` | Current timeline index |
 | `stepCount` | `number` | Total steps in active timeline |
 | `breakpoints` | `Set<number>` | Line numbers with breakpoints |
@@ -270,17 +275,19 @@ See diagram in Part 1. Derived values:
 
 ---
 
-### The Three Python Files Loaded Into Pyodide
+### Python Files Loaded Into Pyodide
 
-All loaded once at session start by `loadPythonRuntime()` in `pythonExecutor.ts`. Loading order matters.
+All loaded once at session start by `loadPythonRuntime()` in `pythonExecutor.ts`. `_vb_engine.py` and `user_api.py` are written to the Pyodide VFS and imported as modules. The remaining three are exec'd into Pyodide globals.
 
-| File | Purpose |
-|------|---------|
-| `src/code-builder/services/visualBuilder.py` | `VisualElem` + `_registry`; `Panel`; `DebugCall`; `_handle_click`; `_serialize_visual_builder`; `_serialize_handlers` / `_serialize_handlers_json`; `PopupException` |
-| `src/code-builder/services/visualBuilderShapes.py` | `Rect`, `Circle`, `Arrow`, `Label`, `Array`, `Array2D` — concrete shape classes with `_serialize()` |
-| `src/debugger-panel/pythonTracer.py` | `sys.settrace` tracing; `_exec_context`; `V()` class; `_visual_code_trace`; `_prepare_and_trace_debug_call`; `MAX_TRACE_STEPS` |
+| File | How loaded | Purpose |
+|------|------------|---------|
+| `src/python-engine/code-builder/services/_vb_engine.py` | VFS import | Hidden engine types: `VisualElem`, `V`, `R`, `TrackedDict`, `PopupException` |
+| `src/python-engine/code-builder/services/user_api.py` | VFS import | User-facing API: `Panel`, all shapes, hooks, `DebugCall`, `RunCall`, `V` shorthand |
+| `src/python-engine/code-builder/services/visualBuilder.py` | exec'd | Sandbox exec, `_user_code_ns`, serialization, `_execute_run_call` |
+| `src/python-engine/code-builder/services/event_handling.py` | exec'd | Click/drag dispatch, handler serialization |
+| `src/python-engine/debugger-panel/pythonTracer.py` | exec'd | `sys.settrace` tracing; `_exec_context`; `_visual_code_trace`; timeline building |
 
-`pythonTracer.py` is loaded last because it patches `VisualElem.__getattribute__` (to auto-eval `V()` objects) and references functions defined in `visualBuilder.py`.
+See [Python Engine](./python-engine.md) for the full three-layer architecture.
 
 ---
 

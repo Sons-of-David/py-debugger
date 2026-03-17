@@ -47,7 +47,7 @@ Each TypeScript shape class registers itself by type string: `registerVisualElem
 
 ### Python Side
 
-**File:** `src/code-builder/services/visualBuilder.py`
+**File:** `src/python-engine/code-builder/services/visualBuilder.py`
 
 #### `_elem_id` vs `_vb_id`
 
@@ -68,7 +68,7 @@ Children store positions **relative to their parent panel's top-left corner**. T
 
 #### `_handle_event_with_output(event_name, elem_id, row, col)`
 
-**File:** `src/code-builder/services/event_handling.py`
+**File:** `src/python-engine/code-builder/services/event_handling.py`
 
 Single unified dispatcher for all interactive events. Looks up the element by `_elem_id`, calls `getattr(elem, event_name)`, captures stdout, and returns `JSON {debugCall, runCall, output}`. Handles `on_click`, `on_drag_start`, `on_drag`, `on_drag_end`.
 
@@ -310,9 +310,9 @@ In Jump mode (animation off), all transitions are disabled for instant updates.
 
 | File | Purpose |
 |------|---------|
-| `src/code-builder/services/event_handling.py` | `_handle_event_with_output` (unified dispatcher); `_handle_click_with_output` (thin wrapper); `_serialize_handlers`/`_serialize_handlers_json` |
-| `src/code-builder/services/visualBuilder.py` | Python serialization, `_get_event_handlers`, `_execute_run_call` |
-| `src/code-builder/services/visualBuilderShapes.py` | `Rect`, `Circle`, `Arrow`, `Line`, `Label`, `Array`, `Array2D` shape classes |
+| `src/python-engine/code-builder/services/event_handling.py` | `_handle_event_with_output` (unified dispatcher); `_handle_click_with_output` (thin wrapper); `_serialize_handlers`/`_serialize_handlers_json` |
+| `src/python-engine/code-builder/services/visualBuilder.py` | Python serialization, `_get_event_handlers`, `_execute_run_call` |
+| `src/python-engine/code-builder/services/user_api.py` | `Rect`, `Circle`, `Arrow`, `Line`, `Label`, `Array`, `Array2D` shape classes |
 | `src/visual-panel/render-objects/BasicShape.ts` | `_elemId` bridge; clickable base class |
 | `src/visual-panel/render-objects/line/Line.ts` | `Line` TypeScript class (implements `VisualBuilderElementBase`, not `BasicShape`) |
 | `src/visual-panel/types/elementRegistry.ts` | Constructor registry by type string |
