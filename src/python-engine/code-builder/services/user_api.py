@@ -36,23 +36,21 @@ class Panel(_engine.VisualElem):
         return out
 
 
-class Rect(_engine.VisualElem):
-    def __init__(self, position=(0, 0), width=1, height=1, color=(34, 197, 94), visible=True, z=0):
-        super().__init__()
-        self.position = position
-        self.width = width
-        self.height = height
-        self.color = color
-        self.visible = visible
-        self.z = z
+RECT_SCHEMA = {
+    'objName': 'Rect',
+    'type': 'rect',
+    'docstring': 'A rectangle shape on the grid.',
+    'properties': [
+        {'name': 'position', 'type': 'tuple[int,int]',     'default': (0, 0),        'ser': 'base'},
+        {'name': 'width',    'type': 'int',                'default': 1,             'ser': 'int'},
+        {'name': 'height',   'type': 'int',                'default': 1,             'ser': 'int'},
+        {'name': 'color',    'type': 'tuple[int,int,int]', 'default': (34, 197, 94), 'ser': 'color'},
+        {'name': 'visible',  'type': 'bool',               'default': True,          'ser': 'base'},
+        {'name': 'z',        'type': 'int',                'default': 0,             'ser': 'base'},
+    ],
+}
 
-    def _serialize(self):
-        out = self._serialize_base()
-        out["type"] = "rect"
-        out["width"] = int(getattr(self, 'width', 1))
-        out["height"] = int(getattr(self, 'height', 1))
-        out["color"] = self._serialize_color(self.color, (34, 197, 94))
-        return out
+Rect = _engine.make_shape_class(RECT_SCHEMA)
 
 
 class Circle(_engine.VisualElem):
