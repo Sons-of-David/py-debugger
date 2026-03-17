@@ -199,8 +199,30 @@ def _visual_code_trace(code: str, persistent: bool = False) -> str:
             sys.settrace(trace_fn)
         return buf.getvalue()
 
-    def trace_fn(frame, event, arg):
+    def _record_step(frame, scope):
         nonlocal last_output_pos
+        _step_memo: dict = {}
+        variables = _capture_variables(frame, {'__builtins__', '__name__', '__doc__'}, _step_memo)
+        cur_pos = debugger_output_buf.tell()
+        output_slice = debugger_output_buf.getvalue()[last_output_pos:cur_pos]
+        last_output_pos = cur_pos
+        _engine.R.registry = _step_memo
+        _engine.R.inv_registry = {id(v): k for k, v in _step_memo.items()}
+        _engine.V.params = variables
+        _engine.V.scope = scope
+        accumulated_builder_output.append(_call_builder(
+            _user_code_ns.get('update', _user_api.update), _engine.TrackedDict(variables), scope))
+        snapshot = json.loads(_serialize_visual_builder())
+        code_trace.append({
+            'variables': variables,
+            'scope': scope,
+            'output': output_slice,
+            'builder_output': ''.join(accumulated_builder_output),
+        })
+        accumulated_builder_output.clear()
+        visual_timeline.append(snapshot)
+
+    def trace_fn(frame, event, arg):
         code_obj = frame.f_code
         if code_obj.co_filename not in ('<exec>', '<string>'):
             return trace_fn
@@ -222,6 +244,11 @@ def _visual_code_trace(code: str, persistent: bool = False) -> str:
             return trace_fn
 
         if event == 'return':
+            if code_obj.co_name == '<module>' and _debug_enabled and code_trace:
+                # Final step: state after the last line finishes. Empty scope clears
+                # the line highlight to signal end of execution.
+                _record_step(frame, [])
+                return trace_fn
             if not _is_traceable_func(code_obj.co_name) or not _debug_enabled:
                 return trace_fn
             func_name = code_obj.co_qualname
@@ -246,34 +273,7 @@ def _visual_code_trace(code: str, persistent: bool = False) -> str:
         if not _debug_enabled:
             return trace_fn
 
-        # Preparing variables and scope
-        _step_memo: dict = {}
-        variables = _capture_variables(frame, {'__builtins__', '__name__', '__doc__'}, _step_memo)
-        scope = _capture_scope(frame)
-
-        cur_pos = debugger_output_buf.tell()
-        output_slice = debugger_output_buf.getvalue()[last_output_pos:cur_pos]
-        last_output_pos = cur_pos
-
-        # Update R identity registries for this step so R wrappers resolve correctly.
-        _engine.R.registry = _step_memo
-        _engine.R.inv_registry = {id(v): k for k, v in _step_memo.items()}
-
-        _engine.V.params = variables
-        _engine.V.scope = scope
-        accumulated_builder_output.append(_call_builder(
-            _user_code_ns.get('update', _user_api.update), _engine.TrackedDict(variables), scope))
-
-        snapshot = json.loads(_serialize_visual_builder())
-
-        code_trace.append({
-            'variables': variables,
-            'scope': scope,
-            'output': output_slice,
-            'builder_output': ''.join(accumulated_builder_output),
-        })
-        accumulated_builder_output.clear()
-        visual_timeline.append(snapshot)
+        _record_step(frame, _capture_scope(frame))
 
         if len(code_trace) >= MAX_TRACE_STEPS:
             raise _engine.PopupException(
