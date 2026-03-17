@@ -191,11 +191,18 @@ export const ARRAY_SCHEMA: ObjDoc = {
   docstring: 'Displays an array of values as square cells on the grid.',
   properties: [
     { name: 'var_name', type: 'str', description: 'Name of the array variable (e.g. "arr", "nums").', default: '""' },
+    { name: 'arr', type: 'list', description: 'Initial array values. Elements must be primitives (int, float, str, bool, or None).', default: '[]' },
     { name: 'position', type: 'tuple[int, int]', description: 'Top-left corner (row, col) of the first cell.', default: '(0, 0)' },
     { name: 'direction', type: 'str', description: '"right", "left", "down", or "up" — layout direction.', default: '"right"' },
+    { name: 'color', type: 'tuple[int, int, int] | None', description: 'RGB fill color for all cells. None uses the default theme color.', default: 'None' },
     { name: 'show_index', type: 'bool', description: 'Whether to show [i] index labels.', default: 'True' },
     { name: 'visible', type: 'bool', description: 'Show or hide the array.', default: 'True' },
+    { name: 'alpha', type: 'float', description: 'Opacity, 0.0 (transparent) to 1.0 (opaque).', default: '1.0' },
+    { name: 'animate', type: 'bool', description: 'Animate transitions to this state. Set to False for instant updates.', default: 'True' },
     { name: 'z', type: 'int', description: 'Depth layer. Lower z renders on top of higher z.', default: '0' },
+  ],
+  methods: [
+    { name: 'delete', signature: 'delete()', docstring: 'Remove this element from the canvas and its parent panel.' },
   ],
 };
 
@@ -293,11 +300,17 @@ export const ARRAY2D_SCHEMA: ObjDoc = {
   properties: [
     { name: 'var_name', type: 'str', description: 'Name of the 2D array variable.', default: '""' },
     { name: 'position', type: 'tuple[int, int]', description: 'Top-left corner (row, col).', default: '(0, 0)' },
-    { name: 'arr', type: 'list[list]', description: '2D list of values (jagged arrays OK).', default: '[]' },
+    { name: 'arr', type: 'list[list]', description: '2D list of values (jagged arrays OK). Elements must be primitives (int, float, str, bool, or None).', default: '[]' },
     { name: 'rectangular', type: 'bool', description: 'If True, pad short rows with empty cells to fill the bounding rectangle. If False, only draw cells that exist in the data.', default: 'True' },
+    { name: 'color', type: 'tuple[int, int, int] | None', description: 'RGB fill color for all cells. None uses the default theme color.', default: 'None' },
     { name: 'show_index', type: 'bool', description: 'Whether to show [i][j] index labels.', default: 'True' },
     { name: 'visible', type: 'bool', description: 'Show or hide the array.', default: 'True' },
+    { name: 'alpha', type: 'float', description: 'Opacity, 0.0 (transparent) to 1.0 (opaque).', default: '1.0' },
+    { name: 'animate', type: 'bool', description: 'Animate transitions to this state. Set to False for instant updates.', default: 'True' },
     { name: 'z', type: 'int', description: 'Depth layer. Lower z renders on top of higher z.', default: '0' },
+  ],
+  methods: [
+    { name: 'delete', signature: 'delete()', docstring: 'Remove this element from the canvas and its parent panel.' },
   ],
 };
 
