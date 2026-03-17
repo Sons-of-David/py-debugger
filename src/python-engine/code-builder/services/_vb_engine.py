@@ -88,6 +88,31 @@ class VisualElem:
             return [int(color[0]), int(color[1]), int(color[2])]
         return list(default)
 
+    def _serialize_from_fields(self, schema):
+        """Serialize this element using a schema dict (for classes with extra methods)."""
+        out = self._serialize_base()
+        out['type'] = schema['type']
+        for p in schema['properties']:
+            if p['ser'] == 'base':
+                continue
+            val = getattr(self, p['name'], p['default'])
+            ser = p['ser']
+            key = p.get('key', p['name'])
+            if ser == 'int':
+                out[key] = int(val)
+            elif ser == 'str':
+                out[key] = str(val)
+            elif ser == 'bool':
+                out[key] = bool(val)
+            elif ser == 'float':
+                out[key] = float(val)
+            elif ser == 'color':
+                out[key] = VisualElem._serialize_color(val, p['default'])
+            elif ser == 'color?':
+                if val is not None:
+                    out[key] = VisualElem._serialize_color(val, (0, 0, 0))
+        return out
+
 
 def _extract_names(expr: str) -> set:
     """Return all variable names referenced in an expression string."""
@@ -255,9 +280,7 @@ def make_shape_class(schema):
 
     Optional 'key' overrides the output dict key (e.g. 'fontSize' for 'font_size').
     """
-    type_name = schema['type']
     all_props = schema['properties']
-    ser_props = [p for p in all_props if p['ser'] != 'base']
 
     def __init__(self, **kwargs):
         VisualElem.__init__(self)
@@ -265,26 +288,7 @@ def make_shape_class(schema):
             object.__setattr__(self, p['name'], kwargs.get(p['name'], p['default']))
 
     def _serialize(self):
-        out = self._serialize_base()
-        out['type'] = type_name
-        for p in ser_props:
-            val = getattr(self, p['name'], p['default'])
-            ser = p['ser']
-            key = p.get('key', p['name'])
-            if ser == 'int':
-                out[key] = int(val)
-            elif ser == 'str':
-                out[key] = str(val)
-            elif ser == 'bool':
-                out[key] = bool(val)
-            elif ser == 'float':
-                out[key] = float(val)
-            elif ser == 'color':
-                out[key] = VisualElem._serialize_color(val, p['default'])
-            elif ser == 'color?':
-                if val is not None:
-                    out[key] = VisualElem._serialize_color(val, (0, 0, 0))
-        return out
+        return self._serialize_from_fields(schema)
 
     return type(schema['objName'], (VisualElem,), {
         '__init__': __init__,

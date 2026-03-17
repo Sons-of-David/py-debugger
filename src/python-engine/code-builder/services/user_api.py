@@ -3,7 +3,22 @@ import _vb_engine as _engine
 
 # ── Visual Elements ──────────────────────────────────────────────────────────
 
+PANEL_SCHEMA = {
+    'objName': 'Panel',
+    'type': 'panel',
+    'docstring': 'A container panel that positions child elements relative to its top-left corner.',
+    'properties': [
+        {'name': 'name',        'type': 'str',  'default': 'Panel', 'ser': 'str'},
+        {'name': 'width',       'type': 'int',  'default': 5,       'ser': 'int'},
+        {'name': 'height',      'type': 'int',  'default': 5,       'ser': 'int'},
+        {'name': 'show_border', 'type': 'bool', 'default': False,   'ser': 'bool'},
+    ],
+}
+
+
 class Panel(_engine.VisualElem):
+    _schema = PANEL_SCHEMA
+
     def __init__(self, name="Panel"):
         super().__init__()
         self.name = name
@@ -27,13 +42,7 @@ class Panel(_engine.VisualElem):
             elem._parent = None
 
     def _serialize(self):
-        out = self._serialize_base()
-        out["type"] = "panel"
-        out["name"] = getattr(self, 'name', 'Panel')
-        out["width"] = int(getattr(self, 'width', 5))
-        out["height"] = int(getattr(self, 'height', 5))
-        out["show_border"] = bool(getattr(self, 'show_border', False))
-        return out
+        return self._serialize_from_fields(PANEL_SCHEMA)
 
 
 RECT_SCHEMA = {
@@ -53,46 +62,40 @@ RECT_SCHEMA = {
 Rect = _engine.make_shape_class(RECT_SCHEMA)
 
 
-class Circle(_engine.VisualElem):
-    def __init__(self, position=(0, 0), width=1, height=1, color=(59, 130, 246), visible=True, z=0):
-        super().__init__()
-        self.position = position
-        self.width = width
-        self.height = height
-        self.color = color
-        self.visible = visible
-        self.z = z
+CIRCLE_SCHEMA = {
+    'objName': 'Circle',
+    'type': 'circle',
+    'docstring': 'A circle (or ellipse) shape on the grid.',
+    'properties': [
+        {'name': 'position', 'type': 'tuple[int,int]',     'default': (0, 0),         'ser': 'base'},
+        {'name': 'width',    'type': 'int',                'default': 1,              'ser': 'int'},
+        {'name': 'height',   'type': 'int',                'default': 1,              'ser': 'int'},
+        {'name': 'color',    'type': 'tuple[int,int,int]', 'default': (59, 130, 246), 'ser': 'color'},
+        {'name': 'visible',  'type': 'bool',               'default': True,           'ser': 'base'},
+        {'name': 'z',        'type': 'int',                'default': 0,              'ser': 'base'},
+    ],
+}
 
-    def _serialize(self):
-        out = self._serialize_base()
-        out["type"] = "circle"
-        out["width"] = int(getattr(self, 'width', 1))
-        out["height"] = int(getattr(self, 'height', 1))
-        out["color"] = self._serialize_color(self.color, (59, 130, 246))
-        return out
+Circle = _engine.make_shape_class(CIRCLE_SCHEMA)
 
 
-class Arrow(_engine.VisualElem):
-    def __init__(self, position=(0, 0), width=1, height=1, color=(16, 185, 129), orientation="up", rotation=0, visible=True, z=0):
-        super().__init__()
-        self.position = position
-        self.width = width
-        self.height = height
-        self.color = color
-        self.orientation = orientation
-        self.rotation = rotation
-        self.visible = visible
-        self.z = z
+ARROW_SCHEMA = {
+    'objName': 'Arrow',
+    'type': 'arrow',
+    'docstring': 'An arrow shape on the grid. Points in the given orientation and can be rotated.',
+    'properties': [
+        {'name': 'position',    'type': 'tuple[int,int]',     'default': (0, 0),          'ser': 'base'},
+        {'name': 'width',       'type': 'int',                'default': 1,               'ser': 'int'},
+        {'name': 'height',      'type': 'int',                'default': 1,               'ser': 'int'},
+        {'name': 'color',       'type': 'tuple[int,int,int]', 'default': (16, 185, 129),  'ser': 'color'},
+        {'name': 'orientation', 'type': 'str',                'default': 'up',            'ser': 'str'},
+        {'name': 'rotation',    'type': 'int',                'default': 0,               'ser': 'int'},
+        {'name': 'visible',     'type': 'bool',               'default': True,            'ser': 'base'},
+        {'name': 'z',           'type': 'int',                'default': 0,               'ser': 'base'},
+    ],
+}
 
-    def _serialize(self):
-        out = self._serialize_base()
-        out["type"] = "arrow"
-        out["width"] = int(getattr(self, 'width', 1))
-        out["height"] = int(getattr(self, 'height', 1))
-        out["color"] = self._serialize_color(self.color, (16, 185, 129))
-        out["orientation"] = str(getattr(self, 'orientation', 'up'))
-        out["rotation"] = int(getattr(self, 'rotation', 0))
-        return out
+Arrow = _engine.make_shape_class(ARROW_SCHEMA)
 
 
 class Line(_engine.VisualElem):
@@ -132,29 +135,23 @@ class Line(_engine.VisualElem):
         return out
 
 
-class Label(_engine.VisualElem):
-    def __init__(self, label="", position=(0, 0), width=1, height=1, font_size=14, color=None, visible=True, z=0):
-        super().__init__()
-        self.label = label
-        self.position = position
-        self.width = width
-        self.height = height
-        self.font_size = font_size
-        self.color = color
-        self.visible = visible
-        self.z = z
+LABEL_SCHEMA = {
+    'objName': 'Label',
+    'type': 'label',
+    'docstring': 'Text label.',
+    'properties': [
+        {'name': 'label',     'type': 'str',             'default': '',   'ser': 'str'},
+        {'name': 'position',  'type': 'tuple[int,int]',  'default': (0, 0), 'ser': 'base'},
+        {'name': 'width',     'type': 'int',             'default': 1,    'ser': 'int'},
+        {'name': 'height',    'type': 'int',             'default': 1,    'ser': 'int'},
+        {'name': 'font_size', 'type': 'int',             'default': 14,   'ser': 'int', 'key': 'fontSize'},
+        {'name': 'color',     'type': 'tuple[int,int,int]|None', 'default': None, 'ser': 'color?'},
+        {'name': 'visible',   'type': 'bool',            'default': True, 'ser': 'base'},
+        {'name': 'z',         'type': 'int',             'default': 0,    'ser': 'base'},
+    ],
+}
 
-    def _serialize(self):
-        out = self._serialize_base()
-        out["type"] = "label"
-        out["label"] = str(getattr(self, 'label', ''))
-        out["width"] = int(getattr(self, 'width', 1))
-        out["height"] = int(getattr(self, 'height', 1))
-        out["fontSize"] = int(getattr(self, 'font_size', 14))
-        c = getattr(self, 'color', None)
-        if c is not None:
-            out["color"] = self._serialize_color(c, (0, 0, 0))
-        return out
+Label = _engine.make_shape_class(LABEL_SCHEMA)
 
 
 class Array(_engine.VisualElem):
