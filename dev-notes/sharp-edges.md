@@ -33,6 +33,16 @@ If `debugCallSuffix` is **non-null** when `appMode` becomes `idle`, Monaco fires
 
 ---
 
+---
+
+### `GridCell` Must Not Have a Border When Rendering Elements
+
+`GridCell` renders inside a `CELL_SIZE × CELL_SIZE` container. When an element is present, the cell div must have **no border**. A `1px` border with `box-sizing: border-box` (Tailwind default) shrinks the usable content area from 40×40 to 38×38 px, causing the SVG inside to render at a 0.95 scale. Shape coordinates then drift from their intended cell-center positions — the start point of a line may still land correctly by coincidence (the 1px border offset and scale reduction cancel at `offset=0.5`), but the end point drifts by `~2px × delta_cells`.
+
+**Rule:** Only apply `border` to `GridCell` when `!hasElementInfo` (i.e., the empty-cell placeholder). Never add padding or border to the element-hosting cell div.
+
+---
+
 ## B: Architectural Quirks
 
 These are intentional behaviors that are non-obvious and must be understood to avoid breaking things.

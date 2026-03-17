@@ -5,6 +5,16 @@ import { useAnimationEnabled, useAnimationDuration } from '../../../animation/an
 
 const CELL = 40; // must match CELL_SIZE in Grid.tsx
 
+function arrowPoints(
+  tx: number, ty: number, // tip
+  ux: number, uy: number, // unit direction toward tip
+  arrowLen: number, arrowHalf: number,
+): string {
+  const bx = tx - ux * arrowLen;
+  const by = ty - uy * arrowLen;
+  return `${tx},${ty} ${bx - uy * arrowHalf},${by + ux * arrowHalf} ${bx + uy * arrowHalf},${by - ux * arrowHalf}`;
+}
+
 function LineView({ line }: { line: Line }) {
   const animate = useAnimationEnabled();
   const animationDuration = useAnimationDuration();
@@ -15,45 +25,33 @@ function LineView({ line }: { line: Line }) {
 
   const arrowLen = Math.max(8, line.strokeWeight * 5);
   const arrowHalf = arrowLen / 2;
-  const uid = `${line.start[0]}-${line.start[1]}-${line.end[0]}-${line.end[1]}`;
-  const endMarkerId = `le-${uid}`;
-  const startMarkerId = `ls-${uid}`;
   const transition = animate ? { duration: animationDuration / 1000, ease: 'easeOut' as const } : { duration: 0 };
 
-  const endMarker = line.endCap === 'arrow' ? (
-    <marker
-      id={endMarkerId}
-      markerWidth={arrowLen}
-      markerHeight={arrowLen}
-      refX={arrowLen}
-      refY={arrowHalf}
-      orient="auto"
-      markerUnits="userSpaceOnUse"
-    >
-      <polygon
-        points={`0 0, ${arrowLen} ${arrowHalf}, 0 ${arrowLen}`}
-        fill={line.hexColor}
-        opacity={line.alpha}
-      />
-    </marker>
+  const dx = ex - sx;
+  const dy = ey - sy;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const ux = dist > 0 ? dx / dist : 0;
+  const uy = dist > 0 ? dy / dist : 0;
+
+  // Stop the shaft at the arrowhead base so the rounded line cap is hidden
+  // under the triangle and only the sharp tip is visible.
+  const x1 = line.startCap === 'arrow' && dist > arrowLen ? sx + ux * arrowLen : sx;
+  const y1 = line.startCap === 'arrow' && dist > arrowLen ? sy + uy * arrowLen : sy;
+  const x2 = line.endCap === 'arrow' && dist > arrowLen ? ex - ux * arrowLen : ex;
+  const y2 = line.endCap === 'arrow' && dist > arrowLen ? ey - uy * arrowLen : ey;
+
+  const endArrow = line.endCap === 'arrow' ? (
+    <motion.polygon
+      animate={{ points: arrowPoints(ex, ey, ux, uy, arrowLen, arrowHalf), fill: line.hexColor, opacity: line.alpha }}
+      transition={transition}
+    />
   ) : null;
 
-  const startMarker = line.startCap === 'arrow' ? (
-    <marker
-      id={startMarkerId}
-      markerWidth={arrowLen}
-      markerHeight={arrowLen}
-      refX={arrowLen}
-      refY={arrowHalf}
-      orient="auto-start-reverse"
-      markerUnits="userSpaceOnUse"
-    >
-      <polygon
-        points={`0 0, ${arrowLen} ${arrowHalf}, 0 ${arrowLen}`}
-        fill={line.hexColor}
-        opacity={line.alpha}
-      />
-    </marker>
+  const startArrow = line.startCap === 'arrow' ? (
+    <motion.polygon
+      animate={{ points: arrowPoints(sx, sy, -ux, -uy, arrowLen, arrowHalf), fill: line.hexColor, opacity: line.alpha }}
+      transition={transition}
+    />
   ) : null;
 
   return (
@@ -64,20 +62,14 @@ function LineView({ line }: { line: Line }) {
       overflow="visible"
       style={{ position: 'absolute', top: 0, left: 0 }}
     >
-      {(endMarker || startMarker) && (
-        <defs>
-          {endMarker}
-          {startMarker}
-        </defs>
-      )}
       <motion.line
-        animate={{ x1: sx, y1: sy, x2: ex, y2: ey, stroke: line.hexColor, opacity: line.alpha }}
+        animate={{ x1, y1, x2, y2, stroke: line.hexColor, opacity: line.alpha }}
         transition={transition}
         strokeWidth={line.strokeWeight}
         strokeLinecap="round"
-        markerEnd={line.endCap === 'arrow' ? `url(#${endMarkerId})` : undefined}
-        markerStart={line.startCap === 'arrow' ? `url(#${startMarkerId})` : undefined}
       />
+      {endArrow}
+      {startArrow}
     </svg>
   );
 }

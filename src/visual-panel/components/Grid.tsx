@@ -380,6 +380,11 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
             backgroundColor: gridBgColor,
             backgroundImage: `linear-gradient(to right, ${gridLineColor} 1px, transparent 1px), linear-gradient(to bottom, ${gridLineColor} 1px, transparent 1px)`,
             backgroundSize: `${CELL_SIZE}px ${CELL_SIZE}px`,
+            // Shift by -0.5px so grid lines straddle cell boundaries rather than
+            // sitting at the left/top edge of each cell. Without this, objects placed
+            // at col*CELL_SIZE overlap the left/top grid line but not the right/bottom
+            // one, making shapes appear asymmetrically offset toward the top-left.
+            backgroundPosition: '-0.5px -0.5px',
           }}
         />
 

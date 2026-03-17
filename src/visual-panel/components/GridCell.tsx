@@ -39,8 +39,13 @@ export const GridCell = memo(function GridCell({
   return (
     <div
       className={`
-        border transition-colors relative
-        ${hasElementInfo ? 'border-transparent' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'}
+        transition-colors relative
+        ${hasElementInfo
+          // No border when an element is present: a 1px border with box-sizing:border-box
+          // shrinks the content area from 40×40 to 38×38, scaling the SVG at 0.95.
+          // That makes shape coordinates drift from cell centers for multi-cell elements.
+          ? ''
+          : 'border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'}
         ${isInvalid ? 'opacity-50 grayscale' : ''}
       `}
       style={getCellStyle()}
