@@ -159,7 +159,7 @@ ARRAY_SCHEMA = {
     'type': 'array',
     'docstring': 'Display a 1D list variable as a row or column on the grid.',
     'properties': [
-        {'name': 'var_name',   'type': 'str',                    'default': '',    'ser': 'str',    'key': 'varName'},
+        {'name': 'name',       'type': 'str',                    'default': '',    'ser': 'str'},
         {'name': 'position',   'type': 'tuple[int,int]',          'default': (0,0), 'ser': 'base'},
         {'name': 'direction',  'type': 'str',                    'default': 'right','ser': 'str'},
         {'name': 'show_index', 'type': 'bool',                   'default': True,  'ser': 'bool',   'key': 'showIndex'},
@@ -196,7 +196,7 @@ ARRAY2D_SCHEMA = {
     'type': 'array2d',
     'docstring': 'Display a 2D list variable as a matrix on the grid.',
     'properties': [
-        {'name': 'var_name',   'type': 'str',                    'default': '',   'ser': 'str',      'key': 'varName'},
+        {'name': 'name',       'type': 'str',                    'default': '',   'ser': 'str'},
         {'name': 'position',   'type': 'tuple[int,int]',          'default': (0,0),'ser': 'base'},
         {'name': 'show_index', 'type': 'bool',                   'default': True, 'ser': 'bool',     'key': 'showIndex'},
         {'name': 'color',      'type': 'tuple[int,int,int]|None', 'default': None, 'ser': 'color?'},

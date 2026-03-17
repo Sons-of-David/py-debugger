@@ -335,13 +335,12 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
   }, [panels]);
 
   const renderedPanelHandles = useMemo(() => {
-    return panels.filter((p) => p.showBorder !== false).map((panel) => {
+    return panels.filter((p) => p.title).map((panel) => {
       const style = panel.panelStyle ?? PANEL_STYLE_DEFAULT;
-      const textClass = panel.title ? style.titleTextClass : 'text-slate-400 dark:text-slate-500';
       return (
         <span
           key={panel.id}
-          className={`absolute text-[10px] font-mono px-1 rounded ${style.titleBgClass} ${textClass}`}
+          className={`absolute text-[10px] font-mono px-1 rounded ${style.titleBgClass} ${style.titleTextClass}`}
           style={{
             left: panel.col * CELL_SIZE + 4,
             top: panel.row * CELL_SIZE,
@@ -350,7 +349,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
             zIndex: 20,
           }}
         >
-          {panel.title || '⋮⋮'}
+          {panel.title}
         </span>
       );
     });

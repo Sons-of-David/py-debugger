@@ -111,7 +111,7 @@ export class Array1D implements VisualBuilderElementBase {
   direction: 'right' | 'left' | 'down' | 'up';
   values: (number | string)[];
   showIndex: boolean;
-  varName?: string;
+  name?: string;
   alpha: number;
   z: number;
   panelId?: string;
@@ -124,7 +124,7 @@ export class Array1D implements VisualBuilderElementBase {
       typeof v === 'number' || typeof v === 'string' ? v : 0
     );
     this.showIndex = el.showIndex ?? true;
-    this.varName = el.varName;
+    this.name = el.name || undefined;
     this.alpha = el.alpha ?? 1;
     this.z = el.z ?? 0;
     this.panelId = el.panelId;
@@ -176,7 +176,7 @@ export class Array1D implements VisualBuilderElementBase {
         id: panelId,
         width: panelWidth,
         height: panelHeight,
-        title: this.varName,
+        title: this.name,
         panelStyle: PANEL_STYLE_1D,
       },
       panelOffset: { row: panelRowOffset, col: panelColOffset },
@@ -190,7 +190,7 @@ export const ARRAY_SCHEMA: ObjDoc = {
   objName: 'Array',
   docstring: 'Displays an array of values as square cells on the grid.',
   properties: [
-    { name: 'var_name', type: 'str', description: 'Name of the array variable (e.g. "arr", "nums").', default: '""' },
+    { name: 'name', type: 'str', description: 'Label shown above the array on the grid. Omit to show no label.', default: '""' },
     { name: 'arr', type: 'list', description: 'Initial array values. Elements must be primitives (int, float, str, bool, or None).', default: '[]' },
     { name: 'position', type: 'tuple[int, int]', description: 'Top-left corner (row, col) of the first cell.', default: '(0, 0)' },
     { name: 'direction', type: 'str', description: '"right", "left", "down", or "up" — layout direction.', default: '"right"' },
@@ -217,7 +217,7 @@ export class Array2D implements VisualBuilderElementBase {
   numCols: number;
   rectangular: boolean = true;
   showIndex: boolean;
-  varName?: string;
+  name?: string;
   alpha: number;
   z: number;
   panelId?: string;
@@ -236,7 +236,7 @@ export class Array2D implements VisualBuilderElementBase {
       : Math.max(1, Math.min(50, Math.max(...this.values.map(r => r.length))));
     this.rectangular = el.rectangular ?? true;
     this.showIndex = el.showIndex ?? true;
-    this.varName = el.varName;
+    this.name = el.name || undefined;
     this.alpha = el.alpha ?? 1;
     this.z = el.z ?? 0;
     this.panelId = el.panelId;
@@ -249,7 +249,7 @@ export class Array2D implements VisualBuilderElementBase {
 
   draw(idxStart: number = 0, VB_PREFIX: string = 'vb-'): ArrayDrawResult {
     let idx = idxStart;
-    const { numRows, numCols, varName } = this;
+    const { numRows, numCols, name } = this;
     const panelId = `${VB_PREFIX}array2d-panel-${idx++}`;
     const showIndices = this.showIndex ?? true;
 
@@ -283,7 +283,7 @@ export class Array2D implements VisualBuilderElementBase {
         id: panelId,
         width: numCols,
         height: numRows,
-        title: varName,
+        title: name,
         panelStyle: PANEL_STYLE_2D,
         showBackground: this.rectangular,
       },
@@ -298,7 +298,7 @@ export const ARRAY2D_SCHEMA: ObjDoc = {
   objName: 'Array2D',
   docstring: 'Displays a 2D array of values as a grid of square cells.',
   properties: [
-    { name: 'var_name', type: 'str', description: 'Name of the 2D array variable.', default: '""' },
+    { name: 'name', type: 'str', description: 'Label shown above the array on the grid. Omit to show no label.', default: '""' },
     { name: 'position', type: 'tuple[int, int]', description: 'Top-left corner (row, col).', default: '(0, 0)' },
     { name: 'arr', type: 'list[list]', description: '2D list of values (jagged arrays OK). Elements must be primitives (int, float, str, bool, or None).', default: '[]' },
     { name: 'rectangular', type: 'bool', description: 'If True, pad short rows with empty cells to fill the bounding rectangle. If False, only draw cells that exist in the data.', default: 'True' },
