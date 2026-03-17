@@ -58,7 +58,9 @@ export function useGridState() {
         maxCol = Math.max(maxCol, childPos.col + w);
       }
 
-      sizes.set(panelId, { width: Math.max(1, maxCol), height: Math.max(1, maxRow) });
+      const declaredW = obj.data.panel?.width ?? 1;
+      const declaredH = obj.data.panel?.height ?? 1;
+      sizes.set(panelId, { width: Math.max(declaredW, maxCol), height: Math.max(declaredH, maxRow) });
     }
 
     return sizes;

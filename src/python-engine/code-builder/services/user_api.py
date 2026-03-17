@@ -6,11 +6,11 @@ import _vb_engine as _engine
 PANEL_SCHEMA = {
     'objName': 'Panel',
     'type': 'panel',
-    'docstring': 'A container panel that positions child elements relative to its top-left corner.',
+    'docstring': 'A container panel. Children use positions relative to its top-left corner. width/height set the minimum size — the panel grows to fit children that overflow.',
     'properties': [
-        {'name': 'name',        'type': 'str',  'default': 'Panel', 'ser': 'str'},
-        {'name': 'width',       'type': 'int',  'default': 5,       'ser': 'int'},
-        {'name': 'height',      'type': 'int',  'default': 5,       'ser': 'int'},
+        {'name': 'name',        'type': 'str',  'default': '',      'ser': 'str'},
+        {'name': 'width',       'type': 'int',  'default': 1,       'ser': 'int'},
+        {'name': 'height',      'type': 'int',  'default': 1,       'ser': 'int'},
         {'name': 'show_border', 'type': 'bool', 'default': False,   'ser': 'bool'},
     ],
 }
@@ -19,11 +19,11 @@ PANEL_SCHEMA = {
 class Panel(_engine.VisualElem):
     _schema = PANEL_SCHEMA
 
-    def __init__(self, name="Panel"):
+    def __init__(self, name=""):
         super().__init__()
         self.name = name
-        self.width = 5
-        self.height = 5
+        self.width = 1
+        self.height = 1
         self.show_border = False
         self._children = []
 
