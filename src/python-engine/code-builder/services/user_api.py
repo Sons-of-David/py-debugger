@@ -151,6 +151,8 @@ LABEL_SCHEMA = {
     ],
 }
 
+# TODO: support width='auto' — measure text length and set width to ceil(len(label) * font_size / CELL_SIZE)
+# so users don't have to calculate width manually for long labels.
 class Label(_engine._ShapeBase, schema=LABEL_SCHEMA): pass
 
 
