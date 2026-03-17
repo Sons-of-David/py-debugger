@@ -14,19 +14,20 @@ Project management file — not linked from dev-notes.md.
 - ~~**setDebug(bool):** Add a `set_debug(bool)` to the debugger side. Lets the user mark when variables are initialized and debugging should begin.~~
 - **Tutorial section:** Add descriptions to sample files and link to them from a tutorial page.
 - **Redo about page:** Redesign the about page and add links to the homepage.
+- **split examples:** have algorithms examples and feature examples
 
 ---
 
 ## Cleanup / Small Tasks
 
 - **setDebugCallSuffix location:** Check if `setDebugCallSuffix` can be handled at `CodeEditorArea` level instead of `App.tsx` (see [sharp-edges.md → debugCallSuffix](./sharp-edges.md)).
-- **Error display:** Improve error viewing to show line numbers relative to user code (not the engine). Auto-jump to the editor tab containing the error.
+- **Error display:** Improve error viewing to show line numbers relative to user code (not the engine). instead of text like "  File "<exec>", line 122, in <module>" have either 'builder' or 'debugger' file and '_main_' as function. Auto-jump to the editor tab containing the error.
 - **Unify userZ + zOrder:** Consider merging `userZ` and `zOrder` in `RenderableObjectData` into a single `depth: [number, number]` tuple — they always travel and sort together in `Grid.tsx`.
-- **Keyboard shortcut — advance mode:** Use Ctrl+Enter (or Shift+Enter) to advance to the next mode (edit→analyze, trace→interactive).
-- **Keyboard shortcut — save:** Use Ctrl+S to auto-save.
-- **Trace mode scroll:** When the debugger code editor is open in trace mode and the current line is off-screen, auto-scroll to it when stepping through the timeline.
-- **Last line not traced:** The trace does not show the last line execution.
-- **Rect animation width jump:** When animating rects (e.g. bubble sort), the `width` property jumps while other properties animate smoothly.
+- ~~**Keyboard shortcut — advance mode:** Use Ctrl+Enter (or Shift+Enter) to advance to the next mode (edit→analyze, trace→interactive).~~
+- ~~**Keyboard shortcut — save:** Use Ctrl+S to auto-save.~~
+- ~~**Trace mode scroll:** When the debugger code editor is open in trace mode and the current line is off-screen, auto-scroll to it when stepping through the timeline.~~
+- ~~**Last line not traced:** The trace does not show the last line execution.~~
+- ~~**Rect animation width jump:** When animating rects (e.g. bubble sort), the `width` property jumps while other properties animate smoothly.~~
 - **Font size button broken:** Can't change font size — button doesn't work.
 ---
 
