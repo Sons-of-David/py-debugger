@@ -164,6 +164,12 @@ def _serialize_variables_for_ts(raw_vars: Dict[str, Any]) -> Dict[str, VariableV
 
 _exec_context: dict = {}
 _last_code_line_count: int = 0
+_debug_enabled: bool = True
+
+
+def set_debug(value: bool) -> None:
+    global _debug_enabled
+    _debug_enabled = value
 
 
 def _visual_code_trace(code: str, persistent: bool = False) -> str:
@@ -272,6 +278,7 @@ def _visual_code_trace(code: str, persistent: bool = False) -> str:
         return trace_fn
 
     exec_ctx = _exec_context if persistent else {'__builtins__': __builtins__}
+    exec_ctx['set_debug'] = set_debug
     if not persistent:
         _exec_context = exec_ctx
 
