@@ -4,6 +4,41 @@ Project management file — not linked from dev-notes.md.
 
 ---
 
+## Beta Launch
+
+### Critical
+
+- **API reference completeness:** Audit all classes and functions in `user_api.py`, `pythonTracer.py`, and builder imports (e.g. `graphs.py`). Every public symbol should appear in `ApiReferencePanel.tsx` (`visualBuilder.ts` / `functionsSchema.ts`) with accurate types, defaults, and descriptions.
+- **Examples overhaul:** Split existing samples into two categories: *Algorithm examples* (bubble sort, tree rotation, linked list, etc.) and *Feature examples* (one sample per major API feature: arrays, rich text, drag, R-tracking, etc.). Add missing feature examples so the full API surface has coverage.
+- **About page redesign:** Rewrite `src/pages/PlanPage.tsx` to be user-facing (not dev notes). Add link to `https://prove-me-wrong.com`.
+- **Feedback widget:** Floating button visible in the editor. Opens a modal with a text area for feedback and a checkbox to include the current code (debugger + builder JSON). Submits to a placeholder endpoint — backend wiring deferred; UI ships first.
+- **Tutorial pages:** In-app React Router pages (like the current About page), one per major feature area (arrays, interactive mode, text boxes, libraries, etc.). Interactive walkthrough layer can be added later.
+- **Error display:** Improve error viewing to show line numbers relative to user code (not the engine). instead of text like "  File "<exec>", line 122, in <module>" have either 'builder' or 'debugger' file and '_main_' as function. Auto-jump to the editor tab containing the error.
+see for example this weird looking error:
+>  File "<exec>", line 1, in <module>
+>  File "<exec>", line 295, in _visual_code_trace
+>  File "<exec>", line 5, in <module>
+>  File "<exec>", line 276, in trace_fn
+>  File "<exec>", line 215, in _record_step
+>  File "<exec>", line 8, in _serialize_visual_builder
+>  File "/home/pyodide/_vb_engine.py", line 336, in _serialize
+>    return self._serialize_from_fields(self._schema)
+>           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  File "/home/pyodide/_vb_engine.py", line 102, in _serialize_from_fields
+>    out[key] = int(val)
+>               ^^^^^^^^
+>TypeError: int() argument must be a string, a bytes-like object or a real number, not >'NoneType'
+
+### Nice to Have
+
+- **Shareable links:** Encode the current editor state (JSON) into a URL hash or query param. Lets users share their work and makes it easy to report bugs with a repro link.
+- **Welcome / first-time experience:** A brief dismissible banner or modal for first-time visitors explaining what the app is and pointing to tutorials and samples.
+- **Pyodide loading state:** Show a visible loading indicator while Pyodide initializes so the app doesn't appear broken on first load.
+- **Tool libraries:** Add more library tools like the given `graphs.py` file. For example `charts.py` builder-import library with a `BarChart` component: takes an array of values and renders a labeled bar graph above a matching array element display. Each should come with a scehma describing what it is in general, and what are its functions, and it should appear in the API reference.
+- **Logo:** App logo/icon.
+
+---
+
 ## Features
 
 - **Curved lines:** Make lines between objects support curves. Curve shape determined by leaving/entry points relative to cell centers.
@@ -12,23 +47,24 @@ Project management file — not linked from dev-notes.md.
 - **Images in grid:** Similar to text boxes, add image elements to the grid that do not go through the Python engine.
 - **LaTeX in text boxes:** Support LaTeX rendering in text box elements.
 - ~~**setDebug(bool):** Add a `set_debug(bool)` to the debugger side. Lets the user mark when variables are initialized and debugging should begin.~~
-- **Tutorial section:** Add descriptions to sample files and link to them from a tutorial page.
-- **Redo about page:** Redesign the about page and add links to the homepage.
-- **split examples:** have algorithms examples and feature examples
+- **input component:** a renderable object where the user can input a text, which is an event
+available during interactive mode.
+- **keyboard events:** for interactive mode
 
 ---
 
 ## Cleanup / Small Tasks
 
 - **setDebugCallSuffix location:** Check if `setDebugCallSuffix` can be handled at `CodeEditorArea` level instead of `App.tsx` (see [sharp-edges.md → debugCallSuffix](./sharp-edges.md)).
-- **Error display:** Improve error viewing to show line numbers relative to user code (not the engine). instead of text like "  File "<exec>", line 122, in <module>" have either 'builder' or 'debugger' file and '_main_' as function. Auto-jump to the editor tab containing the error.
+
 - **Unify userZ + zOrder:** Consider merging `userZ` and `zOrder` in `RenderableObjectData` into a single `depth: [number, number]` tuple — they always travel and sort together in `Grid.tsx`.
 - ~~**Keyboard shortcut — advance mode:** Use Ctrl+Enter (or Shift+Enter) to advance to the next mode (edit→analyze, trace→interactive).~~
 - ~~**Keyboard shortcut — save:** Use Ctrl+S to auto-save.~~
 - ~~**Trace mode scroll:** When the debugger code editor is open in trace mode and the current line is off-screen, auto-scroll to it when stepping through the timeline.~~
 - ~~**Last line not traced:** The trace does not show the last line execution.~~
 - ~~**Rect animation width jump:** When animating rects (e.g. bubble sort), the `width` property jumps while other properties animate smoothly.~~
-- **Font size button broken:** Can't change font size — button doesn't work.
+- ~~**Font size button broken:** Can't change font size — button doesn't work.~~
+
 ---
 
 ## In Progress
