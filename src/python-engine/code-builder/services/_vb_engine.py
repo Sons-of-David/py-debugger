@@ -228,3 +228,66 @@ def _get_v_attr(self, name):
 
 
 VisualElem.__getattribute__ = _get_v_attr
+
+
+def make_shape_class(schema):
+    """Generate a VisualElem subclass from a schema dict.
+
+    Schema format:
+      {
+        'objName': 'Rect',
+        'type': 'rect',
+        'docstring': '...',
+        'properties': [
+          {'name': 'width', 'type': 'int', 'default': 1, 'ser': 'int'},
+          ...
+        ]
+      }
+
+    Property 'ser' values:
+      'base'   — handled by _serialize_base(), not added again
+      'int'    — int(val)
+      'str'    — str(val)
+      'bool'   — bool(val)
+      'float'  — float(val)
+      'color'  — _serialize_color(val, default)
+      'color?' — same but omitted when val is None
+
+    Optional 'key' overrides the output dict key (e.g. 'fontSize' for 'font_size').
+    """
+    type_name = schema['type']
+    all_props = schema['properties']
+    ser_props = [p for p in all_props if p['ser'] != 'base']
+
+    def __init__(self, **kwargs):
+        VisualElem.__init__(self)
+        for p in all_props:
+            object.__setattr__(self, p['name'], kwargs.get(p['name'], p['default']))
+
+    def _serialize(self):
+        out = self._serialize_base()
+        out['type'] = type_name
+        for p in ser_props:
+            val = getattr(self, p['name'], p['default'])
+            ser = p['ser']
+            key = p.get('key', p['name'])
+            if ser == 'int':
+                out[key] = int(val)
+            elif ser == 'str':
+                out[key] = str(val)
+            elif ser == 'bool':
+                out[key] = bool(val)
+            elif ser == 'float':
+                out[key] = float(val)
+            elif ser == 'color':
+                out[key] = VisualElem._serialize_color(val, p['default'])
+            elif ser == 'color?':
+                if val is not None:
+                    out[key] = VisualElem._serialize_color(val, (0, 0, 0))
+        return out
+
+    return type(schema['objName'], (VisualElem,), {
+        '__init__': __init__,
+        '_serialize': _serialize,
+        '_schema': schema,
+    })
