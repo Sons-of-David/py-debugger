@@ -1,0 +1,10 @@
+{
+  "builderCode": "\nclass LabeledArrow(Panel):\n    \"A down pointing arrow with a labal above it\"\n    def __init__(self, label: str, color: tuple[int,int,int]):\n        super().__init__()\n        self.add(\n            Label(\n                label=label, color=color,\n                position=(0,0), width=2, \n            ),\n            Arrow(\n                position=(1,0), width=2, \n                color=color, orientation='down'\n            )\n        )\n        self.visible = False\n\nhead_panel = LabeledArrow('head', (255, 100, 100))\ncur_panel = LabeledArrow('cur', (100, 200, 255))\n\nnode_dict = {}\n\nclass VisNode(Panel):\n    \"A labeled rectangle, with a possible arrow right\"\n    def __init__(self, node, label: str):\n        super().__init__()\n        self.rect = Rect(width=2, height=1, color = (80,140,220))\n        self.label = Label(label=label, width=2, z=-1)\n        self.arrow = Arrow(orientation='right', position=(0,2), width=0)\n        self.add(self.rect, self.label, self.arrow)\n\n        self.position = (4, 1)\n\n        node_dict[node] = self\n\n\ndef function_exit(function_name, value):\n    if function_name == 'Node.__init__' and hasattr(value, 'val'):\n        VisNode(value, str(value.val))\n\n\ndef update(params, scope):\n    node = params.get('head')\n    if node is None:\n        return  # before it is initialized\n\n    x = 1\n    head_panel.visible = True\n    head_panel.position = (0,x)\n\n    while node.next is not None:\n        node_dict[node].position = (2, x)\n        x += 3\n        node_dict[node].arrow.width = 1\n        node = node.next\n\n    node_dict[node].position = (2, x)\n    cur_panel.visible = True\n    cur_panel.position = (0,x)\n",
+  "debuggerCode": "# Linked list construction — watch nodes appear as each __init__ returns\n\nclass Node:\n    def __init__(self, val):\n        self.val = val\n        self.next = None\n\nhead = Node(1)\ncur = head\nfor v in [2, 3, 4, 5]:\n    node = Node(v)\n    cur.next = node\n    cur = node\n",
+  "breakpoints": [
+    13,
+    12,
+    9
+  ],
+  "textBoxes": []
+}
