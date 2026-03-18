@@ -127,6 +127,10 @@ function App() {
     setDebugCallSuffix(null);
     setAnalyzeStatus('idle');
     setAppMode('idle');
+  }, []);
+
+  const handleReset = useCallback(() => {
+    handleEdit();
     clearTerminal();
     resetPythonState();
     clearTimeline();
@@ -134,7 +138,7 @@ function App() {
     setCurrentStep(0);
     setStepCount(0);
     gridAreaRef.current?.loadVisualBuilderObjects([]);
-  }, []);
+  }, [handleEdit]);
 
   const isCodeEmpty = (code: string) =>
     code.split('\n').every((line) => {
@@ -284,8 +288,8 @@ function App() {
     setDebuggerCode(data.debuggerCode ?? '');
     setBreakpoints(data.breakpoints ? new Set(data.breakpoints) : new Set());
     setTextBoxes((data.textBoxes ?? [] as unknown[]).map((raw) => migrateTextBox(raw as Record<string, unknown>)));
-    handleEdit();
-  }, [handleEdit]);
+    handleReset();
+  }, [handleReset]);
 
   // Auto-load first sample and return to edit mode
   useEffect(() => {
