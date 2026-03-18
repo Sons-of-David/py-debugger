@@ -97,7 +97,7 @@ ARROW_SCHEMA = {
         {'name': 'width',    'type': 'int',                'default': 1,              'ser': 'int'},
         {'name': 'height',   'type': 'int',                'default': 1,              'ser': 'int'},
         {'name': 'color',    'type': 'tuple[int,int,int]', 'default': (16, 185, 129), 'ser': 'color'},
-        {'name': 'angle',    'type': 'float',              'default': 0,              'ser': 'base'},
+        {'name': 'angle',    'type': 'float',              'default': 0,              'ser': 'float'},
         {'name': 'visible',  'type': 'bool',               'default': True,           'ser': 'base'},
         {'name': 'z',        'type': 'int',                'default': 0,              'ser': 'base'},
     ],
