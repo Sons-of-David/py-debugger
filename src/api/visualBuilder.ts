@@ -9,6 +9,7 @@ export interface VisualBuilderElementBase {
   alpha?: number;             // optional, default 1
   z?: number;                 // depth layer: lower = closer = rendered on top, default 0
   panelId?: string;
+  _elemId?: number;           // stable identity from Python _elem_id; used as React key
 }
 
 

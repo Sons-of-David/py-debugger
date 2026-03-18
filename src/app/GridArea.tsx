@@ -4,7 +4,7 @@ import { Grid, type GridHandle } from '../visual-panel/components/Grid';
 import { useGridState } from '../visual-panel/hooks/useGridState';
 import type { VisualBuilderElementBase } from '../api/visualBuilder';
 import { executeClickHandler, executeEventHandler, type ClickHandlerResult, type DragType } from '../python-engine/code-builder/services/pythonExecutor';
-import { getConstructor } from '../visual-panel/types/elementRegistry';
+import { hydrateElement } from '../visual-panel/types/elementRegistry';
 import type { TextBox } from '../text-boxes/types';
 
 /* ---------- Shared Tailwind class groups ---------- */
@@ -71,10 +71,7 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
       if (result.error) {
         return;
       }
-      const hydrated = result.snapshot.map((el) => {
-        const ctor = getConstructor(el.type);
-        return ctor ? new ctor(el) : el;
-      });
+      const hydrated = result.snapshot.map((el) => hydrateElement(el));
       loadVisualBuilderObjects(hydrated);
       if (result.debugCall) {
         onDebugCall?.(result.debugCall);
@@ -85,10 +82,7 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
       if (!result || result.error) {
         return;
       }
-      const hydrated = result.snapshot.map((el) => {
-        const ctor = getConstructor(el.type);
-        return ctor ? new ctor(el) : el;
-      });
+      const hydrated = result.snapshot.map((el) => hydrateElement(el));
       loadVisualBuilderObjects(hydrated);
       if (result.debugCall) onDebugCall?.(result.debugCall);
     }, [loadVisualBuilderObjects, onDebugCall]);

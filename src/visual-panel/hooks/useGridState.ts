@@ -255,14 +255,20 @@ export function useGridState() {
       }
 
       const panelIdMap = new Map<string, { gridId: string; origin: CellPosition }>();
+      const hiddenPanelElemIds = new Set<string>();
       let idx = 0;
       let z = zOrderCounter.current++;
 
       // First pass: add regular panels and record their positions
       for (const el of elements) {
         if (el.type !== 'panel') continue;
-        const [row, col] = el.position;
         const elAny = el as any;
+        if (elAny.visible === false) {
+          if (elAny._elem_id != null) hiddenPanelElemIds.add(String(elAny._elem_id));
+          idx++;
+          continue;
+        }
+        const [row, col] = el.position;
         const width = elAny.width ?? 5;
         const height = elAny.height ?? 5;
         const gridId = `${VB_PREFIX}panel-${idx++}`;
@@ -295,6 +301,7 @@ export function useGridState() {
       // Second pass: add non-panel elements
       for (const el of elements) {
         if (el.type === 'panel') continue;
+        if (el.panelId && hiddenPanelElemIds.has(el.panelId)) continue;
         const rawElemId = (el as any)._elemId as number | undefined;
         const gridId = rawElemId != null ? `${VB_PREFIX}elem-${rawElemId}` : `${VB_PREFIX}${idx++}`;
         let row = el.position[0];

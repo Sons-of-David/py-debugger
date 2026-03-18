@@ -1,5 +1,5 @@
 import type { VisualBuilderElementBase } from '../api/visualBuilder';
-import { getConstructor } from '../visual-panel/types/elementRegistry';
+import { hydrateElement } from '../visual-panel/types/elementRegistry';
 
 let timeline: VisualBuilderElementBase[][] = [];
 let maxTime = 0;
@@ -13,13 +13,7 @@ export function hydrateTimelineFromJson(timelineJson: string): VisualBuilderElem
   const raw = JSON.parse(timelineJson) as VisualBuilderElementBase[][];
 
   timeline = raw.map((snapshot) =>
-    snapshot.map((el) => {
-      const entry = getConstructor(el.type);
-      if (entry) {
-        return new entry(el);
-      }
-      return el;
-    }),
+    snapshot.map((el) => hydrateElement(el)),
   );
 
   maxTime = timeline.length > 0 ? timeline.length - 1 : 0;
@@ -30,10 +24,7 @@ export function hydrateTimelineFromArray(
   rawTimeline: VisualBuilderElementBase[][],
 ): VisualBuilderElementBase[] {
   timeline = rawTimeline.map((snapshot) =>
-    snapshot.map((el) => {
-      const entry = getConstructor(el.type);
-      return entry ? new entry(el) : el;
-    }),
+    snapshot.map((el) => hydrateElement(el)),
   );
   maxTime = timeline.length > 0 ? timeline.length - 1 : 0;
   return timeline[0] ?? [];
