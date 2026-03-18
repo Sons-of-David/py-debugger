@@ -53,6 +53,7 @@ def _execute_run_call(expression: str) -> str:
     finally:
         _sys.settrace(None)
         _sys.stdout = _old_stdout
+    _engine.V.params = {k: v for k, v in _exec_context.items() if not k.startswith('__')}
     snapshot = _json.loads(_serialize_visual_builder())
     handlers = _serialize_handlers()
     return _json.dumps({
