@@ -31,36 +31,41 @@ export function useGridState() {
   const panelAutoSizes = useMemo(() => {
     const sizes = new Map<string, { width: number; height: number }>();
 
-    for (const [, obj] of objects) {
-      if (!obj.data.panel) continue;
-      const panelId = obj.data.panel.id;
+    const computeSize = (panelId: string): { width: number; height: number } => {
+      if (sizes.has(panelId)) return sizes.get(panelId)!;
+
+      const panelObj = objects.get(panelId);
+      if (!panelObj?.data.panel) return { width: 1, height: 1 };
 
       let maxRow = 0;
       let maxCol = 0;
 
       for (const [, child] of objects) {
         if (child.data.panelId !== panelId) continue;
-        const childPos = child.position;
 
-        let w = 1;
-        let h = 1;
-
+        let w = 1, h = 1;
         if (child.data.panel) {
-          const nestedSize = sizes.get(child.data.panel.id);
-          w = nestedSize?.width ?? child.data.panel.width ?? 1;
-          h = nestedSize?.height ?? child.data.panel.height ?? 1;
+          const nested = computeSize(child.data.panel.id);
+          w = nested.width;
+          h = nested.height;
         } else {
           w = child.data.shapeProps?.width ?? 1;
           h = child.data.shapeProps?.height ?? 1;
         }
 
-        maxRow = Math.max(maxRow, childPos.row + h);
-        maxCol = Math.max(maxCol, childPos.col + w);
+        maxRow = Math.max(maxRow, child.position.row + h);
+        maxCol = Math.max(maxCol, child.position.col + w);
       }
 
-      const declaredW = obj.data.panel?.width ?? 1;
-      const declaredH = obj.data.panel?.height ?? 1;
-      sizes.set(panelId, { width: Math.max(declaredW, maxCol), height: Math.max(declaredH, maxRow) });
+      const declaredW = panelObj.data.panel.width ?? 1;
+      const declaredH = panelObj.data.panel.height ?? 1;
+      const size = { width: Math.max(declaredW, maxCol), height: Math.max(declaredH, maxRow) };
+      sizes.set(panelId, size);
+      return size;
+    };
+
+    for (const [panelId, obj] of objects) {
+      if (obj.data.panel) computeSize(panelId);
     }
 
     return sizes;
@@ -255,11 +260,10 @@ export function useGridState() {
       }
 
       const panelIdMap = new Map<string, { gridId: string; origin: CellPosition }>();
-      const hiddenPanelElemIds = new Set<string>();
       let idx = 0;
       let z = zOrderCounter.current++;
 
-      // Build elem_id → grid ID map before the first pass so nested panels can resolve their parent
+      // Build elem_id → grid ID map (panel-N based on original array position)
       const serializedPanelIdToGridId = new Map<string, string>();
       let panelIndex = 0;
       for (const el of elements) {
@@ -270,21 +274,57 @@ export function useGridState() {
         }
       }
 
-      // First pass: add regular panels and record their positions
+      // Pre-compute hidden panel elem IDs, propagating down to all descendants
+      const hiddenPanelElemIds = new Set<string>();
       for (const el of elements) {
-        if (el.type !== 'panel') continue;
-        const elAny = el as any;
-        if (elAny.visible === false) {
-          if (elAny._elem_id != null) hiddenPanelElemIds.add(String(elAny._elem_id));
-          idx++;
-          continue;
+        if (el.type === 'panel' && (el as any).visible === false) {
+          const id = (el as any)._elem_id;
+          if (id != null) hiddenPanelElemIds.add(String(id));
         }
+      }
+      let changed = true;
+      while (changed) {
+        changed = false;
+        for (const el of elements) {
+          if (el.type !== 'panel') continue;
+          const id = (el as any)._elem_id;
+          if (id == null || hiddenPanelElemIds.has(String(id))) continue;
+          if (el.panelId && hiddenPanelElemIds.has(el.panelId)) {
+            hiddenPanelElemIds.add(String(id));
+            changed = true;
+          }
+        }
+      }
+
+      // Topologically sort panels: parent before child so panelIdMap always has the parent resolved
+      const panelElements = elements.filter(el => el.type === 'panel');
+      const panelElemIdToEl = new Map(panelElements.map(el => [String((el as any)._elem_id), el]));
+      const sortedPanels: typeof panelElements = [];
+      const visitedPanels = new Set<string>();
+      const visitPanel = (el: VisualBuilderElementBase) => {
+        const id = String((el as any)._elem_id);
+        if (visitedPanels.has(id)) return;
+        if (el.panelId && panelElemIdToEl.has(el.panelId)) {
+          visitPanel(panelElemIdToEl.get(el.panelId)!);
+        }
+        visitedPanels.add(id);
+        sortedPanels.push(el);
+      };
+      for (const el of panelElements) visitPanel(el);
+
+      // First pass: add regular panels in topological order (parent before child)
+      for (const el of sortedPanels) {
+        const elAny = el as any;
+        const elemIdStr = elAny._elem_id != null ? String(elAny._elem_id) : null;
+        if (elemIdStr && hiddenPanelElemIds.has(elemIdStr)) continue;
+
         const [row, col] = el.position;
         const width = elAny.width ?? 5;
         const height = elAny.height ?? 5;
-        const gridId = `${VB_PREFIX}panel-${idx++}`;
+        // Use the pre-assigned grid ID from serializedPanelIdToGridId so parent refs stay consistent
+        const gridId = (elemIdStr && serializedPanelIdToGridId.get(elemIdStr)) ?? `${VB_PREFIX}panel-${idx++}`;
 
-        // Resolve parent panel for nested panels
+        // Resolve parent panel for nested panels (guaranteed to be in panelIdMap due to topo order)
         let parentGridId: string | undefined;
         if (el.panelId) {
           const resolved = serializedPanelIdToGridId.get(el.panelId) ?? el.panelId;
@@ -308,6 +348,9 @@ export function useGridState() {
           zOrder: z++,
         });
       }
+
+      // Start non-panel idx after the panel ID space to avoid collisions
+      idx = panelIndex;
 
       // Second pass: add non-panel elements
       for (const el of elements) {
