@@ -1,33 +1,24 @@
 import { motion } from 'framer-motion';
-import type { ArrowOrientation } from '../types/grid';
 
 interface ArrowProps {
   color?: string;
   opacity?: number;
   strokeWidth?: number;
-  orientation?: ArrowOrientation;
-  rotation?: number;
+  angle?: number;
   animate?: boolean;
   animationDuration?: number;
 }
-
-const ORIENTATION_DEGREES: Record<ArrowOrientation, number> = {
-  up: 180,
-  right: 270,
-  down: 0,
-  left: 90,
-};
 
 export function Arrow({
   color = '#10b981',
   opacity = 1,
   strokeWidth = 0,
-  orientation = 'up',
-  rotation = 0,
+  angle = 0,
   animate = false,
   animationDuration = 300,
 }: ArrowProps) {
-  const baseRotation = ORIENTATION_DEGREES[orientation] ?? 0;
+  // SVG polygon points down by default; angle 0 = up, so offset by 180°
+  const cssRotation = angle + 180;
   const fill = color;
   const stroke = strokeWidth > 0 ? color : 'none';
   const transition = animate ? { duration: animationDuration / 1000, ease: 'easeOut' as const } : { duration: 0 };
@@ -36,7 +27,7 @@ export function Arrow({
     <motion.svg
       viewBox="0 0 100 100"
       className="w-full h-full"
-      animate={{ rotate: baseRotation + rotation }}
+      animate={{ rotate: cssRotation }}
       transition={transition}
     >
       <motion.polygon

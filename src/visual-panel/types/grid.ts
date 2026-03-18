@@ -20,13 +20,10 @@ export interface CellStyle {
   fontSize?: number;    // px
 }
 
-export type ArrowOrientation = 'up' | 'down' | 'left' | 'right';
-
 export interface ShapeProps {
   width?: number;    // in cells
   height?: number;   // in cells
-  rotation?: number;    // degrees
-  orientation?: ArrowOrientation;
+  angle?: number;    // degrees clockwise from up
 }
 
 export interface PanelStyle {

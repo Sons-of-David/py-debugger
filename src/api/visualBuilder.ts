@@ -26,6 +26,7 @@ export interface ObjDoc {
   docstring: string;
   properties: PropertyDoc[];
   methods?: { name: string; signature: string; docstring: string }[];
+  constants?: { name: string; value: string }[];
 }
 
 import { getAllSchemas } from '../visual-panel/types/elementRegistry';

@@ -16,8 +16,7 @@ export function ArrowView({ arrow }: ArrowViewProps) {
       color={rgbToHex(arrow.color, '#10b981')}
       opacity={arrow.alpha}
       strokeWidth={1}
-      orientation={arrow.orientation}
-      rotation={arrow.rotation}
+      angle={arrow.angle}
       animate={animate}
       animationDuration={animationDuration}
     />

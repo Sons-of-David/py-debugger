@@ -91,20 +91,32 @@ class Circle(_engine._ShapeBase, schema=CIRCLE_SCHEMA): pass
 ARROW_SCHEMA = {
     'objName': 'Arrow',
     'type': 'arrow',
-    'docstring': 'An arrow shape on the grid. Points in the given orientation and can be rotated.',
+    'docstring': 'An arrow shape on the grid. Use angle to control direction: 0=up, 90=right, 180=down, 270=left. Use Arrow.UP/DOWN/LEFT/RIGHT constants or set_orientation() for convenience.',
     'properties': [
-        {'name': 'position',    'type': 'tuple[int,int]',     'default': (0, 0),          'ser': 'base'},
-        {'name': 'width',       'type': 'int',                'default': 1,               'ser': 'int'},
-        {'name': 'height',      'type': 'int',                'default': 1,               'ser': 'int'},
-        {'name': 'color',       'type': 'tuple[int,int,int]', 'default': (16, 185, 129),  'ser': 'color'},
-        {'name': 'orientation', 'type': 'str',                'default': 'up',            'ser': 'str'},
-        {'name': 'rotation',    'type': 'int',                'default': 0,               'ser': 'int'},
-        {'name': 'visible',     'type': 'bool',               'default': True,            'ser': 'base'},
-        {'name': 'z',           'type': 'int',                'default': 0,               'ser': 'base'},
+        {'name': 'position', 'type': 'tuple[int,int]',     'default': (0, 0),         'ser': 'base'},
+        {'name': 'width',    'type': 'int',                'default': 1,              'ser': 'int'},
+        {'name': 'height',   'type': 'int',                'default': 1,              'ser': 'int'},
+        {'name': 'color',    'type': 'tuple[int,int,int]', 'default': (16, 185, 129), 'ser': 'color'},
+        {'name': 'angle',    'type': 'float',              'default': 0,              'ser': 'base'},
+        {'name': 'visible',  'type': 'bool',               'default': True,           'ser': 'base'},
+        {'name': 'z',        'type': 'int',                'default': 0,              'ser': 'base'},
     ],
 }
 
-class Arrow(_engine._ShapeBase, schema=ARROW_SCHEMA): pass
+class Arrow(_engine._ShapeBase, schema=ARROW_SCHEMA):
+    UP    = 0
+    RIGHT = 90
+    DOWN  = 180
+    LEFT  = 270
+
+    def set_orientation(self, direction: str) -> None:
+        """Set angle from a direction string: 'up', 'right', 'down', or 'left'."""
+        _map = {'up': 0, 'right': 90, 'down': 180, 'left': 270}
+        if direction not in _map:
+            raise ValueError(
+                f"Arrow.set_orientation: expected 'up', 'right', 'down', or 'left', got {direction!r}"
+            )
+        self.angle = _map[direction]
 
 
 class Line(_engine.VisualElem):
