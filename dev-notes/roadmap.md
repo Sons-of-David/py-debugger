@@ -63,7 +63,7 @@ available during interactive mode.
 
 - **text boxes:** when pressing inside a text in a text box, update the styles in the bar above to match the current pressed text.
 
-- **clear when loading:** Add a clear feature which clears the code from both editors, the variable panel, the output terminals, and the grid. Use this when loading a file.
+- ~~**clear when loading:** Add a clear feature which clears the code from both editors, the variable panel, the output terminals, and the grid. Use this when loading a file.~~
 
 - **setDebugCallSuffix location:** Check if `setDebugCallSuffix` can be handled at `CodeEditorArea` level instead of `App.tsx` (see [sharp-edges.md → debugCallSuffix](./sharp-edges.md)).
 

@@ -9,8 +9,8 @@ import { clearAll as clearTerminal, commitCurrentSegment, appendMarker, appendEr
 import { ApiReferencePanel } from '../api/ApiReferencePanel';
 import { TimelineControls } from '../timeline/TimelineControls';
 import { GridArea, type GridAreaHandle } from './GridArea';
-import { getStateAt, getMaxTime, getTimeline } from '../timeline/timelineState';
-import { getCodeStepAt } from '../python-engine/debugger-panel/codeTimelineState';
+import { getStateAt, getMaxTime, getTimeline, clearTimeline } from '../timeline/timelineState';
+import { getCodeStepAt, clearCodeTimeline } from '../python-engine/debugger-panel/codeTimelineState';
 import type { TextBox } from '../text-boxes/types';
 import { migrateTextBox } from '../text-boxes/types';
 
@@ -129,6 +129,11 @@ function App() {
     setAppMode('idle');
     clearTerminal();
     resetPythonState();
+    clearTimeline();
+    clearCodeTimeline();
+    setCurrentStep(0);
+    setStepCount(0);
+    gridAreaRef.current?.loadVisualBuilderObjects([]);
   }, []);
 
   const isCodeEmpty = (code: string) =>

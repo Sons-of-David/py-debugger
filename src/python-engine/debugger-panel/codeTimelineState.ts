@@ -22,3 +22,7 @@ export function getCodeStepAt(time: number): TraceStep | undefined {
 export function getCodeTimelineLength(): number {
   return codeTimeline.length;
 }
+
+export function clearCodeTimeline(): void {
+  codeTimeline = [];
+}
