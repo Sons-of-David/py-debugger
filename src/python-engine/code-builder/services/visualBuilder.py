@@ -34,7 +34,7 @@ def _exec_builder_code(code: str) -> str:
     _sys.stdout = _io.StringIO()
     try:
         _sys.settrace(_engine.make_step_guard())
-        exec(code, _user_code_ns)
+        exec(compile(code, '<builder_code>', 'exec'), _user_code_ns)
         return _sys.stdout.getvalue()
     finally:
         _sys.settrace(None)

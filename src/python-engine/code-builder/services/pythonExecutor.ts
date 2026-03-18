@@ -115,7 +115,8 @@ async function loadPythonRuntime(): Promise<PyodideRuntime> {
     }
 
     for (const { source } of PYTHON_FILES) {
-      await py.runPythonAsync(source);
+      const escaped = escapeForTripleQuote(source);
+      await py.runPythonAsync(`exec(compile('''${escaped}''', '<engine>', 'exec'))`);
     }
     pythonRuntimeReady = true;
   }
@@ -133,11 +134,11 @@ function cleanPythonError(error: unknown): string {
 /**
  * If the traceback contains any frames from user code (`<string>` filename),
  * filter out all non-user frames and keep only those + the exception message.
- * If no `<string>` frames exist (internal/wrapper error), return the full error.
+ * If no user frames exist (internal/wrapper error), return the full error.
  */
 function filterTraceback(error: string): string {
   const lines = error.split('\n');
-  const hasUserFrame = lines.some((line) => /^\s+File "<string>"/.test(line));
+  const hasUserFrame = lines.some((line) => /^\s+File "<(user_code|builder_code)>"/.test(line));
   if (!hasUserFrame) return error;
 
   const result: string[] = [];
@@ -150,7 +151,7 @@ function filterTraceback(error: string): string {
       continue;
     }
     if (/^ {2}File "/.test(line)) {
-      const isUserFrame = line.startsWith('  File "<string>"');
+      const isUserFrame = /^  File "<(user_code|builder_code)>"/.test(line);
       const frameLines = [line];
       i++;
       // collect source/pointer lines belonging to this frame (indented 4+ spaces)

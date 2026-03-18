@@ -58,7 +58,7 @@ def _capture_variables(
     if frame.f_locals is not frame.f_globals:
         # Walk enclosing function frames (closure scopes), innermost first
         f = frame.f_back
-        while f is not None and f.f_code.co_filename in ('<exec>', '<string>') and f.f_locals is not f.f_globals:
+        while f is not None and f.f_code.co_filename == '<user_code>' and f.f_locals is not f.f_globals:
             for k, v in f.f_locals.items():
                 if k not in local_vars:
                     local_vars[k] = v
@@ -86,11 +86,11 @@ def _capture_scope(frame: FrameType) -> List[Tuple[str, int]]:
     """
     scope = []
     f = frame
-    while f is not None and f.f_code.co_filename in ('<exec>', '<string>'):
+    while f is not None and f.f_code.co_filename == '<user_code>':
         name = f.f_code.co_name
         if name == '<module>':
             name = '_main_'
-        is_priv = name != '_main_' and name.startswith('_') and not (name.startswith('__') and name.endswith('__'))
+        is_priv = (name != '_main_') and name.startswith('_') and not (name.startswith('__') and name.endswith('__'))
         if not is_priv:
             scope.insert(0, (name, f.f_lineno))
         f = f.f_back
@@ -224,7 +224,7 @@ def _visual_code_trace(code: str, persistent: bool = False) -> str:
 
     def trace_fn(frame, event, arg):
         code_obj = frame.f_code
-        if code_obj.co_filename not in ('<exec>', '<string>'):
+        if code_obj.co_filename not in ('<user_code>', '<engine>'):
             return trace_fn
 
         if event == 'call':
@@ -290,7 +290,7 @@ def _visual_code_trace(code: str, persistent: bool = False) -> str:
 
     sys.stdout = debugger_output_buf
     try:
-        compiled = compile(code, '<exec>', 'exec')
+        compiled = compile(code, '<user_code>', 'exec')
         sys.settrace(trace_fn)
         exec(compiled, exec_ctx)
     finally:
@@ -343,5 +343,5 @@ def _prepare_and_trace_debug_call(expression: str) -> str:
     func_source = f"def debug_call():\n    {expression}"
     tree = _ast.parse(func_source)
     _ast.increment_lineno(tree, _last_code_line_count + 2)
-    exec(compile(tree, '<exec>', 'exec'), _exec_context)
+    exec(compile(tree, '<user_code>', 'exec'), _exec_context)
     return _visual_code_trace('debug_call()', True)
