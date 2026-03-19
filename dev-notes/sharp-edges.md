@@ -69,14 +69,6 @@ Code that reads the ID from a **hydrated TypeScript instance** must use `_elemId
 
 ---
 
-### `_vb_id` Is Not Stable Across Serialization Calls
-
-`_vb_id` is assigned fresh on every call to `_serialize_visual_builder()` using an incrementing counter. Two calls produce different `_vb_id` values for the same element. Never use `_vb_id` to correlate elements across calls or timeline steps.
-
-Use `_elem_id` for any persistent element identity.
-
----
-
 ### `_serialize_handlers()` vs `_serialize_handlers_json()` — Never Swap
 
 ```python

@@ -73,8 +73,6 @@ class VisualElem:
 
 **`_elem_id`** — assigned at construction, stable for the lifetime of the element. This is the identity that bridges Python and TypeScript for click dispatch.
 
-**`_vb_id`** — assigned fresh at every serialization call (e.g. `"elem-3"`). Ephemeral — use only for React keys and panel parent references within a single snapshot. See [sharp-edges.md → `_vb_id` is not stable](./sharp-edges.md).
-
 **`_clear_registry()`** — called at the start of every Analyze. Clears `_registry` and resets the `_vis_elem_id` counter. Does **not** reset `_exec_context`.
 
 **`_serialize_base()`** — fields every element emits:
@@ -85,7 +83,7 @@ class VisualElem:
     "alpha": float,
     "z": int,                 # Depth layer; lower z = closer = rendered on top (default 0)
     "_elem_id": int,
-    "panelId": str or None,   # Parent panel's _vb_id (assigned just before this call)
+    "panelId": str or None,   # str(_elem_id) of parent panel, or None
 }
 ```
 
@@ -138,9 +136,8 @@ A user-facing error. Raised when `MAX_TRACE_STEPS` is exceeded or for other user
 ### Serialization Functions
 
 **`_serialize_visual_builder()`**:
-1. Assigns fresh `_vb_id` to every element in `_registry`
-2. Sorts panels to the front (so children can reference their parent's `_vb_id`)
-3. Calls `_serialize()` on each element, assembling a JSON array
+1. Sorts panels to the front (so children can reference their parent's `_elem_id` via `panelId`)
+2. Calls `_serialize()` on each element, assembling a JSON array
 
 **`_serialize_handlers() → dict`** — returns a Python dict `{ elem_id: ["on_click"] }`. Used **only** inside `_visual_code_trace` where the whole result is wrapped in a single `json.dumps`.
 

@@ -18,9 +18,8 @@ Python VisualElem
 
 ### Data Side
 
-Every visual element has two IDs:
+Every visual element has one stable ID:
 - **`_elem_id`** — stable integer assigned at construction. The only identity that holds across serialization calls, Python/TS boundary, and timeline steps.
-- **`_vb_id`** — ephemeral string (e.g. `"elem-3"`) assigned fresh on every call to `_serialize_visual_builder()`. Used for React keys and panel-parent references within a single snapshot only.
 
 At each traced line, `_serialize_visual_builder()` produces a JSON snapshot of the full element registry. All `V()` property bindings are evaluated against that step's variables before serialization.
 
@@ -49,19 +48,11 @@ Each TypeScript shape class registers itself by type string: `registerVisualElem
 
 **File:** `src/python-engine/code-builder/services/visualBuilder.py`
 
-#### `_elem_id` vs `_vb_id`
-
-| Field | Type | Assigned when | Stable? | Use for |
-|-------|------|---------------|---------|---------|
-| `_elem_id` | `int` | At `__init__` | Yes | Click dispatch; TS↔Python identity |
-| `_vb_id` | `str` (`"elem-3"`) | At each `_serialize_visual_builder()` call | No — reassigned every call | React keys; `panelId` references within one snapshot |
-
 #### `_serialize_visual_builder()`
 
 ```python
-# 1. Assign fresh _vb_id to every element
-# 2. Sort: panels first (so children can reference parent _vb_id)
-# 3. Serialize each element via _serialize() → JSON array
+# Serialize each element via _serialize() → JSON array
+# (panels first so children can reference parent _elem_id via panelId)
 ```
 
 Children store positions **relative to their parent panel's top-left corner**. TypeScript resolves these to absolute grid coordinates.
@@ -146,7 +137,7 @@ Takes an array of hydrated TypeScript element instances and populates the grid c
 ```
 For each Panel element:
   → Place at element.position in grid
-  → Record in panelIdMap: _vb_id → { absolutePosition }
+  → Record in panelIdMap: panelId (_elem_id string) → { absolutePosition }
 ```
 
 **Pass 2 — Non-panels:**
@@ -296,8 +287,7 @@ In Jump mode (animation off), all transitions are disabled for instant updates.
 ### Key Invariants
 
 1. `_elem_id` (Python `int`) === `_elemId` (TypeScript `number`) — the only stable identity
-2. `_vb_id` is ephemeral — never use it across serialization calls
-3. `BasicShape` subclasses (`Rect`, `Circle`, `Arrow`) are clickable/draggable; `Line`, `Label`, `Array` are not
+2. `BasicShape` subclasses (`Rect`, `Circle`, `Arrow`) are clickable/draggable; `Line`, `Label`, `Array` are not
 4. `_serialize_handlers()` → dict (embed in outer json.dumps); `_serialize_handlers_json()` → string (for TS calls)
 5. Handlers are re-fetched after every event to support dynamically created elements
 6. Panel children have panel-relative positions in Python JSON; absolute positions in TypeScript instances
