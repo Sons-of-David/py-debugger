@@ -225,6 +225,31 @@ def _visual_code_trace(code: str, persistent: bool = False) -> str:
         visual_timeline.append(snapshot)
         last_snapshot_str = raw
 
+    def _maybe_add_synthetic_step():
+        """After a call/return builder hook, insert a timeline step only if the
+        visual state changed since the last snapshot. Always clears
+        accumulated_builder_output so it doesn't bleed into the next line step."""
+        nonlocal last_snapshot_str
+        raw = _serialize_visual_builder()
+        if last_snapshot_str is not None and raw == last_snapshot_str:
+            accumulated_builder_output.clear()
+            return
+        prev = code_trace[-1] if code_trace else None
+        code_trace.append({
+            'variables': dict(prev['variables']) if prev else {},
+            'scope': prev['scope'] if prev else [],
+            'output': '',
+            'builder_output': ''.join(accumulated_builder_output),
+        })
+        accumulated_builder_output.clear()
+        visual_timeline.append(json.loads(raw))
+        last_snapshot_str = raw
+        if len(code_trace) >= MAX_TRACE_STEPS:
+            raise _engine.PopupException(
+                f"Trace exceeded {MAX_TRACE_STEPS} steps — possible infinite loop. "
+                "(This limit will be user-configurable in a future update.)"
+            )
+
     def trace_fn(frame, event, arg):
         code_obj = frame.f_code
         if code_obj.co_filename not in ('<user_code>', '<engine>'):
@@ -244,6 +269,7 @@ def _visual_code_trace(code: str, persistent: bool = False) -> str:
                     if name != 'self' and name in frame.f_locals
                 }
             ))
+            _maybe_add_synthetic_step()
             return trace_fn
 
         if event == 'return':
@@ -263,6 +289,7 @@ def _visual_code_trace(code: str, persistent: bool = False) -> str:
             accumulated_builder_output.append(_call_builder(
                 _user_code_ns.get('function_exit', _user_api.function_exit), func_name, _engine.R._wrap_original(value)
             ))
+            _maybe_add_synthetic_step()
             return trace_fn
 
         if event != 'line':
