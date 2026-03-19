@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Group, Panel, Separator } from 'react-resizable-panels';
 import { CodeEditorArea } from './CodeEditorArea';
+import { CombinedEditor, COMBINED_SAMPLE } from '../components/combined-editor/CombinedEditor';
 import { useTheme } from '../contexts/ThemeContext';
 import { AnimationContext } from '../animation/animationContext';
 import { loadPyodide, isPyodideLoaded, executePythonCode, executeDebugCall, resetPythonState } from '../python-engine/code-builder/services/pythonExecutor';
@@ -9,12 +10,15 @@ import { clearAll as clearTerminal, commitCurrentSegment, appendMarker, appendEr
 import { ApiReferencePanel } from '../api/ApiReferencePanel';
 import { TimelineControls } from '../timeline/TimelineControls';
 import { GridArea, type GridAreaHandle } from './GridArea';
-import { getStateAt, getMaxTime, getTimeline, clearTimeline } from '../timeline/timelineState';
-import { getCodeStepAt, clearCodeTimeline } from '../python-engine/debugger-panel/codeTimelineState';
+import { getStateAt, getMaxTime, getTimeline, clearTimeline, hydrateTimelineFromArray } from '../timeline/timelineState';
+import { getCodeStepAt, clearCodeTimeline, setCodeTimeline } from '../python-engine/debugger-panel/codeTimelineState';
+import { executeCombinedCode, type CombinedStep } from '../services/combinedExecutor';
 import type { TextBox } from '../text-boxes/types';
 import { migrateTextBox } from '../text-boxes/types';
 
 const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+const USE_COMBINED_EDITOR = true;
 
 // TODO: split samples into "public" (shipped in prod) and "dev" (local-only, e.g. rich-text-demo).
 // Dev samples should only appear when import.meta.env.DEV is true.
@@ -70,6 +74,14 @@ function App() {
   const [textBoxes, setTextBoxes] = useState<TextBox[]>([]);
   const [animationsEnabled, setAnimationsEnabled] = useState(true);
   const [animationDuration, setAnimationDuration] = useState(500); // ms
+
+  // Combined editor state
+  const [combinedCode, setCombinedCode] = useState(COMBINED_SAMPLE);
+  const [combinedTimeline, setCombinedTimeline] = useState<CombinedStep[]>([]);
+  const [isCombinedEditable, setIsCombinedEditable] = useState(true);
+  const [isAnalyzingCombined, setIsAnalyzingCombined] = useState(false);
+  const [combinedError, setCombinedError] = useState<string | undefined>();
+  const [combinedOutput, setCombinedOutput] = useState<string | undefined>();
 
   type AppMode = 'idle' | 'trace' | 'interactive' | 'debug_in_event';
   const [appMode, setAppMode] = useState<AppMode>('idle');
@@ -214,6 +226,51 @@ function App() {
       setDebugCallSuffix(null);
       setAppMode('interactive');
     }
+  }, []);
+
+  // ---------------------------------------------------------------------------
+  // Combined editor handlers
+  // ---------------------------------------------------------------------------
+
+  const handleAnalyzeCombined = useCallback(async () => {
+    if (!combinedCode.trim()) return;
+    setIsAnalyzingCombined(true);
+    setCombinedError(undefined);
+    setCombinedOutput(undefined);
+    clearTerminal();
+    try {
+      const result = await executeCombinedCode(combinedCode);
+      if (result.success) {
+        setCombinedTimeline(result.timeline);
+        hydrateTimelineFromArray(result.timeline.map(s => s.visual));
+        setCodeTimeline(result.timeline.map(s => ({ variables: s.variables, scope: [] })));
+        setStepCount(getMaxTime() + 1);
+        setCurrentStep(0);
+        gridAreaRef.current?.loadVisualBuilderObjects(getStateAt(0) ?? []);
+        setCombinedOutput(result.output || undefined);
+        setIsCombinedEditable(false);
+        setAppMode('trace');
+      } else {
+        setCombinedError(result.error);
+      }
+    } catch (err) {
+      setCombinedError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setIsAnalyzingCombined(false);
+    }
+  }, [combinedCode]);
+
+  const handleEditCombined = useCallback(() => {
+    setIsCombinedEditable(true);
+    setCombinedTimeline([]);
+    setCombinedError(undefined);
+    setCombinedOutput(undefined);
+    clearTimeline();
+    clearCodeTimeline();
+    setCurrentStep(0);
+    setStepCount(0);
+    gridAreaRef.current?.loadVisualBuilderObjects([]);
+    setAppMode('idle');
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -495,6 +552,19 @@ function App() {
           {/* Left panel - Code Editor */}
           <Panel defaultSize={50} minSize={20}>
             <div className="h-full border-r border-gray-300 dark:border-gray-600">
+              {USE_COMBINED_EDITOR ? (
+                <CombinedEditor
+                  code={combinedCode}
+                  onChange={setCombinedCode}
+                  isEditable={isCombinedEditable}
+                  isAnalyzing={isAnalyzingCombined}
+                  currentStep={combinedTimeline.length > 0 ? currentStep : undefined}
+                  onAnalyze={handleAnalyzeCombined}
+                  onEdit={handleEditCombined}
+                  error={combinedError}
+                  output={combinedOutput}
+                />
+              ) : (
               <CodeEditorArea
                 code={visualBuilderCode}
                 onChange={setVisualBuilderCode}
@@ -515,6 +585,7 @@ function App() {
                 onBackToInteractive={handleBackToInteractive}
                 currentStep={currentStep}
               />
+              )}
             </div>
           </Panel>
 

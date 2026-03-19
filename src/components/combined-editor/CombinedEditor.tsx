@@ -2,7 +2,7 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import Editor, { type Monaco } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import type * as MonacoTypes from 'monaco-editor';
-import { VISUAL_ELEM_SCHEMA } from '../../types/visualBuilder';
+import { VISUAL_ELEM_SCHEMA } from '../../api/visualBuilder';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getVizRanges } from './vizBlockParser';
 

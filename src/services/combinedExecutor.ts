@@ -1,6 +1,7 @@
-import { loadPyodide } from './pythonExecutor';
-import type { VisualBuilderElement } from '../types/visualBuilder';
-import VISUAL_BUILDER_PYTHON from './visualBuilder.py?raw';
+import { loadPyodide } from '../python-engine/code-builder/services/pythonExecutor';
+
+import type { VisualBuilderElementBase } from '../api/visualBuilder';
+import VISUAL_BUILDER_PYTHON from '../python-engine/code-builder/services/visualBuilder.py?raw';
 
 export interface CombinedVariable {
   type: string;
@@ -8,7 +9,7 @@ export interface CombinedVariable {
 }
 
 export interface CombinedStep {
-  visual: VisualBuilderElement[];
+  visual: VisualBuilderElementBase[];
   variables: Record<string, CombinedVariable>;
 }
 
