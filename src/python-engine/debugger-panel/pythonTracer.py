@@ -185,6 +185,7 @@ def _visual_code_trace(code: str, persistent: bool = False) -> str:
     visual_timeline = []
     debugger_output_buf = StringIO()
     last_output_pos = 0
+    last_snapshot_str: Optional[str] = None  # raw JSON string from last visual_timeline append
     accumulated_builder_output: List[str] = []  # builder output from function events since last line step
 
     def _call_builder(fn, *args, **kwargs):
@@ -200,7 +201,7 @@ def _visual_code_trace(code: str, persistent: bool = False) -> str:
         return buf.getvalue()
 
     def _record_step(frame, scope):
-        nonlocal last_output_pos
+        nonlocal last_output_pos, last_snapshot_str
         _step_memo: dict = {}
         variables = _capture_variables(frame, {'__builtins__', '__name__', '__doc__'}, _step_memo)
         cur_pos = debugger_output_buf.tell()
@@ -212,7 +213,8 @@ def _visual_code_trace(code: str, persistent: bool = False) -> str:
         _engine.V.scope = scope
         accumulated_builder_output.append(_call_builder(
             _user_code_ns.get('update', _user_api.update), _engine.TrackedDict(variables), scope))
-        snapshot = json.loads(_serialize_visual_builder())
+        raw = _serialize_visual_builder()
+        snapshot = json.loads(raw)
         code_trace.append({
             'variables': variables,
             'scope': scope,
@@ -221,6 +223,7 @@ def _visual_code_trace(code: str, persistent: bool = False) -> str:
         })
         accumulated_builder_output.clear()
         visual_timeline.append(snapshot)
+        last_snapshot_str = raw
 
     def trace_fn(frame, event, arg):
         code_obj = frame.f_code
