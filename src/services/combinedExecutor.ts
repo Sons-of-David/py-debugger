@@ -48,6 +48,9 @@ import json as _json
 _combined_timeline = []
 
 def __record_snapshot__(frame_locals):
+    # Auto-update elements so var_name bindings reflect current locals
+    for elem in VisualElem._registry:
+        elem.update([], frame_locals)
     visual_json = _serialize_visual_builder()
     visual = _json.loads(visual_json)
     # Serialize variables: primitives, lists, 2d-lists only
