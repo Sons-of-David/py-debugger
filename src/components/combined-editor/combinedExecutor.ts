@@ -1,7 +1,9 @@
 import { loadPyodide } from '../../python-engine/code-builder/services/pythonExecutor';
 
 import type { VisualBuilderElementBase } from '../../api/visualBuilder';
-import VISUAL_BUILDER_PYTHON from './visualBuilder.py?raw';
+import VB_ENGINE_PYTHON from './_vb_engine.py?raw';
+import USER_API_PYTHON from './user_api.py?raw';
+import VISUAL_BUILDER_PYTHON from './vb_serializer.py?raw';
 
 export interface CombinedVariable {
   type: string;
@@ -43,33 +45,6 @@ function escapeTripleQuote(s: string): string {
   return s.replace(/'''/g, "\\'\\'\\'");
 }
 
-const SNAPSHOT_HELPER = `
-import json as _json
-
-_combined_timeline = []
-
-def __record_snapshot__(frame_locals):
-    # Auto-update elements so var_name bindings reflect current locals
-    for elem in VisualElem._registry:
-        elem.update([], frame_locals)
-    visual_json = _serialize_visual_builder()
-    visual = _json.loads(visual_json)
-    # Serialize variables: primitives, lists, 2d-lists only
-    variables = {}
-    for k, v in frame_locals.items():
-        if k.startswith('_') or k == '__record_snapshot__':
-            continue
-        if isinstance(v, (int, float, str, bool)):
-            variables[k] = {'type': type(v).__name__, 'value': v}
-        elif isinstance(v, (list, tuple)):
-            if len(v) == 0:
-                variables[k] = {'type': 'list', 'value': []}
-            elif isinstance(v[0], (list, tuple)):
-                variables[k] = {'type': 'list2d', 'value': [list(row) for row in v]}
-            else:
-                variables[k] = {'type': 'list', 'value': list(v)}
-    _combined_timeline.append({'visual': visual, 'variables': variables})
-`;
 
 /**
  * Execute combined Python code (with # @viz / # @end blocks) and return
@@ -79,14 +54,22 @@ export async function executeCombinedCode(code: string): Promise<CombinedResult>
   try {
     const py = await loadPyodide();
 
+    // Write engine modules to Pyodide VFS so visualBuilder.py can import them
+    py.FS.writeFile('/home/pyodide/_vb_engine.py', VB_ENGINE_PYTHON);
+    py.FS.writeFile('/home/pyodide/user_api.py', USER_API_PYTHON);
+
     // Load visual builder classes and serialization helpers
     await py.runPythonAsync(VISUAL_BUILDER_PYTHON);
 
-    // Reset element registry
-    await py.runPythonAsync('VisualElem._registry = []');
+    // Bring user-facing names (Rect, Panel, Array, …) and VisualElem into globals
+    // so they are available both in the exec namespace and in the snapshot helper.
+    await py.runPythonAsync('from user_api import *');
 
-    // Load snapshot helper (defines __record_snapshot__ and _combined_timeline)
-    await py.runPythonAsync(SNAPSHOT_HELPER);
+    // Reset element registry
+    await py.runPythonAsync('_engine.VisualElem._clear_registry()');
+
+    // Reset combined timeline (defined in visualBuilder.py)
+    await py.runPythonAsync('_reset_combined_timeline()');
 
     // Preprocess user code
     const preprocessed = preprocess(code);

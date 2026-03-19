@@ -14,6 +14,7 @@ type TerminalTab = 'builder' | 'debugger' | 'combined';
 interface OutputTerminalProps {
   currentStep: number;
   appMode: 'idle' | 'trace' | 'interactive' | 'debug_in_event';
+  hideTabs?: boolean;
 }
 
 const DEFAULT_HEIGHT = 128;
@@ -27,10 +28,11 @@ function splitLines(text: string): string[] {
   return parts;
 }
 
-export function OutputTerminal({ currentStep }: OutputTerminalProps) {
+export function OutputTerminal({ currentStep, hideTabs }: OutputTerminalProps) {
   useSyncExternalStore(subscribeTerminal, getTerminalVersion);
   const [collapsed, setCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<TerminalTab>('combined');
+  const effectiveTab = hideTabs ? 'combined' : activeTab;
   const [height, setHeight] = useState(DEFAULT_HEIGHT);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isAtBottomRef = useRef(true);
@@ -151,8 +153,8 @@ export function OutputTerminal({ currentStep }: OutputTerminalProps) {
   };
 
   const renderContent = () => {
-    if (activeTab === 'builder') return renderBuilderTab();
-    if (activeTab === 'debugger') return renderDebuggerTab();
+    if (effectiveTab === 'builder') return renderBuilderTab();
+    if (effectiveTab === 'debugger') return renderDebuggerTab();
     return renderCombinedTab();
   };
 
@@ -171,9 +173,9 @@ export function OutputTerminal({ currentStep }: OutputTerminalProps) {
           <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mr-2">
             Output
           </span>
-          {tabBtn('builder', 'Builder')}
-          {tabBtn('debugger', 'Debugger')}
-          {tabBtn('combined', 'Combined')}
+          {!hideTabs && tabBtn('builder', 'Builder')}
+          {!hideTabs && tabBtn('debugger', 'Debugger')}
+          {!hideTabs && tabBtn('combined', 'Combined')}
         </div>
         <button
           type="button"

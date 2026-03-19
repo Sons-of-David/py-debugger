@@ -80,8 +80,6 @@ function App() {
   const [combinedTimeline, setCombinedTimeline] = useState<CombinedStep[]>([]);
   const [isCombinedEditable, setIsCombinedEditable] = useState(true);
   const [isAnalyzingCombined, setIsAnalyzingCombined] = useState(false);
-  const [combinedError, setCombinedError] = useState<string | undefined>();
-  const [combinedOutput, setCombinedOutput] = useState<string | undefined>();
 
   type AppMode = 'idle' | 'trace' | 'interactive' | 'debug_in_event';
   const [appMode, setAppMode] = useState<AppMode>('idle');
@@ -235,8 +233,6 @@ function App() {
   const handleAnalyzeCombined = useCallback(async () => {
     if (!combinedCode.trim()) return;
     setIsAnalyzingCombined(true);
-    setCombinedError(undefined);
-    setCombinedOutput(undefined);
     clearTerminal();
     try {
       const result = await executeCombinedCode(combinedCode);
@@ -247,14 +243,14 @@ function App() {
         setStepCount(getMaxTime() + 1);
         setCurrentStep(0);
         gridAreaRef.current?.loadVisualBuilderObjects(getStateAt(0) ?? []);
-        setCombinedOutput(result.output || undefined);
+        if (result.output) commitCurrentSegment(result.output);
         setIsCombinedEditable(false);
         setAppMode('trace');
       } else {
-        setCombinedError(result.error);
+        appendError(result.error ?? 'Unknown error');
       }
     } catch (err) {
-      setCombinedError(err instanceof Error ? err.message : 'Unknown error');
+      appendError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setIsAnalyzingCombined(false);
     }
@@ -263,8 +259,7 @@ function App() {
   const handleEditCombined = useCallback(() => {
     setIsCombinedEditable(true);
     setCombinedTimeline([]);
-    setCombinedError(undefined);
-    setCombinedOutput(undefined);
+    clearTerminal();
     clearTimeline();
     clearCodeTimeline();
     setCurrentStep(0);
@@ -561,8 +556,6 @@ function App() {
                   currentStep={combinedTimeline.length > 0 ? currentStep : undefined}
                   onAnalyze={handleAnalyzeCombined}
                   onEdit={handleEditCombined}
-                  error={combinedError}
-                  output={combinedOutput}
                 />
               ) : (
               <CodeEditorArea

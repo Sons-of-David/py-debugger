@@ -41,6 +41,37 @@ def _exec_builder_code(code: str) -> str:
         _sys.stdout = _old_stdout
 
 
+# ── Combined-editor timeline ──────────────────────────────────────────────────
+
+import json as _json
+
+_combined_timeline = []
+
+
+def _reset_combined_timeline():
+    global _combined_timeline
+    _combined_timeline = []
+
+
+def __record_snapshot__(frame_locals):
+    """Injected after each # @end marker by the TypeScript preprocessor."""
+    visual = _json.loads(_serialize_visual_builder())
+    variables = {}
+    for k, v in frame_locals.items():
+        if k.startswith('_') or k == '__record_snapshot__':
+            continue
+        if isinstance(v, (int, float, str, bool)):
+            variables[k] = {'type': type(v).__name__, 'value': v}
+        elif isinstance(v, (list, tuple)):
+            if len(v) == 0:
+                variables[k] = {'type': 'list', 'value': []}
+            elif isinstance(v[0], (list, tuple)):
+                variables[k] = {'type': 'list2d', 'value': [list(row) for row in v]}
+            else:
+                variables[k] = {'type': 'list', 'value': list(v)}
+    _combined_timeline.append({'visual': visual, 'variables': variables})
+
+
 def _execute_run_call(expression: str) -> str:
     """Execute expression silently in _exec_context, return snapshot + handlers JSON."""
     import io as _io, sys as _sys, json as _json

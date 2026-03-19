@@ -3,6 +3,7 @@ import Editor, { type Monaco } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import type * as MonacoTypes from 'monaco-editor';
 import { VISUAL_ELEM_SCHEMA } from '../../api/visualBuilder';
+import { OutputTerminal } from '../../output-terminal/OutputTerminal';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getVizRanges } from './vizBlockParser';
 import sampleCode from './sample.py?raw';
@@ -17,8 +18,6 @@ interface CombinedEditorProps {
   currentStep?: number;
   onAnalyze: () => void;
   onEdit: () => void;
-  error?: string;
-  output?: string;
 }
 
 export function CombinedEditor({
@@ -29,8 +28,6 @@ export function CombinedEditor({
   currentStep,
   onAnalyze,
   onEdit,
-  error,
-  output,
 }: CombinedEditorProps) {
   const { darkMode } = useTheme();
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -359,23 +356,7 @@ export function CombinedEditor({
         />
       </div>
 
-      {/* Error / Output */}
-      {(error || output) && (
-        <div className="flex-shrink-0 border-t border-gray-300 dark:border-gray-700 max-h-32 overflow-auto">
-          {error && (
-            <div className="px-4 py-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm font-mono">
-              <span className="font-semibold">Error: </span>
-              {error}
-            </div>
-          )}
-          {output && !error && (
-            <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-mono">
-              <span className="font-semibold text-gray-500 dark:text-gray-400">Output: </span>
-              {output}
-            </div>
-          )}
-        </div>
-      )}
+      <OutputTerminal currentStep={currentStep ?? 0} appMode="idle" hideTabs />
 
       <style>{`
         .viz-block-line {
