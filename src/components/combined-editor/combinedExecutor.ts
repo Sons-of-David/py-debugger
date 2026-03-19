@@ -23,19 +23,37 @@ export interface CombinedResult {
 }
 
 /**
- * Inject __record_snapshot__(dict(locals())) after each # @end line.
- * The original comment is preserved; the call is added on the next line
- * with the same indentation as the # @end line.
+ * Validate and preprocess viz blocks.
+ *
+ * Replaces # @viz with __viz_begin__() and # @end with __viz_end__(dict(locals())).
+ * Validates that blocks are matched and not nested.
+ *
+ * TODO: Eventually move viz block bodies into their own functions so the scope
+ * boundary is explicit and pathological cases (e.g. # @end inside a conditional
+ * in a different scope) become impossible at the language level.
  */
 function preprocess(code: string): string {
-  return code
-    .split('\n')
-    .flatMap(line => {
-      if (line.trim() === '# @end') {
-        const indent = line.match(/^(\s*)/)?.[1] ?? '';
-        return [line, `${indent}__record_snapshot__(dict(locals()))`];
-      }
-      return [line];
+  const lines = code.split('\n');
+  let open = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+    if (trimmed === '# @viz') {
+      if (open) throw new Error(`Line ${i + 1}: nested # @viz blocks are not supported`);
+      open = true;
+    } else if (trimmed === '# @end') {
+      if (!open) throw new Error(`Line ${i + 1}: # @end without matching # @viz`);
+      open = false;
+    }
+  }
+  if (open) throw new Error('Unclosed # @viz block (missing # @end)');
+
+  return lines
+    .map(line => {
+      const indent = line.match(/^(\s*)/)?.[1] ?? '';
+      if (line.trim() === '# @viz') return `${indent}__viz_begin__()`;
+      if (line.trim() === '# @end') return `${indent}__viz_end__(dict(locals()))`;
+      return line;
     })
     .join('\n');
 }
@@ -61,17 +79,13 @@ export async function executeCombinedCode(code: string): Promise<CombinedResult>
     // Load visual builder classes and serialization helpers
     await py.runPythonAsync(VISUAL_BUILDER_PYTHON);
 
-    // Bring user-facing names (Rect, Panel, Array, …) and VisualElem into globals
-    // so they are available both in the exec namespace and in the snapshot helper.
-    await py.runPythonAsync('from user_api import *');
-
     // Reset element registry
     await py.runPythonAsync('_engine.VisualElem._clear_registry()');
 
-    // Reset combined timeline (defined in visualBuilder.py)
+    // Reset combined timeline and V() tracer state
     await py.runPythonAsync('_reset_combined_timeline()');
 
-    // Preprocess user code
+    // Preprocess user code (replaces # @viz / # @end with tracer hook calls)
     const preprocessed = preprocess(code);
     const escaped = escapeTripleQuote(preprocessed);
 
@@ -83,12 +97,10 @@ _stdout_capture = _io.StringIO()
 _sys.stdout = _stdout_capture
 `);
 
+    // _exec_combined_code builds its own namespace from user_api (Panel, Rect, V, …)
+    // and installs the V()-change-detection tracer around exec.
     try {
-      await py.runPythonAsync(`exec('''${escaped}''', {
-    **{k: v for k, v in globals().items() if not k.startswith('__')},
-    '__builtins__': __builtins__,
-    '__record_snapshot__': __record_snapshot__,
-})`);
+      await py.runPythonAsync(`_exec_combined_code('''${escaped}''')`);
     } finally {
       await py.runPythonAsync(`_sys.stdout = _sys.__stdout__`);
     }
