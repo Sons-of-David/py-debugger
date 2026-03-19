@@ -117,10 +117,6 @@ function App() {
   // Timeline
   // ---------------------------------------------------------------------------
 
-  const getStepLine = (step: number) => {
-    const scope = getCodeStepAt(step)?.scope ?? [];
-    return scope.length > 0 ? scope[scope.length - 1][1] : null;
-  };
 
   const goToStep = useCallback((step: number) => {
     const clamped = Math.max(0, Math.min(getMaxTime(), step));
@@ -493,8 +489,6 @@ function App() {
               currentStep={currentStep}
               stepCount={stepCount}
               onGoToStep={goToStep}
-              getStepLine={getStepLine}
-              breakpoints={breakpoints}
             />
           </div>
 
