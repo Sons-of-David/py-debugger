@@ -1,4 +1,6 @@
 arr = [5, 7, 2, 6, 3, 1]
+min_index = 0
+j = 0
 
 # @viz
 class LabeledArrow(Panel):
@@ -9,12 +11,12 @@ class LabeledArrow(Panel):
             Label(label=label, color=color)
         )
 
-min_idx_arrow = LabeledArrow(label='min index', color=(220, 70, 120), position=(-2, V("min_index")))
-j_arrow = LabeledArrow(label='j', color=(120, 70, 220), position=(-2, V("j")))
-rect = Rect(width=V("i"), alpha=0.7)
-vis_arr = Array(cells=arr)
 panel = Panel(position=(2, 2))
-panel.add(rect, vis_arr, min_idx_arrow, j_arrow)
+panel.add(
+    Array(cells=arr),
+    Rect(width=V("i"), alpha=0.7), 
+    LabeledArrow(label='min index', color=(220, 70, 120), position=V('(-2, min_index)')), LabeledArrow(label='j', color=(120, 70, 220), position=V('(-2, j)'))
+)
 # @end
 
 n = len(arr)
