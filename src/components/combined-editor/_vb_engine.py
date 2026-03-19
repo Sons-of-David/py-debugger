@@ -114,6 +114,11 @@ class VisualElem:
             if p['ser'] == 'base':
                 continue
             val = getattr(self, p['name'], p['default'])
+            # V() returns None when its expression references an undefined variable
+            # (e.g. V("i") before the loop starts). Fall back to the schema default
+            # so serialization can proceed without error.
+            if val is None:
+                val = p['default']
             ser = p['ser']
             key = p.get('key', p['name'])
             if ser == 'int':
