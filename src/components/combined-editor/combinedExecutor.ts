@@ -5,6 +5,8 @@ import VB_ENGINE_PYTHON from './_vb_engine.py?raw';
 import USER_API_PYTHON from './user_api.py?raw';
 import VISUAL_BUILDER_PYTHON from './vb_serializer.py?raw';
 import type { VizRange } from './vizBlockParser';
+import { setHandlers } from '../../visual-panel/handlersState';
+import { appendClickOutput } from '../../output-terminal/terminalState';
 
 export interface CombinedVariable {
   type: string;
@@ -28,8 +30,6 @@ export interface CombinedResult {
 export interface CombinedClickResult {
   interactiveTimeline: CombinedStep[];
   finalSnapshot: VisualBuilderElementBase[];
-  handlers: Record<string, string[]>;
-  output: string;
 }
 
 /**
@@ -167,11 +167,11 @@ export async function executeCombinedClickHandler(
       console.error('Combined click handler error:', result.error);
       return null;
     }
+    setHandlers(result.handlers ?? {});
+    if (result.output) appendClickOutput(result.output);
     return {
       interactiveTimeline: result.interactive_timeline,
       finalSnapshot: result.final_snapshot,
-      handlers: result.handlers,
-      output: result.output,
     };
   } catch (error) {
     console.error('executeCombinedClickHandler error:', error);

@@ -4,8 +4,10 @@ import { Grid, type GridHandle } from '../visual-panel/components/Grid';
 import { useGridState } from '../visual-panel/hooks/useGridState';
 import type { VisualBuilderElementBase } from '../api/visualBuilder';
 import { executeClickHandler, executeEventHandler, type ClickHandlerResult, type DragType } from '../python-engine/code-builder/services/pythonExecutor';
+import { executeCombinedClickHandler, type CombinedClickResult } from '../components/combined-editor/combinedExecutor';
 import { hydrateElement } from '../visual-panel/types/elementRegistry';
 import type { TextBox } from '../text-boxes/types';
+import type { VizRange } from '../components/combined-editor/vizBlockParser';
 
 /* ---------- Shared Tailwind class groups ---------- */
 
@@ -31,10 +33,14 @@ interface GridAreaProps {
   onDebugCall?: (expression: string) => void;
   textBoxes: TextBox[];
   onTextBoxesChange: (boxes: TextBox[]) => void;
+  /** Combined-editor: viz block ranges for the current code, used for auto-tracing clicks. */
+  combinedVizRanges?: VizRange[];
+  /** Combined-editor: called when a click produces a traced mini-timeline. */
+  onCombinedTrace?: (result: CombinedClickResult) => void;
 }
 
 export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
-  function GridArea({ darkMode, mouseEnabled, onDebugCall, textBoxes, onTextBoxesChange }, ref) {
+  function GridArea({ darkMode, mouseEnabled, onDebugCall, textBoxes, onTextBoxesChange, combinedVizRanges, onCombinedTrace }, ref) {
     const {
       cells,
       overlayCells,
@@ -66,17 +72,23 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
     }, []);
 
     const handleElementClick = useCallback(async (elemId: number, position: [number, number]) => {
-      const result: ClickHandlerResult = await executeClickHandler(elemId, position[0], position[1]);
-      if (!result) return;
-      if (result.error) {
+      if (combinedVizRanges) {
+        const result = await executeCombinedClickHandler(elemId, position[0], position[1], combinedVizRanges);
+        if (!result) return;
+        if (result.interactiveTimeline.length > 0) {
+          onCombinedTrace?.(result);
+        } else {
+          loadVisualBuilderObjects(result.finalSnapshot.map((el) => hydrateElement(el)));
+        }
         return;
       }
+      const result: ClickHandlerResult = await executeClickHandler(elemId, position[0], position[1]);
+      if (!result) return;
+      if (result.error) return;
       const hydrated = result.snapshot.map((el) => hydrateElement(el));
       loadVisualBuilderObjects(hydrated);
-      if (result.debugCall) {
-        onDebugCall?.(result.debugCall);
-      }
-    }, [loadVisualBuilderObjects, onDebugCall]);
+      if (result.debugCall) onDebugCall?.(result.debugCall);
+    }, [combinedVizRanges, loadVisualBuilderObjects, onCombinedTrace, onDebugCall]);
 
     const applyEventResult = useCallback((result: ClickHandlerResult) => {
       if (!result || result.error) {

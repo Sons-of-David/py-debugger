@@ -12,7 +12,9 @@ import { TimelineControls } from '../timeline/TimelineControls';
 import { GridArea, type GridAreaHandle } from './GridArea';
 import { getStateAt, getMaxTime, getTimeline, clearTimeline, hydrateTimelineFromArray } from '../timeline/timelineState';
 import { getCodeStepAt, clearCodeTimeline, setCodeTimeline } from '../python-engine/debugger-panel/codeTimelineState';
-import { executeCombinedCode, type CombinedStep } from '../components/combined-editor/combinedExecutor';
+import { executeCombinedCode, type CombinedStep, type CombinedClickResult } from '../components/combined-editor/combinedExecutor';
+import { setHandlers } from '../visual-panel/handlersState';
+import { getVizRanges } from '../components/combined-editor/vizBlockParser';
 import type { TextBox } from '../text-boxes/types';
 import { migrateTextBox } from '../text-boxes/types';
 
@@ -236,6 +238,7 @@ function App() {
         setCombinedTimeline(result.timeline);
         hydrateTimelineFromArray(result.timeline.map(s => s.visual));
         setCodeTimeline(result.timeline.map(s => ({ variables: s.variables, scope: [] })));
+        setHandlers(result.handlers ?? {});
         setStepCount(getMaxTime() + 1);
         setCurrentStep(0);
         gridAreaRef.current?.loadVisualBuilderObjects(getStateAt(0) ?? []);
@@ -258,11 +261,29 @@ function App() {
     clearTerminal();
     clearTimeline();
     clearCodeTimeline();
+    setHandlers({});
     setCurrentStep(0);
     setStepCount(0);
     gridAreaRef.current?.loadVisualBuilderObjects([]);
     setAppMode('idle');
   }, []);
+
+  const handleCombinedTrace = useCallback((result: CombinedClickResult) => {
+    // A click handler traced into algorithm code — load the mini-timeline and enter stepping mode.
+    // Append final snapshot as last step so goToStep(getMaxTime()) in handleBackToInteractive
+    // restores the correct post-click visual state.
+    const allSteps = [
+      ...result.interactiveTimeline,
+      { visual: result.finalSnapshot, variables: {}, line: undefined },
+    ];
+    hydrateTimelineFromArray(allSteps.map(s => s.visual));
+    setStepCount(allSteps.length);
+    goToStep(0);
+    setAppMode('debug_in_event');
+  }, [goToStep]);
+
+  // viz block ranges for the current combined code; stable until code changes
+  const combinedVizRanges = useMemo(() => getVizRanges(combinedCode), [combinedCode]);
 
   // ---------------------------------------------------------------------------
   // Editor state (variables, highlighted lines)
@@ -536,6 +557,7 @@ function App() {
                   isEditable={isCombinedEditable}
                   isAnalyzing={isAnalyzingCombined}
                   currentStep={combinedTimeline.length > 0 ? currentStep : undefined}
+                  currentLine={combinedTimeline.length > 0 ? combinedTimeline[currentStep]?.line : undefined}
                   onAnalyze={handleAnalyzeCombined}
                   onEdit={handleEditCombined}
                 />
@@ -576,6 +598,8 @@ function App() {
                 onDebugCall={handleDebugCall}
                 textBoxes={textBoxes}
                 onTextBoxesChange={setTextBoxes}
+                combinedVizRanges={USE_COMBINED_EDITOR ? combinedVizRanges : undefined}
+                onCombinedTrace={USE_COMBINED_EDITOR ? handleCombinedTrace : undefined}
               />
 
               {apiReferenceOpen && (
