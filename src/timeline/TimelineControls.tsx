@@ -4,12 +4,18 @@ interface TimelineControlsProps {
   currentStep: number;
   stepCount: number;
   onGoToStep: (step: number) => void;
+  appMode?: string;
+  onEnterInteractive?: () => void;
+  onBackToInteractive?: () => void;
 }
 
 export function TimelineControls({
   currentStep,
   stepCount,
   onGoToStep,
+  appMode,
+  onEnterInteractive,
+  onBackToInteractive,
 }: TimelineControlsProps) {
   const [inputValue, setInputValue] = useState(String(currentStep));
 
@@ -90,6 +96,39 @@ export function TimelineControls({
       >
         {'>>'}
       </button>
+
+      {appMode === 'trace' && onEnterInteractive && (
+        <>
+          <div className="w-px h-5 bg-gray-300 dark:bg-gray-500 mx-0.5" />
+          <button
+            onClick={onEnterInteractive}
+            className={btnActive}
+            title="Finish trace and enter interactive mode"
+          >
+            {/* Mouse cursor icon */}
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M4 0v20l4.5-4.5 2.8 6.5 2-.9-2.8-6.6H16Z" />
+            </svg>
+          </button>
+        </>
+      )}
+
+      {appMode === 'debug_in_event' && onBackToInteractive && (
+        <>
+          <div className="w-px h-5 bg-gray-300 dark:bg-gray-500 mx-0.5" />
+          <button
+            onClick={onBackToInteractive}
+            className={btnActive}
+            title="Back to interactive mode"
+          >
+            {/* Left arrow with circle — "return" icon */}
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6" />
+              <circle cx="12" cy="12" r="10" strokeWidth="1.5" />
+            </svg>
+          </button>
+        </>
+      )}
     </div>
   );
 }

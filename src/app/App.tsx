@@ -498,6 +498,9 @@ function App() {
               currentStep={currentStep}
               stepCount={stepCount}
               onGoToStep={goToStep}
+              appMode={USE_COMBINED_EDITOR ? appMode : undefined}
+              onEnterInteractive={USE_COMBINED_EDITOR ? handleEnterInteractive : undefined}
+              onBackToInteractive={USE_COMBINED_EDITOR ? handleBackToInteractive : undefined}
             />
           </div>
 

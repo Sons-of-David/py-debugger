@@ -16,6 +16,7 @@ interface CombinedEditorProps {
   isEditable: boolean;
   isAnalyzing: boolean;
   currentStep?: number;
+  currentLine?: number;
   onAnalyze: () => void;
   onEdit: () => void;
 }
@@ -26,6 +27,7 @@ export function CombinedEditor({
   isEditable,
   isAnalyzing,
   currentStep,
+  currentLine,
   onAnalyze,
   onEdit,
 }: CombinedEditorProps) {
@@ -62,28 +64,34 @@ export function CombinedEditor({
     vizDecorationsRef.current = editor.deltaDecorations(vizDecorationsRef.current, decorations);
   }, [code]);
 
-  // Update active step decoration (highlight the # @end line of the current step)
+  // Update active step decoration (highlight the current executed line)
   const updateActiveDecoration = useCallback(() => {
     const editor = editorRef.current;
     const monaco = monacoRef.current;
     if (!editor || !monaco) return;
 
-    const ranges = getVizRanges(code);
     const decorations: editor.IModelDeltaDecoration[] = [];
 
-    if (currentStep !== undefined && currentStep >= 0 && currentStep < ranges.length) {
-      const endLine = ranges[currentStep].endLine;
+    if (currentLine != null) {
       decorations.push({
-        range: new monaco.Range(endLine, 1, endLine, 1),
+        range: new monaco.Range(currentLine, 1, currentLine, 1),
         options: {
           isWholeLine: true,
-          className: 'active-viz-end',
+          className: 'active-executed-line',
+          marginClassName: 'active-executed-line-margin',
         },
       });
     }
 
     activeDecorationsRef.current = editor.deltaDecorations(activeDecorationsRef.current, decorations);
-  }, [code, currentStep]);
+  }, [currentLine]);
+
+  // Scroll to the current executed line when it changes
+  useEffect(() => {
+    if (currentLine != null && editorRef.current) {
+      editorRef.current.revealLineInCenterIfOutsideViewport(currentLine);
+    }
+  }, [currentLine]);
 
   useEffect(() => {
     updateVizDecorations();
@@ -363,9 +371,12 @@ export function CombinedEditor({
           background-color: rgba(99, 102, 241, 0.07) !important;
           border-left: 2px solid rgba(99, 102, 241, 0.3) !important;
         }
-        .active-viz-end {
-          background-color: rgba(99, 102, 241, 0.2) !important;
-          border-left: 3px solid #6366f1 !important;
+        .active-executed-line {
+          background-color: rgba(250, 204, 21, 0.18) !important;
+        }
+        .active-executed-line-margin {
+          background-color: rgba(250, 204, 21, 0.5) !important;
+          border-left: 3px solid #facc15 !important;
         }
       `}</style>
     </div>
