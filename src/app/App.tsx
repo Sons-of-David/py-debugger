@@ -4,8 +4,8 @@ import { Group, Panel, Separator } from 'react-resizable-panels';
 import { CombinedEditor, COMBINED_SAMPLE } from '../components/combined-editor/CombinedEditor';
 import { useTheme } from '../contexts/ThemeContext';
 import { AnimationContext } from '../animation/animationContext';
-import { loadPyodide, isPyodideLoaded, executeDebugCall, resetPythonState } from '../python-engine/code-builder/services/pythonExecutor';
-import { clearAll as clearTerminal, commitCurrentSegment, appendMarker, appendError, setCombinedEditorSteps } from '../output-terminal/terminalState';
+import { loadPyodide, isPyodideLoaded, resetPythonState } from '../python-engine/code-builder/services/pythonExecutor';
+import { clearAll as clearTerminal, commitCurrentSegment, appendError, setCombinedEditorSteps } from '../output-terminal/terminalState';
 import { ApiReferencePanel } from '../api/ApiReferencePanel';
 import { TimelineControls } from '../timeline/TimelineControls';
 import { GridArea, type GridAreaHandle } from './GridArea';
@@ -63,7 +63,6 @@ function App() {
   const [apiReferenceOpen, setApiReferenceOpen] = useState(false);
   const [saveSampleStatus, setSaveSampleStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
-  const [debugCallSuffix, setDebugCallSuffix] = useState<string | null>(null);
   const [textBoxes, setTextBoxes] = useState<TextBox[]>([]);
   const [animationsEnabled, setAnimationsEnabled] = useState(true);
   const [animationDuration, setAnimationDuration] = useState(500); // ms
@@ -142,29 +141,6 @@ function App() {
   const handleEnterInteractive = useCallback(() => enterInteractive('trace'), [enterInteractive]);
   const handleBackToInteractive = useCallback(() => enterInteractive('debug'), [enterInteractive]);
 
-  const handleDebugCall = useCallback(async (expression: string) => {
-    setAppMode('debug_in_event');
-    const indented = expression.split('\n').map(l => '    ' + l).join('\n');
-    const suffix = `\n\ndef debug_call():\n${indented}`;
-    setDebugCallSuffix(suffix);
-    appendMarker(`----- debug call: ${expression} -----`);
-    const result = await executeDebugCall(expression);
-    if (result.error) {
-      setAnalyzeStatus('error');
-      setDebugCallSuffix(null);
-      setAppMode('interactive');
-      return;
-    }
-    if (result.success && getMaxTime() >= 0) {
-      setStepCount(getMaxTime() + 1);
-      setCurrentStep(0);
-      const state = getStateAt(0);
-      if (state) gridAreaRef.current?.loadVisualBuilderObjects(state);
-    } else {
-      setDebugCallSuffix(null);
-      setAppMode('interactive');
-    }
-  }, []);
 
   // ---------------------------------------------------------------------------
   // Combined editor handlers
@@ -505,7 +481,6 @@ function App() {
                 ref={gridAreaRef}
                 darkMode={darkMode}
                 mouseEnabled={mouseEnabled}
-                onDebugCall={handleDebugCall}
                 textBoxes={textBoxes}
                 onTextBoxesChange={setTextBoxes}
                 combinedVizRanges={combinedVizRanges}
