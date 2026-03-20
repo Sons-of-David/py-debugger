@@ -4,13 +4,13 @@ import { Group, Panel, Separator } from 'react-resizable-panels';
 import { CombinedEditor, COMBINED_SAMPLE } from '../components/combined-editor/CombinedEditor';
 import { useTheme } from '../contexts/ThemeContext';
 import { AnimationContext } from '../animation/animationContext';
-import { loadPyodide, isPyodideLoaded, executePythonCode, executeDebugCall, resetPythonState } from '../python-engine/code-builder/services/pythonExecutor';
+import { loadPyodide, isPyodideLoaded, executeDebugCall, resetPythonState } from '../python-engine/code-builder/services/pythonExecutor';
 import { clearAll as clearTerminal, commitCurrentSegment, appendMarker, appendError, setCombinedEditorSteps } from '../output-terminal/terminalState';
 import { ApiReferencePanel } from '../api/ApiReferencePanel';
 import { TimelineControls } from '../timeline/TimelineControls';
 import { GridArea, type GridAreaHandle } from './GridArea';
-import { getStateAt, getMaxTime, getTimeline, clearTimeline, hydrateTimelineFromArray } from '../timeline/timelineState';
-import { getCodeStepAt, clearCodeTimeline, setCodeTimeline } from '../python-engine/debugger-panel/codeTimelineState';
+import { getStateAt, getMaxTime, clearTimeline, hydrateTimelineFromArray } from '../timeline/timelineState';
+import { clearCodeTimeline, setCodeTimeline } from '../python-engine/debugger-panel/codeTimelineState';
 import { executeCombinedCode, type CombinedStep, type CombinedClickResult } from '../components/combined-editor/combinedExecutor';
 import { setHandlers } from '../visual-panel/handlersState';
 import { getVizRanges } from '../components/combined-editor/vizBlockParser';
@@ -57,12 +57,6 @@ function App() {
   const [samplesOpen, setSamplesOpen] = useState(false);
   const [projectName, setProjectName] = useState('untitled');
 
-  // Visual builder state
-  const [visualBuilderCode, setVisualBuilderCode] = useState('');
-  const [debuggerCode, setDebuggerCode] = useState('');
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analyzeStatus, setAnalyzeStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const everAnalyzedRef = useRef(false);
   const autoLoadedRef = useRef(false);
   const [pyodideLoading, setPyodideLoading] = useState(false);
   const [pyodideReady, setPyodideReady] = useState(false);
@@ -88,13 +82,6 @@ function App() {
   // Timeline state
   const [currentStep, setCurrentStep] = useState(0);
   const [stepCount, setStepCount] = useState(0);
-  const [breakpoints, setBreakpoints] = useState<Set<number>>(new Set());
-
-  // Mark dirty whenever code changes after a completed analysis
-  useEffect(() => {
-    if (everAnalyzedRef.current) setAnalyzeStatus('idle');
-  }, [visualBuilderCode, debuggerCode]);
-
   // Preload Pyodide on mount
   useEffect(() => {
     if (!isPyodideLoaded()) {
@@ -129,14 +116,7 @@ function App() {
   // Main Flow
   // ---------------------------------------------------------------------------
 
-  const handleEdit = useCallback(() => {
-    setDebugCallSuffix(null);
-    setAnalyzeStatus('idle');
-    setAppMode('idle');
-  }, []);
-
   const handleReset = useCallback(() => {
-    handleEdit();
     clearTerminal();
     resetPythonState();
     clearTimeline();
@@ -145,55 +125,15 @@ function App() {
     setStepCount(0);
     gridAreaRef.current?.loadVisualBuilderObjects([]);
     setProjectName('untitled');
-    setVisualBuilderCode('');
-    setDebuggerCode('');
-    setBreakpoints(new Set());
     setTextBoxes([]);
     setCombinedCode('');
     setCombinedTimeline([]);
     setIsCombinedEditable(true);
     setHandlers({});
-  }, [handleEdit]);
-
-  const isCodeEmpty = (code: string) =>
-    code.split('\n').every((line) => {
-      const trimmed = line.trim();
-      return trimmed === '' || trimmed.startsWith('#');
-    });
-
-  const runAnalyze = useCallback(async (vbCode: string, dbgCode: string) => {
-    setIsAnalyzing(true);
-    clearTerminal();
-
-    try {
-      const result = await executePythonCode(vbCode, dbgCode);
-
-      if (result.success) {
-        const skipTrace = isCodeEmpty(dbgCode);
-        setStepCount(getMaxTime() + 1);
-        setCurrentStep(skipTrace ? getMaxTime() : 0);
-        gridAreaRef.current?.loadVisualBuilderObjects(
-          skipTrace ? getTimeline()[getMaxTime()] ?? getTimeline()[0] : getTimeline()[0]
-        );
-        setAnalyzeStatus('success');
-        setAppMode(skipTrace ? 'interactive' : 'trace');
-      } else {
-        setAnalyzeStatus('error');
-      }
-    } catch (err) {
-      setAnalyzeStatus('error');
-    } finally {
-      everAnalyzedRef.current = true;
-      setIsAnalyzing(false);
-    }
+    setAppMode('idle');
   }, []);
 
-  const handleAnalyze = useCallback(() => {
-    return runAnalyze(visualBuilderCode, debuggerCode);
-  }, [visualBuilderCode, debuggerCode, runAnalyze]);
-
   const enterInteractive = useCallback((from: 'trace' | 'debug') => {
-    if (from === 'debug') setDebugCallSuffix(null);
     goToStep(getMaxTime());
     commitCurrentSegment(from === 'debug' ? '----- end debug call -----' : '----- end trace -----');
     setAppMode('interactive');
@@ -291,26 +231,6 @@ function App() {
   const combinedVizRanges = useMemo(() => getVizRanges(combinedCode), [combinedCode]);
 
   // ---------------------------------------------------------------------------
-  // Editor state (variables, highlighted lines)
-  // ---------------------------------------------------------------------------
-
-  const currentVariables = useMemo(
-    () => getCodeStepAt(currentStep)?.variables ?? {},
-    // stepCount changes when a new trace is loaded, forcing a re-compute
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [currentStep, stepCount],
-  );
-
-  const highlightedLines = useMemo(() => {
-    const scope = getCodeStepAt(currentStep)?.scope ?? [];
-    const next = scope.length > 0 ? scope[scope.length - 1][1] : null;
-    const prevScope = currentStep > 0 ? getCodeStepAt(currentStep - 1)?.scope ?? [] : [];
-    const prev = prevScope.length > 0 ? prevScope[prevScope.length - 1][1] : null;
-    return { prev, next };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStep, stepCount]);
-
-  // ---------------------------------------------------------------------------
   // Load \ Save
   // ---------------------------------------------------------------------------
 
@@ -394,9 +314,9 @@ function App() {
         e.preventDefault();
         handleSave();
       } else if (e.key === 'Enter') {
-        if (appMode === 'idle' && !isAnalyzing) {
+        if (appMode === 'idle' && !isAnalyzingCombined) {
           e.preventDefault();
-          handleAnalyze();
+          handleAnalyzeCombined();
         } else if (appMode === 'trace') {
           e.preventDefault();
           handleEnterInteractive();
@@ -405,7 +325,7 @@ function App() {
     };
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [appMode, isAnalyzing, handleAnalyze, handleEnterInteractive, handleSave]);
+  }, [appMode, isAnalyzingCombined, handleAnalyzeCombined, handleEnterInteractive, handleSave]);
 
   return (
     <AnimationContext.Provider value={{ enabled: animationsEnabled, duration: animationDuration }}>
