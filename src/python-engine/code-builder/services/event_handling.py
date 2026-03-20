@@ -48,7 +48,7 @@ def _handle_event_with_output(event_name, elem_id, row, col, *extra_args):
             if elem._elem_id == elem_id:
                 handler = getattr(elem, event_name, None)
                 if callable(handler):
-                    result = handler((row, col), *extra_args)
+                    result = handler(col, row, *extra_args)
                 break
     finally:
         _sys.settrace(None)

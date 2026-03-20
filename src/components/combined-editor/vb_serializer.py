@@ -25,7 +25,7 @@ def __viz_end__(frame_locals):
     import sys as _sys
     global _tracing_active
     _tracing_active = True
-    __record_snapshot__(frame_locals, _sys._getframe(1).f_lineno)
+    __record_snapshot__(frame_locals, _sys._getframe(1).f_lineno, is_viz=True)
 
 
 def _collect_v_values():
@@ -117,21 +117,31 @@ def _exec_builder_code(code: str) -> str:
 import json as _json
 
 _combined_timeline = []
+_last_stdout_pos: int = 0
 
 
 def _reset_combined_timeline():
-    global _combined_timeline, _tracing_active, _last_v_values, _combined_ns
+    global _combined_timeline, _tracing_active, _last_v_values, _combined_ns, _last_stdout_pos
     _combined_timeline = []
     _tracing_active = True
     _last_v_values = {}
     _combined_ns = {}
+    _last_stdout_pos = 0
 
 
-def __record_snapshot__(frame_locals, line=None):
+def __record_snapshot__(frame_locals, line=None, is_viz=False):
     """Record a visual + variable snapshot into the combined timeline."""
+    global _last_stdout_pos
+    import sys as _sys
+    try:
+        all_output = _sys.stdout.getvalue()
+        delta = all_output[_last_stdout_pos:]
+        _last_stdout_pos = len(all_output)
+    except Exception:
+        delta = ''
     visual = _json.loads(_serialize_visual_builder())
     variables = _collect_variables(frame_locals)
-    _combined_timeline.append({'visual': visual, 'variables': variables, 'line': line})
+    _combined_timeline.append({'visual': visual, 'variables': variables, 'line': line, 'output': delta, 'is_viz': is_viz})
 
 
 def _collect_variables(frame_locals):
@@ -169,8 +179,12 @@ def _serialize_combined_handlers() -> str:
 def _make_interactive_tracer(viz_ranges):
     """Create a viz-aware tracer for interactive click execution.
 
+    Snapshots are recorded using the same triggers as the initial trace:
+    - V() value change outside a viz block
+    - viz block end (via the _snap callback, called by a patched __viz_end__)
+
     viz_ranges: list of (startLine, endLine) tuples (1-based, inclusive).
-    Returns (tracer_fn, steps_list).
+    Returns (tracer_fn, steps_list, snap_fn).
 
     Per-frame skipping: if a function's co_firstlineno falls inside any viz block
     range, return None for the 'call' event — skipping local tracing for that frame
@@ -183,6 +197,11 @@ def _make_interactive_tracer(viz_ranges):
 
     guard = _engine.make_step_guard()
     steps = []
+    last_v_values = {}
+
+    def _snap(frame_locals, line):
+        visual = _json.loads(_serialize_visual_builder())
+        steps.append({'visual': visual, 'variables': _collect_variables(frame_locals), 'line': line})
 
     def _trace(frame, event, arg):
         guard(frame, event, arg)
@@ -192,15 +211,14 @@ def _make_interactive_tracer(viz_ranges):
             return None if in_viz(frame.f_code.co_firstlineno) else _trace
         if event == 'line' and not in_viz(frame.f_lineno):
             _engine.V.params = dict(frame.f_locals)
-            visual = _json.loads(_serialize_visual_builder())
-            steps.append({
-                'visual': visual,
-                'variables': _collect_variables(frame.f_locals),
-                'line': frame.f_lineno,
-            })
+            current = _collect_v_values()
+            if current and current != last_v_values:
+                last_v_values.clear()
+                last_v_values.update(current)
+                _snap(frame.f_locals, frame.f_lineno)
         return _trace
 
-    return _trace, steps
+    return _trace, steps, _snap
 
 
 def _exec_combined_click_traced(elem_id: int, row: int, col: int, viz_ranges_json: str) -> str:
@@ -223,17 +241,28 @@ def _exec_combined_click_traced(elem_id: int, row: int, col: int, viz_ranges_jso
                             'interactive_timeline': [], 'final_snapshot': [], 'handlers': {}, 'output': ''})
 
     viz_ranges = [(r['startLine'], r['endLine']) for r in _json.loads(viz_ranges_json)]
-    _tracer, steps = _make_interactive_tracer(viz_ranges)
+    _tracer, steps, snap = _make_interactive_tracer(viz_ranges)
+
+    def _click_viz_end(frame_locals):
+        import sys as _sys
+        snap(frame_locals, _sys._getframe(1).f_lineno)
+
+    _old_viz_end = _combined_ns.get('__viz_end__')
+    _combined_ns['__viz_end__'] = _click_viz_end
 
     _old_stdout = _sys.stdout
     _capture = _io.StringIO()
     _sys.stdout = _capture
     try:
         _sys.settrace(_tracer)
-        handler((row, col))
+        handler(col, row)
     finally:
         _sys.settrace(None)
         _sys.stdout = _old_stdout
+        if _old_viz_end is not None:
+            _combined_ns['__viz_end__'] = _old_viz_end
+        else:
+            _combined_ns.pop('__viz_end__', None)
 
     # Refresh V.params from saved namespace so V() expressions re-evaluate correctly
     _engine.V.params = {k: v for k, v in _combined_ns.items()

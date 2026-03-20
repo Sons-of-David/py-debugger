@@ -106,7 +106,8 @@ export class Array2DCell {
 
 export class Array1D implements VisualBuilderElementBase {
   type = 'array' as const;
-  position: [number, number];
+  x: number;
+  y: number;
   visible: boolean = true;
   direction: 'right' | 'left' | 'down' | 'up';
   values: (number | string)[];
@@ -118,7 +119,8 @@ export class Array1D implements VisualBuilderElementBase {
   style?: CellStyle;
 
   constructor(el: any) {
-    this.position = el.position;
+    this.x = el.x ?? 0;
+    this.y = el.y ?? 0;
     this.direction = (['left', 'down', 'up'].includes(el.direction!) ? el.direction! : 'right') as 'right' | 'left' | 'down' | 'up';
     this.values = (el.values ?? []).map((v: unknown) =>
       typeof v === 'number' || typeof v === 'string' ? v : 0
@@ -212,7 +214,8 @@ registerVisualElement('array', Array1D, ARRAY_SCHEMA);
 
 export class Array2D implements VisualBuilderElementBase {
   type = 'array2d' as const;
-  position: [number, number];
+  x: number;
+  y: number;
   visible: boolean = true;
   values: (string | number | null)[][];
   numRows: number;
@@ -226,7 +229,8 @@ export class Array2D implements VisualBuilderElementBase {
   style?: CellStyle;
 
   constructor(el: any) {
-    this.position = el.position;
+    this.x = el.x ?? 0;
+    this.y = el.y ?? 0;
     const rawValues: unknown[][] = Array.isArray(el.values) ? el.values : [];
     this.values = rawValues.map(row =>
       Array.isArray(row)

@@ -6,7 +6,7 @@ import { CombinedEditor, COMBINED_SAMPLE } from '../components/combined-editor/C
 import { useTheme } from '../contexts/ThemeContext';
 import { AnimationContext } from '../animation/animationContext';
 import { loadPyodide, isPyodideLoaded, executePythonCode, executeDebugCall, resetPythonState } from '../python-engine/code-builder/services/pythonExecutor';
-import { clearAll as clearTerminal, commitCurrentSegment, appendMarker, appendError } from '../output-terminal/terminalState';
+import { clearAll as clearTerminal, commitCurrentSegment, appendMarker, appendError, setCombinedEditorSteps } from '../output-terminal/terminalState';
 import { ApiReferencePanel } from '../api/ApiReferencePanel';
 import { TimelineControls } from '../timeline/TimelineControls';
 import { GridArea, type GridAreaHandle } from './GridArea';
@@ -80,6 +80,7 @@ function App() {
   // Combined editor state
   const [combinedCode, setCombinedCode] = useState(COMBINED_SAMPLE);
   const [combinedTimeline, setCombinedTimeline] = useState<CombinedStep[]>([]);
+  const [interactiveLineNumbers, setInteractiveLineNumbers] = useState<(number | undefined)[]>([]);
   const [isCombinedEditable, setIsCombinedEditable] = useState(true);
   const [isAnalyzingCombined, setIsAnalyzingCombined] = useState(false);
 
@@ -242,7 +243,9 @@ function App() {
         setStepCount(getMaxTime() + 1);
         setCurrentStep(0);
         gridAreaRef.current?.loadVisualBuilderObjects(getStateAt(0) ?? []);
-        if (result.output) commitCurrentSegment(result.output);
+        setCombinedEditorSteps(
+          result.timeline.map(s => ({ text: s.output ?? '', isViz: s.isViz ?? false }))
+        );
         setIsCombinedEditable(false);
         setAppMode('trace');
       } else {
@@ -277,6 +280,7 @@ function App() {
       { visual: result.finalSnapshot, variables: {}, line: undefined },
     ];
     hydrateTimelineFromArray(allSteps.map(s => s.visual));
+    setInteractiveLineNumbers(allSteps.map(s => s.line));
     setStepCount(allSteps.length);
     goToStep(0);
     setAppMode('debug_in_event');
@@ -560,7 +564,12 @@ function App() {
                   isEditable={isCombinedEditable}
                   isAnalyzing={isAnalyzingCombined}
                   currentStep={combinedTimeline.length > 0 ? currentStep : undefined}
-                  currentLine={combinedTimeline.length > 0 ? combinedTimeline[currentStep]?.line : undefined}
+                  currentLine={
+                    appMode === 'trace' && combinedTimeline.length > 0 ? combinedTimeline[currentStep]?.line :
+                    appMode === 'debug_in_event' ? interactiveLineNumbers[currentStep] :
+                    undefined
+                  }
+                  appMode={appMode}
                   onAnalyze={handleAnalyzeCombined}
                   onEdit={handleEditCombined}
                 />

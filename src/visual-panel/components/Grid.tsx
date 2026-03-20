@@ -24,8 +24,8 @@ interface GridProps {
   onZoom: (delta: number) => void;
   darkMode?: boolean;
   mouseEnabled?: boolean;
-  onElementClick?: (elemId: number, position: [number, number]) => void;
-  onElementDrag?: (elemId: number, position: [number, number], dragType: 'start' | 'mid' | 'end') => Promise<void> | void;
+  onElementClick?: (elemId: number, x: number, y: number) => void;
+  onElementDrag?: (elemId: number, x: number, y: number, dragType: 'start' | 'mid' | 'end') => Promise<void> | void;
   // Text box props
   textBoxes?: TextBox[];
   selectedTextBoxId?: string | null;
@@ -72,8 +72,8 @@ const GridSingleObject = memo(function GridSingleObject({
 }: {
   obj: RenderableObject;
   mouseEnabled: boolean;
-  onElementClick?: (elemId: number, position: [number, number]) => void;
-  onElementDragStart?: (elemId: number, position: [number, number]) => void; // internal: Grid handles drag type
+  onElementClick?: (elemId: number, x: number, y: number) => void;
+  onElementDragStart?: (elemId: number, x: number, y: number) => void; // internal: Grid handles drag type
 }) {
   const { widthCells, heightCells } = obj;
   const [flashing, setFlashing] = useState(false);
@@ -94,11 +94,7 @@ const GridSingleObject = memo(function GridSingleObject({
     ? (e: React.MouseEvent<HTMLDivElement>) => {
         const colOffset = Math.floor(e.nativeEvent.offsetX / CELL_SIZE);
         const rowOffset = Math.floor(e.nativeEvent.offsetY / CELL_SIZE);
-        const pos: [number, number] = [
-          clickData!.position[0] + rowOffset,
-          clickData!.position[1] + colOffset,
-        ];
-        onElementClick!(clickData!.elemId, pos);
+        onElementClick!(clickData!.elemId, clickData!.x + colOffset, clickData!.y + rowOffset);
         setFlashing(true);
         setTimeout(() => setFlashing(false), 300);
       }
@@ -109,11 +105,7 @@ const GridSingleObject = memo(function GridSingleObject({
         e.preventDefault();
         const colOffset = Math.floor(e.nativeEvent.offsetX / CELL_SIZE);
         const rowOffset = Math.floor(e.nativeEvent.offsetY / CELL_SIZE);
-        const pos: [number, number] = [
-          dragData!.position[0] + rowOffset,
-          dragData!.position[1] + colOffset,
-        ];
-        onElementDragStart!(dragData!.elemId, pos);
+        onElementDragStart!(dragData!.elemId, dragData!.x + colOffset, dragData!.y + rowOffset);
       }
     : undefined;
 
@@ -195,7 +187,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
       const { elemId, lastRow, lastCol } = dragStateRef.current;
       dragStateRef.current = null;
       dragCallInFlightRef.current = false;
-      onElementDragRef.current?.(elemId, [lastRow, lastCol], 'end');
+      onElementDragRef.current?.(elemId, lastCol, lastRow, 'end');
     };
     window.addEventListener('mouseup', handleMouseUp);
     return () => window.removeEventListener('mouseup', handleMouseUp);
@@ -210,9 +202,9 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
     return [Math.max(0, Math.floor(y)), Math.max(0, Math.floor(x))];
   }, [zoom]);
 
-  const handleDragStart = useCallback((elemId: number, position: [number, number]) => {
-    dragStateRef.current = { elemId, lastRow: position[0], lastCol: position[1] };
-    Promise.resolve(onElementDragRef.current?.(elemId, position, 'start'))
+  const handleDragStart = useCallback((elemId: number, x: number, y: number) => {
+    dragStateRef.current = { elemId, lastRow: y, lastCol: x };
+    Promise.resolve(onElementDragRef.current?.(elemId, x, y, 'start'))
       .finally(() => { dragCallInFlightRef.current = false; });
   }, []);
 
@@ -226,7 +218,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
     dragCallInFlightRef.current = true;
     // Wrap in Promise.resolve so the in-flight flag clears whether the handler
     // returns a Promise (async) or void (sync / not defined).
-    Promise.resolve(onElementDragRef.current?.(elemId, [row, col], 'mid'))
+    Promise.resolve(onElementDragRef.current?.(elemId, col, row, 'mid'))
       .finally(() => { dragCallInFlightRef.current = false; });
   }, [getCellFromMouseEvent]);
 

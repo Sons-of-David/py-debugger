@@ -318,7 +318,8 @@ export function useGridState() {
         const elemIdStr = elAny._elem_id != null ? String(elAny._elem_id) : null;
         if (elemIdStr && hiddenPanelElemIds.has(elemIdStr)) continue;
 
-        const [row, col] = el.position;
+        const row = el.y;
+        const col = el.x;
         const width = elAny.width ?? 5;
         const height = elAny.height ?? 5;
         // Use the pre-assigned grid ID from serializedPanelIdToGridId so parent refs stay consistent
@@ -358,8 +359,8 @@ export function useGridState() {
         if (el.panelId && hiddenPanelElemIds.has(el.panelId)) continue;
         const rawElemId = (el as any)._elemId as number | undefined;
         const gridId = rawElemId != null ? `${VB_PREFIX}elem-${rawElemId}` : `${VB_PREFIX}${idx++}`;
-        let row = el.position[0];
-        let col = el.position[1];
+        let row = el.y;
+        let col = el.x;
         let parentPanelId: string | undefined;
         if (el.panelId) {
           const gridPanelId = serializedPanelIdToGridId.get(el.panelId) ?? el.panelId;
@@ -371,7 +372,7 @@ export function useGridState() {
           }
         }
         const pos: CellPosition = { row, col };
-        const targetPosition = parentPanelId ? { row: el.position[0], col: el.position[1] } : pos;
+        const targetPosition = parentPanelId ? { row: el.y, col: el.x } : pos;
 
         if ('draw' in el && typeof (el as Record<string, unknown>).draw === 'function') {
           const drawElemId = (el as any)._elemId as number | undefined;
@@ -382,8 +383,8 @@ export function useGridState() {
             const { panel: panelInfo, panelOffset, cells: drawCells, nextIdx } =
               drawResult as unknown as ArrayDrawResult;
 
-            const panelRow = el.position[0] + (panelOffset?.row ?? 0);
-            const panelCol = el.position[1] + (panelOffset?.col ?? 0);
+            const panelRow = el.y + (panelOffset?.row ?? 0);
+            const panelCol = el.x + (panelOffset?.col ?? 0);
 
             const panelGridId = panelInfo.id;
             panelIdMap.set(panelGridId, { gridId: panelGridId, origin: { row: panelRow + (parentPanelId ? panelIdMap.get(parentPanelId)!.origin.row : 0), col: panelCol + (parentPanelId ? panelIdMap.get(parentPanelId)!.origin.col : 0) } });
@@ -433,11 +434,11 @@ export function useGridState() {
           } else {
             const elemId = (el as any)._elemId as number | undefined;
             const clickData: InteractionData | undefined = elemId != null && hasHandler(elemId, 'on_click')
-              ? { elemId, position: el.position as [number, number] }
+              ? { elemId, x: el.x, y: el.y }
               : undefined;
             const hasDrag = elemId != null && hasHandler(elemId, 'on_drag');
             const dragData: InteractionData | undefined = hasDrag
-              ? { elemId: elemId!, position: el.position as [number, number] }
+              ? { elemId: elemId!, x: el.x, y: el.y }
               : undefined;
             next.set(gridId, {
               id: gridId,

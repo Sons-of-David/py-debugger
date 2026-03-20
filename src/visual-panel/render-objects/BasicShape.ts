@@ -2,7 +2,8 @@ import type { VisualBuilderElementBase } from "../../api/visualBuilder";
 
 export abstract class BasicShape implements VisualBuilderElementBase {
   type: string;
-  position: [number, number];
+  x: number;
+  y: number;
   visible: boolean = true;
   alpha: number;
   z: number;
@@ -15,7 +16,8 @@ export abstract class BasicShape implements VisualBuilderElementBase {
 
   constructor(type: string, el: any) {
     this.type = type;
-    this.position = el.position ?? [0, 0];
+    this.x = el.x ?? 0;
+    this.y = el.y ?? 0;
     this.visible = el.visible ?? true;
     this.alpha = el.alpha ?? 1;
     this.z = el.z ?? 0;

@@ -44,8 +44,9 @@ class VisualElem:
         VisualElem._registry.clear()
         VisualElem._vis_elem_id = 0
 
-    def __init__(self, position=(0, 0), visible=True, alpha=1.0, z=0, animate=True):
-        self.position = position
+    def __init__(self, x=0, y=0, visible=True, alpha=1.0, z=0, animate=True):
+        self.x = x
+        self.y = y
         self.visible = visible
         self.alpha = alpha
         self.z = z
@@ -64,13 +65,14 @@ class VisualElem:
 
     def _serialize_base(self):
         """Return base serialization dict with common properties."""
-        pos = getattr(self, 'position', (0, 0))
-        if not isinstance(pos, (list, tuple)) or len(pos) < 2:
-            pos = (0, 0)
         try:
-            row, col = int(pos[0]), int(pos[1])
+            x = int(getattr(self, 'x', 0))
         except (ValueError, TypeError):
-            row, col = 0, 0
+            x = 0
+        try:
+            y = int(getattr(self, 'y', 0))
+        except (ValueError, TypeError):
+            y = 0
 
         alpha = getattr(self, 'alpha', 1.0)
         try:
@@ -79,7 +81,8 @@ class VisualElem:
             alpha = 1.0
 
         out = {
-            "position": [row, col],
+            "x": x,
+            "y": y,
             "visible": getattr(self, 'visible', True),
             "alpha": alpha,
             "z": int(getattr(self, 'z', 0)),

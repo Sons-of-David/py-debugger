@@ -17,6 +17,8 @@ export interface CombinedStep {
   visual: VisualBuilderElementBase[];
   variables: Record<string, CombinedVariable>;
   line?: number;
+  output?: string;   // stdout delta since previous snapshot
+  isViz?: boolean;   // true if triggered by __viz_end__ (viz block)
 }
 
 export interface CombinedResult {
@@ -24,7 +26,6 @@ export interface CombinedResult {
   timeline: CombinedStep[];
   handlers: Record<string, string[]>;  // elem_id (string key) → handler names
   error?: string;
-  output?: string;
 }
 
 export interface CombinedClickResult {
@@ -115,14 +116,26 @@ _sys.stdout = _stdout_capture
       await py.runPythonAsync(`_sys.stdout = _sys.__stdout__`);
     }
 
-    const output: string = await py.runPythonAsync(`_stdout_capture.getvalue()`);
     const timelineJson: string = await py.runPythonAsync(`_json.dumps(_combined_timeline)`);
-    const timeline = JSON.parse(timelineJson) as CombinedStep[];
+    const rawTimeline = JSON.parse(timelineJson) as Array<{
+      visual: VisualBuilderElementBase[];
+      variables: Record<string, CombinedVariable>;
+      line?: number;
+      output?: string;
+      is_viz?: boolean;
+    }>;
+    const timeline: CombinedStep[] = rawTimeline.map(s => ({
+      visual: s.visual,
+      variables: s.variables,
+      line: s.line,
+      output: s.output,
+      isViz: s.is_viz,
+    }));
 
     const handlersJson: string = await py.runPythonAsync('_serialize_combined_handlers()');
     const handlers = JSON.parse(handlersJson) as Record<string, string[]>;
 
-    return { success: true, timeline, handlers, output };
+    return { success: true, timeline, handlers };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     let cleanError = errorMessage;

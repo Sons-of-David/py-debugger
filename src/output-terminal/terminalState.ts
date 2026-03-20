@@ -1,4 +1,4 @@
-export type LineSource = 'debugger' | 'builder' | 'marker' | 'error';
+export type LineSource = 'debugger' | 'builder' | 'marker' | 'error' | 'viz';
 
 export interface TerminalLine {
   text: string;
@@ -143,6 +143,25 @@ export function getCombinedLines(currentStep: number): TerminalLine[] {
   return lines;
 }
 
+// ── Combined editor per-step output ───────────────────────────────────────────
+let _combinedEditorSteps: Array<{ text: string; isViz: boolean }> = [];
+
+export function setCombinedEditorSteps(steps: Array<{ text: string; isViz: boolean }>): void {
+  _combinedEditorSteps = steps;
+  _notify();
+}
+
+export function getCombinedEditorOutput(currentStep: number): TerminalLine[] {
+  const lines: TerminalLine[] = [];
+  const end = Math.min(currentStep + 1, _combinedEditorSteps.length);
+  for (let i = 0; i < end; i++) {
+    const { text, isViz } = _combinedEditorSteps[i];
+    if (!text) continue;
+    lines.push(...toLines(text, isViz ? 'viz' : 'debugger'));
+  }
+  return lines;
+}
+
 export function clearAll(): void {
   _builderInitOutput = '';
   _committedDebugger = '';
@@ -150,6 +169,7 @@ export function clearAll(): void {
   _committedCombinedLines = [];
   _currentDebuggerSteps = [];
   _currentBuilderSteps = [];
+  _combinedEditorSteps = [];
   _notify();
 }
 

@@ -59,7 +59,8 @@ RECT_SCHEMA = {
     'type': 'rect',
     'docstring': 'A rectangle shape on the grid.',
     'properties': [
-        {'name': 'position', 'type': 'tuple[int,int]',     'default': (0, 0),        'ser': 'base'},
+        {'name': 'x',        'type': 'int',                'default': 0,             'ser': 'base'},
+        {'name': 'y',        'type': 'int',                'default': 0,             'ser': 'base'},
         {'name': 'width',    'type': 'int',                'default': 1,             'ser': 'int'},
         {'name': 'height',   'type': 'int',                'default': 1,             'ser': 'int'},
         {'name': 'color',    'type': 'tuple[int,int,int]', 'default': (34, 197, 94), 'ser': 'color'},
@@ -76,7 +77,8 @@ CIRCLE_SCHEMA = {
     'type': 'circle',
     'docstring': 'A circle (or ellipse) shape on the grid.',
     'properties': [
-        {'name': 'position', 'type': 'tuple[int,int]',     'default': (0, 0),         'ser': 'base'},
+        {'name': 'x',        'type': 'int',                'default': 0,              'ser': 'base'},
+        {'name': 'y',        'type': 'int',                'default': 0,              'ser': 'base'},
         {'name': 'width',    'type': 'int',                'default': 1,              'ser': 'int'},
         {'name': 'height',   'type': 'int',                'default': 1,              'ser': 'int'},
         {'name': 'color',    'type': 'tuple[int,int,int]', 'default': (59, 130, 246), 'ser': 'color'},
@@ -93,7 +95,8 @@ ARROW_SCHEMA = {
     'type': 'arrow',
     'docstring': 'An arrow shape on the grid. Use angle to control direction: 0=up, 90=right, 180=down, 270=left. Use Arrow.UP/DOWN/LEFT/RIGHT constants or set_orientation() for convenience.',
     'properties': [
-        {'name': 'position', 'type': 'tuple[int,int]',     'default': (0, 0),         'ser': 'base'},
+        {'name': 'x',        'type': 'int',                'default': 0,              'ser': 'base'},
+        {'name': 'y',        'type': 'int',                'default': 0,              'ser': 'base'},
         {'name': 'width',    'type': 'int',                'default': 1,              'ser': 'int'},
         {'name': 'height',   'type': 'int',                'default': 1,              'ser': 'int'},
         {'name': 'color',    'type': 'tuple[int,int,int]', 'default': (16, 185, 129), 'ser': 'color'},
@@ -123,7 +126,7 @@ class Line(_engine.VisualElem):
     def __init__(self, start=(0, 0), end=(1, 1), color=(239, 68, 68),
                  stroke_weight=2, start_offset=(0.5, 0.5), end_offset=(0.5, 0.5),
                  start_cap='none', end_cap='arrow', z=0):
-        super().__init__()
+        super().__init__(x=start[1], y=start[0])
         self.start = start
         self.end = end
         self.color = color
@@ -134,16 +137,11 @@ class Line(_engine.VisualElem):
         self.end_cap = end_cap
         self.z = z
 
-    @property
-    def position(self):
-        return self.start
-
-    @position.setter
-    def position(self, value):
-        self.start = value
-
     def _serialize(self):
         out = self._serialize_base()
+        # x/y reflect the current start position
+        out['x'] = int(self.start[1])
+        out['y'] = int(self.start[0])
         out["type"] = "line"
         out["start"] = list(self.start)
         out["end"] = list(self.end)
@@ -162,7 +160,8 @@ LABEL_SCHEMA = {
     'docstring': 'Text label.',
     'properties': [
         {'name': 'label',     'type': 'str',             'default': '',   'ser': 'str'},
-        {'name': 'position',  'type': 'tuple[int,int]',  'default': (0, 0), 'ser': 'base'},
+        {'name': 'x',         'type': 'int',             'default': 0,    'ser': 'base'},
+        {'name': 'y',         'type': 'int',             'default': 0,    'ser': 'base'},
         {'name': 'width',     'type': 'int',             'default': 1,    'ser': 'int'},
         {'name': 'height',    'type': 'int',             'default': 1,    'ser': 'int'},
         {'name': 'font_size', 'type': 'int',             'default': 14,   'ser': 'int', 'key': 'fontSize'},
@@ -183,7 +182,8 @@ ARRAY_SCHEMA = {
     'docstring': 'Display a 1D list variable as a row or column on the grid.',
     'properties': [
         {'name': 'name',       'type': 'str',                    'default': '',    'ser': 'str'},
-        {'name': 'position',   'type': 'tuple[int,int]',          'default': (0,0), 'ser': 'base'},
+        {'name': 'x',          'type': 'int',                    'default': 0,     'ser': 'base'},
+        {'name': 'y',          'type': 'int',                    'default': 0,     'ser': 'base'},
         {'name': 'direction',  'type': 'str',                    'default': 'right','ser': 'str'},
         {'name': 'show_index', 'type': 'bool',                   'default': True,  'ser': 'bool',   'key': 'showIndex'},
         {'name': 'color',      'type': 'tuple[int,int,int]|None', 'default': None,  'ser': 'color?'},  # None → CSS default
@@ -220,7 +220,8 @@ ARRAY2D_SCHEMA = {
     'docstring': 'Display a 2D list variable as a matrix on the grid.',
     'properties': [
         {'name': 'name',       'type': 'str',                    'default': '',   'ser': 'str'},
-        {'name': 'position',   'type': 'tuple[int,int]',          'default': (0,0),'ser': 'base'},
+        {'name': 'x',          'type': 'int',                    'default': 0,    'ser': 'base'},
+        {'name': 'y',          'type': 'int',                    'default': 0,    'ser': 'base'},
         {'name': 'show_index', 'type': 'bool',                   'default': True, 'ser': 'bool',     'key': 'showIndex'},
         {'name': 'color',      'type': 'tuple[int,int,int]|None', 'default': None, 'ser': 'color?'},
         {'name': 'cells',       'type': 'list',  'default': [],   'ser': 'list2d_r', 'key': 'values'},
@@ -300,10 +301,10 @@ class RunCall:
 
 # ── Element Event Handlers (override per element) ────────────────────────────
 
-def on_click(self, position: tuple[int, int]):
+def on_click(self, x: int, y: int):
     pass
 
-def on_drag(self, position: tuple[int, int], drag_type: str):
+def on_drag(self, x: int, y: int, drag_type: str):
     pass
 
 
@@ -316,7 +317,7 @@ def no_debug(fn):
     in the interactive timeline. The visual state is still refreshed after the call.
 
     Example:
-        arr.on_click = lambda pos: no_debug(sort)(arr)
+        arr.on_click = lambda x, y: no_debug(sort)(arr)
     """
     import sys as _sys
     def wrapper(*args, **kwargs):

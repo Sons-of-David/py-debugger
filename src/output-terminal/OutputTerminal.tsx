@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import {
   getCombinedLines,
+  getCombinedEditorOutput,
   getBuilderOutput,
   getBuilderStepOutput,
   getDebuggerOutput,
@@ -28,7 +29,7 @@ function splitLines(text: string): string[] {
   return parts;
 }
 
-export function OutputTerminal({ currentStep, hideTabs }: OutputTerminalProps) {
+export function OutputTerminal({ currentStep, appMode, hideTabs }: OutputTerminalProps) {
   useSyncExternalStore(subscribeTerminal, getTerminalVersion);
   const [collapsed, setCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<TerminalTab>('combined');
@@ -71,7 +72,8 @@ export function OutputTerminal({ currentStep, hideTabs }: OutputTerminalProps) {
   const builderSteps = getBuilderStepOutput(currentStep);
   const debuggerText = getDebuggerOutput(currentStep);
   const combinedLines = getCombinedLines(currentStep);
-  const contentKey = builderInit + builderSteps + debuggerText + combinedLines.length;
+  const combinedEditorLines = getCombinedEditorOutput(currentStep);
+  const contentKey = builderInit + builderSteps + debuggerText + combinedLines.length + combinedEditorLines.length;
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -102,10 +104,25 @@ export function OutputTerminal({ currentStep, hideTabs }: OutputTerminalProps) {
     ));
 
   const colorFor = (source: TerminalLine['source']) => {
+    if (source === 'viz') return 'text-emerald-600 dark:text-emerald-400';
     if (source === 'builder') return 'text-emerald-600 dark:text-emerald-400';
     if (source === 'marker') return 'text-gray-400 dark:text-gray-500';
     if (source === 'error') return 'text-red-600 dark:text-red-400';
     return 'text-gray-700 dark:text-gray-200';
+  };
+
+  const renderCombinedEditorOutput = () => {
+    const lines = getCombinedEditorOutput(currentStep);
+    if (!lines.length) return <div className="text-gray-400 dark:text-gray-600 italic">No output.</div>;
+    return (
+      <>
+        {lines.map((line, i) => (
+          <div key={i} className={`whitespace-pre ${colorFor(line.source)}`}>
+            {line.text || '\u00A0'}
+          </div>
+        ))}
+      </>
+    );
   };
 
   const renderBuilderTab = () => {
@@ -153,6 +170,7 @@ export function OutputTerminal({ currentStep, hideTabs }: OutputTerminalProps) {
   };
 
   const renderContent = () => {
+    if (hideTabs && appMode === 'trace') return renderCombinedEditorOutput();
     if (effectiveTab === 'builder') return renderBuilderTab();
     if (effectiveTab === 'debugger') return renderDebuggerTab();
     return renderCombinedTab();

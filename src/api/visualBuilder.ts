@@ -4,7 +4,8 @@ export type ArrayDirection = 'right' | 'left' | 'down' | 'up';
 
 export interface VisualBuilderElementBase {
   type: string;               // shape type
-  position: [number, number]; // common position
+  x: number;                  // horizontal position (column)
+  y: number;                  // vertical position (row)
   visible?: boolean;          // optional, default true
   alpha?: number;             // optional, default 1
   z?: number;                 // depth layer: lower = closer = rendered on top, default 0

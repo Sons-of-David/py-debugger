@@ -71,9 +71,9 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
       gridRef.current?.alignGrid();
     }, []);
 
-    const handleElementClick = useCallback(async (elemId: number, position: [number, number]) => {
+    const handleElementClick = useCallback(async (elemId: number, x: number, y: number) => {
       if (combinedVizRanges) {
-        const result = await executeCombinedClickHandler(elemId, position[0], position[1], combinedVizRanges);
+        const result = await executeCombinedClickHandler(elemId, y, x, combinedVizRanges);
         if (!result) return;
         if (result.interactiveTimeline.length > 0) {
           onCombinedTrace?.(result);
@@ -82,7 +82,7 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
         }
         return;
       }
-      const result: ClickHandlerResult = await executeClickHandler(elemId, position[0], position[1]);
+      const result: ClickHandlerResult = await executeClickHandler(elemId, y, x);
       if (!result) return;
       if (result.error) return;
       const hydrated = result.snapshot.map((el) => hydrateElement(el));
@@ -99,8 +99,8 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
       if (result.debugCall) onDebugCall?.(result.debugCall);
     }, [loadVisualBuilderObjects, onDebugCall]);
 
-    const handleElementDrag = useCallback(async (elemId: number, position: [number, number], dragType: DragType) => {
-      applyEventResult(await executeEventHandler('on_drag', elemId, position[0], position[1], dragType));
+    const handleElementDrag = useCallback(async (elemId: number, x: number, y: number, dragType: DragType) => {
+      applyEventResult(await executeEventHandler('on_drag', elemId, y, x, dragType));
     }, [applyEventResult]);
 
     const handleTextBoxAdded = useCallback((box: TextBox) => {

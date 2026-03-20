@@ -10,7 +10,8 @@ interface CellStyle {
 
 export class Label implements VisualBuilderElementBase {
   type: 'label' = 'label';
-  position: [number, number];
+  x: number;
+  y: number;
   visible: boolean = true;
   label?: string;
   width?: number;
@@ -22,7 +23,8 @@ export class Label implements VisualBuilderElementBase {
   panelId?: string;
 
   constructor(el: any) {
-    this.position = el.position;
+    this.x = el.x ?? 0;
+    this.y = el.y ?? 0;
     this.visible = el.visible ?? true;
     this.label = el.label;
     this.width = el.width ?? 1;

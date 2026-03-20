@@ -5,7 +5,8 @@ import { rgbToHex } from '../../../api/visualBuilder';
 
 export class Line implements VisualBuilderElementBase {
   type = 'line' as const;
-  position: [number, number];
+  x: number;
+  y: number;
   visible: boolean;
   alpha: number;
   panelId?: string;
@@ -21,7 +22,8 @@ export class Line implements VisualBuilderElementBase {
   endCap: 'none' | 'arrow';
 
   constructor(el: any) {
-    this.position = el.position ?? [0, 0];
+    this.x = el.x ?? 0;
+    this.y = el.y ?? 0;
     this.visible = el.visible ?? true;
     this.alpha = el.alpha ?? 1;
     this.z = el.z ?? 0;

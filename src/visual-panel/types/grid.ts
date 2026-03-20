@@ -45,7 +45,8 @@ export const PANEL_STYLE_DEFAULT: PanelStyle = {
 // Consider unifying element identity so there is one source of truth.
 export interface InteractionData {
   elemId: number;
-  position: [number, number];
+  x: number;
+  y: number;
 }
 
 export interface RenderableObjectData {

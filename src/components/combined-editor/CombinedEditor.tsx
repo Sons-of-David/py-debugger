@@ -17,6 +17,7 @@ interface CombinedEditorProps {
   isAnalyzing: boolean;
   currentStep?: number;
   currentLine?: number;
+  appMode: 'idle' | 'trace' | 'interactive' | 'debug_in_event';
   onAnalyze: () => void;
   onEdit: () => void;
 }
@@ -28,6 +29,7 @@ export function CombinedEditor({
   isAnalyzing,
   currentStep,
   currentLine,
+  appMode,
   onAnalyze,
   onEdit,
 }: CombinedEditorProps) {
@@ -364,7 +366,7 @@ export function CombinedEditor({
         />
       </div>
 
-      <OutputTerminal currentStep={currentStep ?? 0} appMode="idle" hideTabs />
+      <OutputTerminal currentStep={currentStep ?? 0} appMode={appMode} hideTabs />
 
       <style>{`
         .viz-block-line {
