@@ -72,6 +72,33 @@ RECT_SCHEMA = {
 class Rect(_engine._ShapeBase, schema=RECT_SCHEMA): pass
 
 
+INPUT_SCHEMA = {
+    'objName': 'Input',
+    'type': 'input',
+    'docstring': 'A text-input box on the grid. In interactive mode, clicking it opens an inline text field; pressing Enter calls input_changed(text).',
+    'properties': [
+        {'name': 'x',           'type': 'int',                'default': 0,              'ser': 'base'},
+        {'name': 'y',           'type': 'int',                'default': 0,              'ser': 'base'},
+        {'name': 'width',       'type': 'int',                'default': 3,              'ser': 'int'},
+        {'name': 'height',      'type': 'int',                'default': 1,              'ser': 'int'},
+        {'name': 'color',       'type': 'tuple[int,int,int]', 'default': (99, 102, 241), 'ser': 'color'},
+        {'name': 'visible',     'type': 'bool',               'default': True,           'ser': 'base'},
+        {'name': 'z',           'type': 'int',                'default': 0,              'ser': 'base'},
+        {'name': 'value',       'type': 'str',                'default': '',             'ser': 'str'},
+        {'name': 'placeholder', 'type': 'str',                'default': '',             'ser': 'str'},
+    ],
+}
+
+class Input(_engine._ShapeBase, schema=INPUT_SCHEMA):
+    def input_changed(self, text: str) -> None:
+        """Called when the user submits text. Override to add custom logic."""
+        self.value = text
+
+    def get_input(self) -> str:
+        """Return the current text value."""
+        return self.value
+
+
 CIRCLE_SCHEMA = {
     'objName': 'Circle',
     'type': 'circle',

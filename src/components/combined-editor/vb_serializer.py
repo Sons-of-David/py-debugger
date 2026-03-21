@@ -171,6 +171,8 @@ def _serialize_combined_handlers() -> str:
         names = []
         if hasattr(elem, 'on_click') and callable(elem.on_click):
             names.append('on_click')
+        if isinstance(elem, _user_api.Input):
+            names.append('input_changed')
         if names:
             handlers[elem._elem_id] = names
     return _json.dumps(handlers)
@@ -265,6 +267,61 @@ def _exec_combined_click_traced(elem_id: int, row: int, col: int, viz_ranges_jso
             _combined_ns.pop('__viz_end__', None)
 
     # Refresh V.params from saved namespace so V() expressions re-evaluate correctly
+    _engine.V.params = {k: v for k, v in _combined_ns.items()
+                        if not k.startswith('_') and k != '__builtins__'}
+    final_snapshot = _json.loads(_serialize_visual_builder())
+    handlers = _json.loads(_serialize_combined_handlers())
+
+    return _json.dumps({
+        'interactive_timeline': steps,
+        'final_snapshot': final_snapshot,
+        'handlers': handlers,
+        'output': _capture.getvalue(),
+    })
+
+
+def _exec_combined_input_changed(elem_id: int, text: str, viz_ranges_json: str) -> str:
+    """Call input_changed(text) on element with viz-aware tracing; return interactive_timeline + final snapshot."""
+    import sys as _sys, io as _io
+
+    target = None
+    for elem in _engine.VisualElem._registry:
+        if elem._elem_id == elem_id:
+            target = elem
+            break
+
+    if target is None:
+        return _json.dumps({'error': f'Element {elem_id} not found',
+                            'interactive_timeline': [], 'final_snapshot': [], 'handlers': {}, 'output': ''})
+
+    if not isinstance(target, _user_api.Input):
+        return _json.dumps({'error': f'Element {elem_id} is not an Input',
+                            'interactive_timeline': [], 'final_snapshot': [], 'handlers': {}, 'output': ''})
+
+    viz_ranges = [(r['startLine'], r['endLine']) for r in _json.loads(viz_ranges_json)]
+    _tracer, steps, snap = _make_interactive_tracer(viz_ranges)
+
+    def _input_viz_end(frame_locals):
+        import sys as _sys
+        snap(frame_locals, _sys._getframe(1).f_lineno)
+
+    _old_viz_end = _combined_ns.get('__viz_end__')
+    _combined_ns['__viz_end__'] = _input_viz_end
+
+    _old_stdout = _sys.stdout
+    _capture = _io.StringIO()
+    _sys.stdout = _capture
+    try:
+        _sys.settrace(_tracer)
+        target.input_changed(text)
+    finally:
+        _sys.settrace(None)
+        _sys.stdout = _old_stdout
+        if _old_viz_end is not None:
+            _combined_ns['__viz_end__'] = _old_viz_end
+        else:
+            _combined_ns.pop('__viz_end__', None)
+
     _engine.V.params = {k: v for k, v in _combined_ns.items()
                         if not k.startswith('_') and k != '__builtins__'}
     final_snapshot = _json.loads(_serialize_visual_builder())
