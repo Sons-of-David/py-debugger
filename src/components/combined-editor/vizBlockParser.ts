@@ -48,6 +48,53 @@ export function getVizRanges(code: string): VizRange[] {
 }
 
 /**
+ * Returns ranges for complete but malformed viz blocks, for live red-highlight.
+ *
+ * A range is "bad" when both markers are present but the block is structurally
+ * invalid (mismatched indentation, or a body line dedents below the markers).
+ * An orphan # @end (no opening # @viz) is also flagged as a single-line range.
+ * An unclosed # @viz with no # @end is intentionally ignored — the user may
+ * still be typing.
+ */
+export function getVizBadRanges(code: string): VizRange[] {
+  const lines = code.split('\n');
+  const bad: VizRange[] = [];
+  let openStart: number | null = null;
+  let openIndent: number | null = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    const t = lines[i].trim();
+    const indent = leadingSpaces(lines[i]);
+    const lineNum = i + 1;
+
+    if (t === '# @viz') {
+      openStart = lineNum;   // 1-based; also == 0-based index of first body line
+      openIndent = indent;
+    } else if (t === '# @end') {
+      if (openStart === null) {
+        // Orphan # @end
+        bad.push({ startLine: lineNum, endLine: lineNum });
+        continue;
+      }
+      // Check indentation match and body lines
+      let invalid = indent !== openIndent;
+      if (!invalid) {
+        for (let j = openStart; j < i; j++) {
+          if (lines[j].trim() !== '' && leadingSpaces(lines[j]) < openIndent!) {
+            invalid = true;
+            break;
+          }
+        }
+      }
+      if (invalid) bad.push({ startLine: openStart, endLine: lineNum });
+      openStart = null;
+      openIndent = null;
+    }
+  }
+  return bad;
+}
+
+/**
  * Strict validation for use at analyze/execute time.
  * Returns a descriptive error string on the first problem, or null if valid.
  */
