@@ -285,7 +285,7 @@ function EmbedShell({
             href="/"
             className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm hover:underline flex-shrink-0"
           >
-            py-debugger
+            AlgoPlay
           </a>
           <span className="text-gray-400 dark:text-gray-500 flex-shrink-0">·</span>
           <span className="text-sm text-gray-700 dark:text-gray-200 truncate">{sampleName}</span>

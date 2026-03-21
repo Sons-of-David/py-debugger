@@ -22,6 +22,7 @@
     "framer-motion": "^12.37.0",
     "gifenc": "^1.0.3",
     "html-to-image": "^1.11.13",
+    "lucide-react": "^0.577.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-resizable-panels": "^4.6.2",
