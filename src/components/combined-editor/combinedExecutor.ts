@@ -4,7 +4,7 @@ import type { VisualBuilderElementBase } from '../../api/visualBuilder';
 import VB_ENGINE_PYTHON from './_vb_engine.py?raw';
 import USER_API_PYTHON from './user_api.py?raw';
 import VISUAL_BUILDER_PYTHON from './vb_serializer.py?raw';
-import type { VizRange } from './vizBlockParser';
+import { validateVizBlocks, type VizRange } from './vizBlockParser';
 import { setHandlers } from '../../visual-panel/handlersState';
 import { appendClickOutput } from '../../output-terminal/terminalState';
 
@@ -44,22 +44,10 @@ export interface CombinedClickResult {
  * in a different scope) become impossible at the language level.
  */
 function preprocess(code: string): string {
-  const lines = code.split('\n');
-  let open = false;
+  const validationError = validateVizBlocks(code);
+  if (validationError) throw new Error(validationError);
 
-  for (let i = 0; i < lines.length; i++) {
-    const trimmed = lines[i].trim();
-    if (trimmed === '# @viz') {
-      if (open) throw new Error(`Line ${i + 1}: nested # @viz blocks are not supported`);
-      open = true;
-    } else if (trimmed === '# @end') {
-      if (!open) throw new Error(`Line ${i + 1}: # @end without matching # @viz`);
-      open = false;
-    }
-  }
-  if (open) throw new Error('Unclosed # @viz block (missing # @end)');
-
-  return lines
+  return code.split('\n')
     .map(line => {
       const indent = line.match(/^(\s*)/)?.[1] ?? '';
       if (line.trim() === '# @viz') return `${indent}__viz_begin__()`;

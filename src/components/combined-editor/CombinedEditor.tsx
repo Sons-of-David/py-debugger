@@ -260,8 +260,7 @@ export const CombinedEditor = forwardRef<CombinedEditorHandle, CombinedEditorPro
       const editor = editorRef.current;
       const monaco = monacoRef.current;
       if (!editor || !monaco) return;
-      const ranges = getVizRanges(code);
-      for (const r of ranges) {
+      for (const r of getVizRanges(code)) {
         editor.setSelection(new monaco.Range(r.startLine, 1, r.startLine, 1));
         editor.trigger('fold', 'editor.fold', {});
       }
