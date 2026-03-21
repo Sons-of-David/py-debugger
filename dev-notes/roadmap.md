@@ -111,6 +111,8 @@ The **interactive mode** (`on_click`, click-traced sub-runs) is the core differe
 
 - **auto add # @end:** 
 
+- **update shape from visual panel:** In edit mode, we can choose a block, and then a shape, and automatically update it
+
 - ~~**setDebugCallSuffix location:** Check if `setDebugCallSuffix` can be handled at `CodeEditorArea` level instead of `App.tsx` (see [sharp-edges.md → debugCallSuffix](./sharp-edges.md)).~~
   **Removed:** `debugCallSuffix` mechanism eliminated with the old two-editor architecture.
 

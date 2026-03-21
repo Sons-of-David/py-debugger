@@ -265,6 +265,10 @@ export const CombinedEditor = forwardRef<CombinedEditorHandle, CombinedEditorPro
       const editor = editorRef.current;
       const monaco = monacoRef.current;
       if (!editor || !monaco) return;
+      // TODO: folding is unreliable — editor.fold is a no-op if Monaco hasn't finished
+      // computing folding ranges yet (async). Need a reliable way to wait for the
+      // folding model to be ready before triggering fold (e.g. getFoldingModel() promise
+      // or polling editor.getHiddenAreas()).
       for (const r of getVizRanges(code)) {
         editor.setSelection(new monaco.Range(r.startLine, 1, r.startLine, 1));
         editor.trigger('fold', 'editor.fold', {});

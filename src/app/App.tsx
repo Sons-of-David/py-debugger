@@ -339,7 +339,6 @@ function App() {
   useEffect(() => {
     if (!pendingPostLoadRef.current || !combinedCode.trim()) return;
     pendingPostLoadRef.current = false;
-    // rAF lets Monaco finish computing folding ranges before we trigger fold
     requestAnimationFrame(() => combinedEditorRef.current?.foldVizBlocks());
     if (AUTO_ANALYZE_ON_LOAD) handleAnalyzeCombined();
   }, [combinedCode, handleAnalyzeCombined]);
