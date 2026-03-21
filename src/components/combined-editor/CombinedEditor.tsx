@@ -5,7 +5,7 @@ import type * as MonacoTypes from 'monaco-editor';
 import { VISUAL_ELEM_SCHEMA } from '../../api/visualBuilder';
 import { OutputTerminal } from '../../output-terminal/OutputTerminal';
 import { useTheme } from '../../contexts/ThemeContext';
-import { getVizRanges } from './vizBlockParser';
+import { getVizRanges, getVizBadRanges } from './vizBlockParser';
 import sampleCode from './sample.py?raw';
 
 export const COMBINED_SAMPLE = sampleCode;
@@ -48,17 +48,22 @@ export const CombinedEditor = forwardRef<CombinedEditorHandle, CombinedEditorPro
     const monaco = monacoRef.current;
     if (!editor || !monaco) return;
 
-    const ranges = getVizRanges(code);
     const decorations: editor.IModelDeltaDecoration[] = [];
 
-    for (const r of ranges) {
+    for (const r of getVizRanges(code)) {
       for (let line = r.startLine; line <= r.endLine; line++) {
         decorations.push({
           range: new monaco.Range(line, 1, line, 1),
-          options: {
-            isWholeLine: true,
-            className: 'viz-block-line',
-          },
+          options: { isWholeLine: true, className: 'viz-block-line' },
+        });
+      }
+    }
+
+    for (const r of getVizBadRanges(code)) {
+      for (let line = r.startLine; line <= r.endLine; line++) {
+        decorations.push({
+          range: new monaco.Range(line, 1, line, 1),
+          options: { isWholeLine: true, className: 'viz-block-error-line' },
         });
       }
     }
@@ -270,7 +275,7 @@ export const CombinedEditor = forwardRef<CombinedEditorHandle, CombinedEditorPro
   return (
     <div className="flex flex-col h-full bg-white dark:bg-gray-900">
       {/* Toolbar */}
-      <div className="flex-shrink-0 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-700 px-4 py-2 flex items-center justify-between">
+      <div className="flex-shrink-0 h-10 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-700 px-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Python Code</span>
           {!isEditable && (
@@ -323,6 +328,10 @@ export const CombinedEditor = forwardRef<CombinedEditorHandle, CombinedEditorPro
         .viz-block-line {
           background-color: rgba(99, 102, 241, 0.07) !important;
           border-left: 2px solid rgba(99, 102, 241, 0.3) !important;
+        }
+        .viz-block-error-line {
+          background-color: rgba(239, 68, 68, 0.08) !important;
+          border-left: 2px solid rgba(239, 68, 68, 0.5) !important;
         }
         .active-executed-line {
           background-color: rgba(250, 204, 21, 0.18) !important;

@@ -21,7 +21,7 @@ const buttonDisabled =
   `${buttonNeutral} disabled:opacity-50`;
 
 const panelHeader =
-  "flex-shrink-0 px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between";
+  "flex-shrink-0 h-10 px-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between";
 
 export interface GridAreaHandle {
   loadVisualBuilderObjects: (elements: VisualBuilderElementBase[]) => void;
