@@ -1,4 +1,6 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { GIFEncoder, quantize, applyPalette } from 'gifenc';
+import type { CaptureRegion } from '../visual-panel/components/CaptureRegionLayer';
 
 import { Group, Panel, Separator } from 'react-resizable-panels';
 import { CombinedEditor, COMBINED_SAMPLE, type CombinedEditorHandle } from '../components/combined-editor/CombinedEditor';
@@ -82,6 +84,7 @@ function App() {
 
   // Timeline state
   const [currentStep, setCurrentStep] = useState(0);
+  const [isCreatingGif, setIsCreatingGif] = useState(false);
   const [stepCount, setStepCount] = useState(0);
   const [hasInteractiveElements, setHasInteractiveElements] = useState(false);
   // Preload Pyodide on mount
@@ -113,6 +116,75 @@ function App() {
     if (state) gridAreaRef.current?.loadVisualBuilderObjects(state);
     setCurrentStep(clamped);
   }, []);
+
+  const handleCreateGif = useCallback(async (region: CaptureRegion | null) => {
+    if (isCreatingGif) return;
+    const maxStep = getMaxTime();
+    if (maxStep < 1) return;
+
+    setIsCreatingGif(true);
+    setAnimationsEnabled(false);
+
+    const savedStep = currentStep;
+    try {
+      type GifFrame = { indexed: Uint8Array; palette: number[][]; width: number; height: number };
+      const frames: GifFrame[] = [];
+
+      for (let i = 0; i <= maxStep; i++) {
+        const state = getStateAt(i);
+        if (state) gridAreaRef.current?.loadVisualBuilderObjects(state);
+        // Two rAF cycles so React flushes + browser paints before we capture
+        await new Promise<void>((res) => requestAnimationFrame(() => requestAnimationFrame(() => res())));
+        const dataUrl = await gridAreaRef.current?.captureFrameData(region);
+        if (!dataUrl) continue;
+
+        const img = new Image();
+        img.src = dataUrl;
+        await new Promise<void>((res) => { img.onload = () => res(); });
+
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0);
+        const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const palette = quantize(data, 256);
+        frames.push({ indexed: applyPalette(data, palette), palette, width: canvas.width, height: canvas.height });
+      }
+
+      if (frames.length === 0) return;
+
+      const encoder = GIFEncoder();
+      encoder.writeHeader();
+      for (const frame of frames) {
+        encoder.writeFrame(frame.indexed, frame.width, frame.height, {
+          palette: frame.palette,
+          delay: 10, // centiseconds → 100ms per frame
+          repeat: 0,
+        });
+      }
+      encoder.finish();
+
+      const bytes = encoder.bytes();
+      const blob = new Blob([bytes.buffer.slice(0) as ArrayBuffer], { type: 'image/gif' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      link.download = `trace-${timestamp}.gif`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('GIF export failed:', err);
+    } finally {
+      setAnimationsEnabled(true);
+      setIsCreatingGif(false);
+      // Restore the step the user was on
+      goToStep(savedStep);
+    }
+  }, [isCreatingGif, currentStep, goToStep]);
 
   // ---------------------------------------------------------------------------
   // Main Flow
@@ -331,8 +403,10 @@ function App() {
     <div className="w-screen h-screen overflow-hidden flex flex-col bg-gray-100 dark:bg-gray-900 dark:text-gray-100">
       {/* Header */}
       <header className="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-2 grid grid-cols-3 items-center shadow-sm">
-        {/* Left: project name + samples */}
+        {/* Left: brand + project name + samples */}
         <div className="flex items-center gap-3">
+          <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 tracking-tight select-none">AlgoPlay</span>
+          <span className="text-gray-300 dark:text-gray-600 select-none">·</span>
           <input
             type="text"
             value={projectName}
@@ -469,6 +543,9 @@ function App() {
                 onTextBoxesChange={setTextBoxes}
                 combinedVizRanges={combinedVizRanges}
                 onCombinedTrace={handleCombinedTrace}
+                appMode={appMode}
+                onCreateGif={handleCreateGif}
+                isCreatingGif={isCreatingGif}
               />
 
               {apiReferenceOpen && (

@@ -470,7 +470,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
         </div>
 
         {/* Capture region layer */}
-        <div className="absolute inset-0" style={{ pointerEvents: 'none' }}>
+        <div className="absolute inset-0" style={{ pointerEvents: capturingRegion ? 'auto' : 'none' }}>
           <div className="relative w-full h-full">
             <CaptureRegionLayer
               active={capturingRegion}

@@ -40,10 +40,11 @@ interface GridAreaProps {
   onCombinedTrace?: (result: CombinedClickResult) => void;
   appMode?: 'idle' | 'trace' | 'interactive' | 'debug_in_event';
   onCreateGif?: (region: CaptureRegion | null) => void;
+  isCreatingGif?: boolean;
 }
 
 export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
-  function GridArea({ darkMode, mouseEnabled, textBoxes, onTextBoxesChange, combinedVizRanges, onCombinedTrace, appMode = 'idle', onCreateGif }, ref) {
+  function GridArea({ darkMode, mouseEnabled, textBoxes, onTextBoxesChange, combinedVizRanges, onCombinedTrace, appMode = 'idle', onCreateGif, isCreatingGif = false }, ref) {
     const {
       cells,
       overlayCells,
@@ -66,8 +67,6 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
     const [capturingRegionMode, setCapturingRegionMode] = useState(false);
     // When set, the next drawn region triggers a GIF instead of a screenshot
     const pendingGifRef = useRef(false);
-
-    useImperativeHandle(ref, () => ({ loadVisualBuilderObjects, captureFrameData }), [loadVisualBuilderObjects]);
 
     const handleZoom = useCallback(
       (delta: number) => {
@@ -170,6 +169,8 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
       return canvas.toDataURL('image/png');
     }, [darkMode, zoom]);
 
+    useImperativeHandle(ref, () => ({ loadVisualBuilderObjects, captureFrameData }), [loadVisualBuilderObjects, captureFrameData]);
+
     const downloadDataUrl = (dataUrl: string, filename: string) => {
       const link = document.createElement('a');
       link.href = dataUrl;
@@ -253,10 +254,11 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
             {appMode === 'trace' && (
               <button
                 onClick={handleGifClick}
-                className={`${buttonNeutral}${capturingRegionMode && pendingGifRef.current ? ' ring-2 ring-inset ring-orange-500' : ''}`}
+                disabled={isCreatingGif}
+                className={`${buttonDisabled}${capturingRegionMode && pendingGifRef.current ? ' ring-2 ring-inset ring-orange-500' : ''}`}
                 title="Export full trace as GIF"
               >
-                🎬
+                {isCreatingGif ? '⏳' : '🎬'}
               </button>
             )}
             <button
