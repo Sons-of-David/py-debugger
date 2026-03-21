@@ -137,6 +137,14 @@ _sys.stdout = _stdout_capture
     if (errorMessage.includes('PythonError:')) {
       cleanError = errorMessage.split('PythonError:')[1]?.trim() || errorMessage;
     }
+    // If the traceback contains a user code frame, strip internal engine frames
+    // so the error appears to originate from user code.
+    if (cleanError.includes('File "<combined_code>"')) {
+      const lines = cleanError.split('\n');
+      const firstLine = lines[0]; // "Traceback (most recent call last):"
+      const userFrameIndex = lines.findIndex(l => l.includes('File "<combined_code>"'));
+      cleanError = [firstLine, ...lines.slice(userFrameIndex)].join('\n');
+    }
     return { success: false, timeline: [], handlers: {}, error: cleanError };
   }
 }

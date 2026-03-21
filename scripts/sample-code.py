@@ -14,6 +14,10 @@ Usage:
   # Set builderCode from a file
   python scripts/sample-code.py set feature-3-arrays builderCode new_code.py
 
+  # Extract all samples to .py files alongside the JSON files
+  python scripts/sample-code.py extract
+  # Each foo.json -> foo_code.py (debuggerCode) + foo_builder.py (builderCode)
+
 Name resolution: if the argument does not end in '.json' it is resolved to
   src/samples/<name>.json relative to the repository root (the directory
   containing this script's parent).
@@ -79,7 +83,25 @@ def cmd_set(args):
     print(f'updated {field} in {os.path.basename(path)}')
 
 
-COMMANDS = {'get': cmd_get, 'set': cmd_set}
+def cmd_extract(args):
+    import glob as _glob
+    pattern = os.path.join(SAMPLES_DIR, '*.json')
+    files = sorted(_glob.glob(pattern))
+    if not files:
+        sys.exit(f'error: no JSON files found in {SAMPLES_DIR}')
+    for json_path in files:
+        base = os.path.splitext(json_path)[0]
+        with open(json_path, encoding='utf-8') as f:
+            data = json.load(f)
+        for field, suffix in (('debuggerCode', '_code.py'), ('builderCode', '_builder.py')):
+            code = data.get(field, '')
+            out_path = base + suffix
+            with open(out_path, 'w', encoding='utf-8') as f:
+                f.write(code)
+            print(f'wrote {os.path.relpath(out_path)}')
+
+
+COMMANDS = {'get': cmd_get, 'set': cmd_set, 'extract': cmd_extract}
 
 if __name__ == '__main__':
     if len(sys.argv) < 2 or sys.argv[1] not in COMMANDS:
