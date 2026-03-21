@@ -69,29 +69,31 @@ _combined_ns: dict = {}
 def _exec_combined_code(code: str):
     """Execute combined user code with V() change detection and viz-block snapshot hooks."""
     global _combined_ns
-    import sys as _sys
+    import sys as _sys, io as _io
     ns = {k: v for k, v in vars(_user_api).items() if not k.startswith('_')}
     ns['__builtins__'] = __builtins__
     ns['__viz_begin__'] = __viz_begin__
     ns['__viz_end__'] = __viz_end__
-    _sys.settrace(_make_v_aware_tracer())
+    _old_stdout = _sys.stdout
+    _sys.stdout = _io.StringIO()
     try:
-        exec(compile(code, '<combined_code>', 'exec'), ns)
-    finally:
-        _sys.settrace(None)
-        _combined_ns = ns  # persist for interactive click handlers
-    # Post-exec flush: the last assignment/print runs after the last 'line' event fires,
-    # so it's never observed by the tracer. Take one final snapshot if V() values changed
-    # or there is remaining stdout output.
-    final_scope = {k: v for k, v in ns.items() if not k.startswith('_')}
-    _engine.V.params = final_scope
-    current = _collect_v_values()
-    try:
+        _sys.settrace(_make_v_aware_tracer())
+        try:
+            exec(compile(code, '<combined_code>', 'exec'), ns)
+        finally:
+            _sys.settrace(None)
+            _combined_ns = ns  # persist for interactive click handlers
+        # Post-exec flush: the last assignment/print runs after the last 'line' event fires,
+        # so it's never observed by the tracer. Take one final snapshot if V() values changed
+        # or there is remaining stdout output.
+        final_scope = {k: v for k, v in ns.items() if not k.startswith('_')}
+        _engine.V.params = final_scope
+        current = _collect_v_values()
         remaining = _sys.stdout.getvalue()[_last_stdout_pos:]
-    except Exception:
-        remaining = ''
-    if (current and current != _last_v_values) or remaining:
-        __record_snapshot__(final_scope, _last_traced_line)
+        if (current and current != _last_v_values) or remaining:
+            __record_snapshot__(final_scope, _last_traced_line)
+    finally:
+        _sys.stdout = _old_stdout
 
 
 # Sandbox namespace for user builder code. Populated by _exec_builder_code,
@@ -153,12 +155,9 @@ def __record_snapshot__(frame_or_scope, line=None, is_viz=False):
     """
     global _last_stdout_pos
     import sys as _sys
-    try:
-        all_output = _sys.stdout.getvalue()
-        delta = all_output[_last_stdout_pos:]
-        _last_stdout_pos = len(all_output)
-    except Exception:
-        delta = ''
+    all_output = _sys.stdout.getvalue()
+    delta = all_output[_last_stdout_pos:]
+    _last_stdout_pos = len(all_output)
     visual = _json.loads(_serialize_visual_builder())
     variables = _collect_variables(frame_or_scope)
     _combined_timeline.append({'visual': visual, 'variables': variables, 'line': line, 'output': delta, 'is_viz': is_viz})

@@ -101,21 +101,9 @@ export async function executeCombinedCode(code: string): Promise<CombinedResult>
     const preprocessed = preprocess(code);
     const escaped = escapeTripleQuote(preprocessed);
 
-    // Capture stdout
-    await py.runPythonAsync(`
-import sys as _sys
-import io as _io
-_stdout_capture = _io.StringIO()
-_sys.stdout = _stdout_capture
-`);
-
     // _exec_combined_code builds its own namespace from user_api (Panel, Rect, V, …)
     // and installs the V()-change-detection tracer around exec.
-    try {
-      await py.runPythonAsync(`_exec_combined_code('''${escaped}''')`);
-    } finally {
-      await py.runPythonAsync(`_sys.stdout = _sys.__stdout__`);
-    }
+    await py.runPythonAsync(`_exec_combined_code('''${escaped}''')`);
 
     const timelineJson: string = await py.runPythonAsync(`_json.dumps(_combined_timeline)`);
     const rawTimeline = JSON.parse(timelineJson) as Array<{
