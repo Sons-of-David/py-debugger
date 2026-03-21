@@ -127,46 +127,41 @@ function App() {
 
     const savedStep = currentStep;
     try {
-      type GifFrame = { indexed: Uint8Array; palette: number[][]; width: number; height: number };
+      type GifFrame = { indexed: Uint8Array; width: number; height: number };
       const frames: GifFrame[] = [];
+      let sharedPalette: number[][] | null = null;
 
       for (let i = 0; i <= maxStep; i++) {
         const state = getStateAt(i);
         if (state) gridAreaRef.current?.loadVisualBuilderObjects(state);
         // Two rAF cycles so React flushes + browser paints before we capture
         await new Promise<void>((res) => requestAnimationFrame(() => requestAnimationFrame(() => res())));
-        const dataUrl = await gridAreaRef.current?.captureFrameData(region);
-        if (!dataUrl) continue;
 
-        const img = new Image();
-        img.src = dataUrl;
-        await new Promise<void>((res) => { img.onload = () => res(); });
+        // captureFrameCanvas avoids the PNG encode/decode round-trip of captureFrameData
+        const canvas = await gridAreaRef.current?.captureFrameCanvas(region);
+        if (!canvas) continue;
 
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        const ctx = canvas.getContext('2d')!;
-        ctx.drawImage(img, 0, 0);
-        const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const palette = quantize(data, 256);
-        frames.push({ indexed: applyPalette(data, palette), palette, width: canvas.width, height: canvas.height });
+        const { data } = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height);
+        // Compute palette once from the first frame and reuse — much faster than per-frame quantization
+        if (!sharedPalette) sharedPalette = quantize(data, 256);
+        frames.push({ indexed: applyPalette(data, sharedPalette), width: canvas.width, height: canvas.height });
       }
 
-      if (frames.length === 0) return;
+      if (frames.length === 0 || !sharedPalette) return;
 
+      // GIFEncoder auto mode writes the GIF header on the first writeFrame — do NOT call writeHeader() manually
       const encoder = GIFEncoder();
-      encoder.writeHeader();
       for (const frame of frames) {
         encoder.writeFrame(frame.indexed, frame.width, frame.height, {
-          palette: frame.palette,
-          delay: 10, // centiseconds → 100ms per frame
-          repeat: 0,
+          palette: sharedPalette,
+          delay: 100, // ms — gifenc divides by 10 → 10 centiseconds = 100ms/frame
+          repeat: 0,  // loop forever (only written on the first frame by gifenc auto mode)
         });
       }
       encoder.finish();
 
-      const bytes = encoder.bytes();
-      const blob = new Blob([bytes.buffer.slice(0) as ArrayBuffer], { type: 'image/gif' });
+      const bytes = encoder.bytes(); // correctly-sized Uint8Array copy — pass directly to Blob
+      const blob = new Blob([bytes.buffer as ArrayBuffer], { type: 'image/gif' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
-import { toPng } from 'html-to-image';
+import { toCanvas } from 'html-to-image';
 import { Grid, type GridHandle, CELL_SIZE } from '../visual-panel/components/Grid';
 import { useGridState } from '../visual-panel/hooks/useGridState';
 import type { VisualBuilderElementBase } from '../api/visualBuilder';
@@ -27,6 +27,7 @@ const panelHeader =
 export interface GridAreaHandle {
   loadVisualBuilderObjects: (elements: VisualBuilderElementBase[]) => void;
   captureFrameData: (region: CaptureRegion | null) => Promise<string | null>;
+  captureFrameCanvas: (region: CaptureRegion | null) => Promise<HTMLCanvasElement | null>;
 }
 
 interface GridAreaProps {
@@ -130,21 +131,18 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
       setSelectedTextBoxId(null);
     }, [textBoxes, onTextBoxesChange]);
 
-    /** Capture the grid (or a specific cell region) and return a PNG data URL. */
-    const captureFrameData = useCallback(async (region: CaptureRegion | null): Promise<string | null> => {
+    /** Render the grid element to a cropped canvas (shared by screenshot and GIF paths). */
+    const captureFrameCanvas = useCallback(async (region: CaptureRegion | null): Promise<HTMLCanvasElement | null> => {
       const element = gridRef.current?.captureElement();
       if (!element) return null;
 
-      const fullDataUrl = await toPng(element, {
+      // toCanvas avoids the PNG encode/decode round-trip of toPng
+      const fullCanvas = await toCanvas(element, {
         pixelRatio: 1,
         backgroundColor: darkMode ? '#111827' : '#f3f4f6',
         skipFonts: true,
         cacheBust: false,
       });
-
-      const img = new Image();
-      img.src = fullDataUrl;
-      await new Promise((resolve) => { img.onload = resolve; });
 
       let sx: number, sy: number, sw: number, sh: number;
       if (region) {
@@ -159,17 +157,22 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
         sh = element.clientHeight;
       }
 
-      const canvas = document.createElement('canvas');
-      canvas.width = sw;
-      canvas.height = sh;
-      const ctx = canvas.getContext('2d');
+      const cropped = document.createElement('canvas');
+      cropped.width = sw;
+      cropped.height = sh;
+      const ctx = cropped.getContext('2d');
       if (!ctx) return null;
 
-      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
-      return canvas.toDataURL('image/png');
+      ctx.drawImage(fullCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+      return cropped;
     }, [darkMode, zoom]);
 
-    useImperativeHandle(ref, () => ({ loadVisualBuilderObjects, captureFrameData }), [loadVisualBuilderObjects, captureFrameData]);
+    const captureFrameData = useCallback(async (region: CaptureRegion | null): Promise<string | null> => {
+      const canvas = await captureFrameCanvas(region);
+      return canvas ? canvas.toDataURL('image/png') : null;
+    }, [captureFrameCanvas]);
+
+    useImperativeHandle(ref, () => ({ loadVisualBuilderObjects, captureFrameData, captureFrameCanvas }), [loadVisualBuilderObjects, captureFrameData, captureFrameCanvas]);
 
     const downloadDataUrl = (dataUrl: string, filename: string) => {
       const link = document.createElement('a');
