@@ -62,13 +62,7 @@ function escapeTripleQuote(s: string): string {
   return s.replace(/'''/g, "\\'\\'\\'");
 }
 
-
-/**
- * Execute combined Python code (with # @viz / # @end blocks) and return
- * a timeline of snapshots, one per # @end marker.
- */
-export async function executeCombinedCode(code: string): Promise<CombinedResult> {
-  try {
+async function initializePythonEngine(): ReturnType<typeof loadPyodide> {
     const py = await loadPyodide();
 
     // Write engine modules to Pyodide VFS so visualBuilder.py can import them
@@ -90,6 +84,18 @@ for _m in ('user_api', '_vb_engine'):
 
     // Reset combined timeline and V() tracer state
     await py.runPythonAsync('_reset_combined_timeline()');
+
+    return py;
+}
+
+
+/**
+ * Execute combined Python code (with # @viz / # @end blocks) and return
+ * a timeline of snapshots, one per # @end marker.
+ */
+export async function executeCombinedCode(code: string): Promise<CombinedResult> {
+  try {
+    const py = await initializePythonEngine();
 
     // Preprocess user code (replaces # @viz / # @end with tracer hook calls)
     const preprocessed = preprocess(code);
