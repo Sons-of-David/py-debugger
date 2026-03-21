@@ -19,3 +19,4 @@ export {
   type ArrayPanelInfo,
 } from './array';
 export { PanelCell, PanelCellView, PANEL_SCHEMA } from './panel';
+export { InputElem, INPUT_SCHEMA, InputView } from './input';
