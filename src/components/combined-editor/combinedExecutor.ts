@@ -87,6 +87,13 @@ export async function executeCombinedCode(code: string): Promise<CombinedResult>
     py.FS.writeFile('/home/pyodide/_vb_engine.py', VB_ENGINE_PYTHON);
     py.FS.writeFile('/home/pyodide/user_api.py', USER_API_PYTHON);
 
+    // Clear any cached imports so the freshly written files are picked up
+    await py.runPythonAsync(`
+import sys as _sys
+for _m in ('user_api', '_vb_engine'):
+    _sys.modules.pop(_m, None)
+`);
+
     // Load visual builder classes and serialization helpers
     await py.runPythonAsync(VISUAL_BUILDER_PYTHON);
 
