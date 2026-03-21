@@ -56,6 +56,20 @@ export function ExtrasMenu({
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute right-0 top-full mt-1 z-50 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded shadow-lg py-1">
 
+            {/* Tutorials link */}
+            <a
+              href="/tutorials"
+              className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              onClick={() => setOpen(false)}
+            >
+              Tutorials
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M2 6h8M6 2l4 4-4 4" />
+              </svg>
+            </a>
+
+            <div className="my-1 border-t border-gray-200 dark:border-gray-600" />
+
             {/* File section */}
             <div className="px-3 py-1 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">File</div>
             <button
