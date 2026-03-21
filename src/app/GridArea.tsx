@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
 import { toPng } from 'html-to-image';
-import { Grid, type GridHandle } from '../visual-panel/components/Grid';
+import { Grid, type GridHandle, CELL_SIZE } from '../visual-panel/components/Grid';
 import { useGridState } from '../visual-panel/hooks/useGridState';
 import type { VisualBuilderElementBase } from '../api/visualBuilder';
 import { executeEventHandler, type ClickHandlerResult, type DragType } from '../python-engine/code-builder/services/pythonExecutor';
@@ -8,6 +8,7 @@ import { executeCombinedClickHandler, executeCombinedInputChanged, type Combined
 import { hydrateElement } from '../visual-panel/types/elementRegistry';
 import type { TextBox } from '../text-boxes/types';
 import type { VizRange } from '../components/combined-editor/vizBlockParser';
+import type { CaptureRegion } from '../visual-panel/components/CaptureRegionLayer';
 
 /* ---------- Shared Tailwind class groups ---------- */
 
@@ -25,6 +26,7 @@ const panelHeader =
 
 export interface GridAreaHandle {
   loadVisualBuilderObjects: (elements: VisualBuilderElementBase[]) => void;
+  captureFrameData: (region: CaptureRegion | null) => Promise<string | null>;
 }
 
 interface GridAreaProps {
@@ -36,10 +38,12 @@ interface GridAreaProps {
   combinedVizRanges?: VizRange[];
   /** Combined-editor: called when a click produces a traced mini-timeline. */
   onCombinedTrace?: (result: CombinedClickResult) => void;
+  appMode?: 'idle' | 'trace' | 'interactive' | 'debug_in_event';
+  onCreateGif?: (region: CaptureRegion | null) => void;
 }
 
 export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
-  function GridArea({ darkMode, mouseEnabled, textBoxes, onTextBoxesChange, combinedVizRanges, onCombinedTrace }, ref) {
+  function GridArea({ darkMode, mouseEnabled, textBoxes, onTextBoxesChange, combinedVizRanges, onCombinedTrace, appMode = 'idle', onCreateGif }, ref) {
     const {
       cells,
       overlayCells,
@@ -57,7 +61,13 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
     const [addingTextBox, setAddingTextBox] = useState(false);
     const [selectedTextBoxId, setSelectedTextBoxId] = useState<string | null>(null);
 
-    useImperativeHandle(ref, () => ({ loadVisualBuilderObjects }), [loadVisualBuilderObjects]);
+    // Capture region state
+    const [captureRegion, setCaptureRegion] = useState<CaptureRegion | null>(null);
+    const [capturingRegionMode, setCapturingRegionMode] = useState(false);
+    // When set, the next drawn region triggers a GIF instead of a screenshot
+    const pendingGifRef = useRef(false);
+
+    useImperativeHandle(ref, () => ({ loadVisualBuilderObjects, captureFrameData }), [loadVisualBuilderObjects]);
 
     const handleZoom = useCallback(
       (delta: number) => {
@@ -121,55 +131,95 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
       setSelectedTextBoxId(null);
     }, [textBoxes, onTextBoxesChange]);
 
-    const handleScreenshot = useCallback(async () => {
+    /** Capture the grid (or a specific cell region) and return a PNG data URL. */
+    const captureFrameData = useCallback(async (region: CaptureRegion | null): Promise<string | null> => {
       const element = gridRef.current?.captureElement();
-      if (!element || isCapturing) return;
+      if (!element) return null;
 
+      const fullDataUrl = await toPng(element, {
+        pixelRatio: 1,
+        backgroundColor: darkMode ? '#111827' : '#f3f4f6',
+        skipFonts: true,
+        cacheBust: false,
+      });
+
+      const img = new Image();
+      img.src = fullDataUrl;
+      await new Promise((resolve) => { img.onload = resolve; });
+
+      let sx: number, sy: number, sw: number, sh: number;
+      if (region) {
+        sx = region.col * CELL_SIZE * zoom;
+        sy = region.row * CELL_SIZE * zoom;
+        sw = region.widthCells * CELL_SIZE * zoom;
+        sh = region.heightCells * CELL_SIZE * zoom;
+      } else {
+        sx = element.scrollLeft;
+        sy = element.scrollTop;
+        sw = element.clientWidth;
+        sh = element.clientHeight;
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = sw;
+      canvas.height = sh;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+      return canvas.toDataURL('image/png');
+    }, [darkMode, zoom]);
+
+    const downloadDataUrl = (dataUrl: string, filename: string) => {
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+
+    /** Called when a region is drawn — either triggers screenshot or GIF depending on pendingGifRef. */
+    const handleCaptureRegionDrawn = useCallback(async (region: CaptureRegion) => {
+      setCaptureRegion(region);
+      setCapturingRegionMode(false);
+
+      if (pendingGifRef.current) {
+        pendingGifRef.current = false;
+        onCreateGif?.(region);
+        return;
+      }
+
+      // Screenshot path
+      if (isCapturing) return;
       setIsCapturing(true);
       try {
-        const viewportWidth = element.clientWidth;
-        const viewportHeight = element.clientHeight;
-        const scrollLeft = element.scrollLeft;
-        const scrollTop = element.scrollTop;
-
-        const fullDataUrl = await toPng(element, {
-          pixelRatio: 1,
-          backgroundColor: darkMode ? '#111827' : '#f3f4f6',
-          skipFonts: true,
-          cacheBust: false,
-        });
-
-        const img = new Image();
-        img.src = fullDataUrl;
-        await new Promise((resolve) => { img.onload = resolve; });
-
-        const canvas = document.createElement('canvas');
-        canvas.width = viewportWidth;
-        canvas.height = viewportHeight;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) throw new Error('Could not get canvas context');
-
-        ctx.drawImage(
-          img,
-          scrollLeft, scrollTop, viewportWidth, viewportHeight,
-          0, 0, viewportWidth, viewportHeight
-        );
-
-        const croppedDataUrl = canvas.toDataURL('image/png');
-
-        const link = document.createElement('a');
-        link.href = croppedDataUrl;
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-        link.download = `visual-panel-${timestamp}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const dataUrl = await captureFrameData(region);
+        if (dataUrl) {
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+          downloadDataUrl(dataUrl, `visual-panel-${timestamp}.png`);
+        }
       } catch (err) {
         console.error('Screenshot failed:', err);
       } finally {
         setIsCapturing(false);
       }
-    }, [darkMode, isCapturing]);
+    }, [isCapturing, captureFrameData, onCreateGif]);
+
+    const handleScreenshotClick = useCallback(() => {
+      if (isCapturing) return;
+      pendingGifRef.current = false;
+      setCapturingRegionMode(true);
+    }, [isCapturing]);
+
+    const handleGifClick = useCallback(() => {
+      if (captureRegion) {
+        onCreateGif?.(captureRegion);
+      } else {
+        pendingGifRef.current = true;
+        setCapturingRegionMode(true);
+      }
+    }, [captureRegion, onCreateGif]);
 
     return (
       <div className="h-full flex flex-col">
@@ -193,13 +243,22 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
               ⊞
             </button>
             <button
-              onClick={handleScreenshot}
+              onClick={handleScreenshotClick}
               disabled={isCapturing}
-              className={buttonDisabled}
-              title="Download screenshot"
+              className={`${buttonDisabled}${capturingRegionMode && !pendingGifRef.current ? ' ring-2 ring-inset ring-orange-500' : ''}`}
+              title="Screenshot: click then draw a region on the grid"
             >
               {isCapturing ? '⏳' : '📷'}
             </button>
+            {appMode === 'trace' && (
+              <button
+                onClick={handleGifClick}
+                className={`${buttonNeutral}${capturingRegionMode && pendingGifRef.current ? ' ring-2 ring-inset ring-orange-500' : ''}`}
+                title="Export full trace as GIF"
+              >
+                🎬
+              </button>
+            )}
             <button
               onClick={() => setAddingTextBox((v) => !v)}
               className={`${buttonNeutral}${addingTextBox ? ' ring-2 ring-inset ring-indigo-500' : ''}`}
@@ -231,6 +290,9 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
             onTextBoxAdded={handleTextBoxAdded}
             onTextBoxChange={handleTextBoxChange}
             onTextBoxDelete={handleTextBoxDelete}
+            capturingRegion={capturingRegionMode}
+            captureRegionBounds={captureRegion}
+            onCaptureRegionDrawn={handleCaptureRegionDrawn}
           />
         </div>
       </div>

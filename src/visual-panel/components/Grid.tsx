@@ -6,6 +6,7 @@ import type { RenderableObjectData, PanelStyle } from '../types/grid';
 import { PANEL_STYLE_DEFAULT } from '../types/grid';
 import type { TextBox } from '../../text-boxes/types';
 import { TextBoxesLayer } from '../../text-boxes/TextBoxesLayer';
+import { CaptureRegionLayer, type CaptureRegion } from './CaptureRegionLayer';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -35,6 +36,10 @@ interface GridProps {
   onTextBoxAdded?: (box: TextBox) => void;
   onTextBoxChange?: (box: TextBox) => void;
   onTextBoxDelete?: (id: string) => void;
+  // Capture region props
+  capturingRegion?: boolean;
+  captureRegionBounds?: CaptureRegion | null;
+  onCaptureRegionDrawn?: (region: CaptureRegion) => void;
 }
 
 export interface GridHandle {
@@ -205,6 +210,9 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
   onTextBoxAdded,
   onTextBoxChange,
   onTextBoxDelete,
+  capturingRegion = false,
+  captureRegionBounds = null,
+  onCaptureRegionDrawn,
 }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const gridContentRef = useRef<HTMLDivElement>(null);
@@ -457,6 +465,17 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
               onTextBoxAdded={onTextBoxAdded ?? (() => {})}
               onTextBoxChange={onTextBoxChange ?? (() => {})}
               onTextBoxDelete={onTextBoxDelete ?? (() => {})}
+            />
+          </div>
+        </div>
+
+        {/* Capture region layer */}
+        <div className="absolute inset-0" style={{ pointerEvents: 'none' }}>
+          <div className="relative w-full h-full">
+            <CaptureRegionLayer
+              active={capturingRegion}
+              persistedRegion={captureRegionBounds}
+              onRegionDrawn={onCaptureRegionDrawn ?? (() => {})}
             />
           </div>
         </div>
