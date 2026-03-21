@@ -25,7 +25,8 @@ def __viz_end__(frame_locals):
     import sys as _sys
     global _tracing_active
     _tracing_active = True
-    __record_snapshot__(frame_locals, _sys._getframe(1).f_lineno, is_viz=True)
+    caller = _sys._getframe(1)
+    __record_snapshot__(caller, caller.f_lineno, is_viz=True)
 
 
 def _collect_v_values():
@@ -45,14 +46,16 @@ def _make_v_aware_tracer():
     guard = _engine.make_step_guard()
 
     def _tracer(frame, event, arg):
+        global _last_traced_line
         guard(frame, event, arg)
         if event == 'line' and frame.f_code.co_filename == '<combined_code>' and _tracing_active:
-            _engine.V.params = dict(frame.f_locals)
+            _last_traced_line = frame.f_lineno
+            _engine.V.params = _build_scope(frame)
             current = _collect_v_values()
             if current and current != _last_v_values:
                 _last_v_values.clear()
                 _last_v_values.update(current)
-                __record_snapshot__(frame.f_locals, frame.f_lineno)
+                __record_snapshot__(frame, frame.f_lineno)
         return _tracer
 
     return _tracer
@@ -77,6 +80,18 @@ def _exec_combined_code(code: str):
     finally:
         _sys.settrace(None)
         _combined_ns = ns  # persist for interactive click handlers
+    # Post-exec flush: the last assignment/print runs after the last 'line' event fires,
+    # so it's never observed by the tracer. Take one final snapshot if V() values changed
+    # or there is remaining stdout output.
+    final_scope = {k: v for k, v in ns.items() if not k.startswith('_')}
+    _engine.V.params = final_scope
+    current = _collect_v_values()
+    try:
+        remaining = _sys.stdout.getvalue()[_last_stdout_pos:]
+    except Exception:
+        remaining = ''
+    if (current and current != _last_v_values) or remaining:
+        __record_snapshot__(final_scope, _last_traced_line)
 
 
 # Sandbox namespace for user builder code. Populated by _exec_builder_code,
@@ -118,19 +133,24 @@ import json as _json
 
 _combined_timeline = []
 _last_stdout_pos: int = 0
+_last_traced_line: int = None
 
 
 def _reset_combined_timeline():
-    global _combined_timeline, _tracing_active, _last_v_values, _combined_ns, _last_stdout_pos
+    global _combined_timeline, _tracing_active, _last_v_values, _combined_ns, _last_stdout_pos, _last_traced_line
     _combined_timeline = []
     _tracing_active = True
     _last_v_values = {}
     _combined_ns = {}
     _last_stdout_pos = 0
+    _last_traced_line = None
 
 
-def __record_snapshot__(frame_locals, line=None, is_viz=False):
-    """Record a visual + variable snapshot into the combined timeline."""
+def __record_snapshot__(frame_or_scope, line=None, is_viz=False):
+    """Record a visual + variable snapshot into the combined timeline.
+
+    frame_or_scope: a Python frame object, or a plain dict (used for post-exec flush).
+    """
     global _last_stdout_pos
     import sys as _sys
     try:
@@ -140,16 +160,42 @@ def __record_snapshot__(frame_locals, line=None, is_viz=False):
     except Exception:
         delta = ''
     visual = _json.loads(_serialize_visual_builder())
-    variables = _collect_variables(frame_locals)
+    variables = _collect_variables(frame_or_scope)
     _combined_timeline.append({'visual': visual, 'variables': variables, 'line': line, 'output': delta, 'is_viz': is_viz})
 
 
-def _collect_variables(frame_locals):
-    """Extract serializable variables from a frame's locals dict."""
+def _build_scope(frame):
+    """Merge all variables visible at frame: globals → enclosing frames → current frame.
+
+    Inner scope overrides outer. Skips private names (starting with '_').
+    Used for both V.params (V() expression evaluation) and variable display.
+    """
+    merged = {}
+    for k, v in frame.f_globals.items():
+        if not k.startswith('_'):
+            merged[k] = v
+    chain = []
+    f = frame
+    while f is not None:
+        if f.f_code.co_filename == '<combined_code>':
+            chain.append(f)
+        f = f.f_back
+    chain.reverse()  # outermost first so inner scope wins
+    for f in chain:
+        for k, v in f.f_locals.items():
+            if not k.startswith('_'):
+                merged[k] = v
+    return merged
+
+
+def _collect_variables(frame_or_scope):
+    """Extract serializable variables from the full scope visible at frame.
+
+    frame_or_scope: a Python frame object, or a plain dict used as the scope directly.
+    """
+    scope = frame_or_scope if isinstance(frame_or_scope, dict) else _build_scope(frame_or_scope)
     variables = {}
-    for k, v in frame_locals.items():
-        if k.startswith('_') or k == '__record_snapshot__':
-            continue
+    for k, v in scope.items():
         if isinstance(v, (int, float, str, bool)):
             variables[k] = {'type': type(v).__name__, 'value': v}
         elif isinstance(v, (list, tuple)):
@@ -201,9 +247,9 @@ def _make_interactive_tracer(viz_ranges):
     steps = []
     last_v_values = {}
 
-    def _snap(frame_locals, line):
+    def _snap(frame, line):
         visual = _json.loads(_serialize_visual_builder())
-        steps.append({'visual': visual, 'variables': _collect_variables(frame_locals), 'line': line})
+        steps.append({'visual': visual, 'variables': _collect_variables(frame), 'line': line})
 
     def _trace(frame, event, arg):
         guard(frame, event, arg)
@@ -212,12 +258,12 @@ def _make_interactive_tracer(viz_ranges):
         if event == 'call':
             return None if in_viz(frame.f_code.co_firstlineno) else _trace
         if event == 'line' and not in_viz(frame.f_lineno):
-            _engine.V.params = dict(frame.f_locals)
+            _engine.V.params = _build_scope(frame)
             current = _collect_v_values()
             if current and current != last_v_values:
                 last_v_values.clear()
                 last_v_values.update(current)
-                _snap(frame.f_locals, frame.f_lineno)
+                _snap(frame, frame.f_lineno)
         return _trace
 
     return _trace, steps, _snap
@@ -247,7 +293,8 @@ def _exec_combined_click_traced(elem_id: int, row: int, col: int, viz_ranges_jso
 
     def _click_viz_end(frame_locals):
         import sys as _sys
-        snap(frame_locals, _sys._getframe(1).f_lineno)
+        f = _sys._getframe(1)
+        snap(f, f.f_lineno)
 
     _old_viz_end = _combined_ns.get('__viz_end__')
     _combined_ns['__viz_end__'] = _click_viz_end
@@ -303,7 +350,8 @@ def _exec_combined_input_changed(elem_id: int, text: str, viz_ranges_json: str) 
 
     def _input_viz_end(frame_locals):
         import sys as _sys
-        snap(frame_locals, _sys._getframe(1).f_lineno)
+        f = _sys._getframe(1)
+        snap(f, f.f_lineno)
 
     _old_viz_end = _combined_ns.get('__viz_end__')
     _combined_ns['__viz_end__'] = _input_viz_end
