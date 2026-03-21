@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import Editor, { type Monaco } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import type * as MonacoTypes from 'monaco-editor';
@@ -10,29 +10,29 @@ import sampleCode from './sample.py?raw';
 
 export const COMBINED_SAMPLE = sampleCode;
 
+export interface CombinedEditorHandle {
+  foldVizBlocks: () => void;
+}
+
 interface CombinedEditorProps {
   code: string;
   onChange: (code: string) => void;
   isEditable: boolean;
-  isAnalyzing: boolean;
   currentStep?: number;
   currentLine?: number;
   appMode: 'idle' | 'trace' | 'interactive' | 'debug_in_event';
-  onAnalyze: () => void;
   onEdit: () => void;
 }
 
-export function CombinedEditor({
+export const CombinedEditor = forwardRef<CombinedEditorHandle, CombinedEditorProps>(function CombinedEditor({
   code,
   onChange,
   isEditable,
-  isAnalyzing,
   currentStep,
   currentLine,
   appMode,
-  onAnalyze,
   onEdit,
-}: CombinedEditorProps) {
+}: CombinedEditorProps, ref) {
   const { darkMode } = useTheme();
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
@@ -256,24 +256,18 @@ export function CombinedEditor({
     };
   }, []);
 
-  const foldAllViz = () => {
-    const editor = editorRef.current;
-    const monaco = monacoRef.current;
-    if (!editor || !monaco) return;
-    const ranges = getVizRanges(code);
-    for (const r of ranges) {
-      editor.setSelection(new monaco.Range(r.startLine, 1, r.startLine, 1));
-      editor.trigger('fold', 'editor.fold', {});
-    }
-  };
-
-  const unfoldAllViz = () => {
-    const editor = editorRef.current;
-    if (!editor) return;
-    editor.trigger('unfold', 'editor.unfoldAll', {});
-  };
-
-  const vizCount = getVizRanges(code).length;
+  useImperativeHandle(ref, () => ({
+    foldVizBlocks: () => {
+      const editor = editorRef.current;
+      const monaco = monacoRef.current;
+      if (!editor || !monaco) return;
+      const ranges = getVizRanges(code);
+      for (const r of ranges) {
+        editor.setSelection(new monaco.Range(r.startLine, 1, r.startLine, 1));
+        editor.trigger('fold', 'editor.fold', {});
+      }
+    },
+  }), [code]);
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-gray-900">
@@ -286,57 +280,16 @@ export function CombinedEditor({
               Read-only
             </span>
           )}
-          {vizCount > 0 && (
-            <span className="text-xs px-2 py-0.5 bg-indigo-500/20 text-indigo-400 rounded">
-              {vizCount} viz {vizCount === 1 ? 'block' : 'blocks'}
-            </span>
-          )}
         </div>
-
-        <div className="flex items-center gap-2">
-          {vizCount > 0 && (
-            <>
-              <button
-                type="button"
-                onClick={foldAllViz}
-                title="Fold all viz blocks"
-                className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-              >
-                Fold viz
-              </button>
-              <button
-                type="button"
-                onClick={unfoldAllViz}
-                title="Unfold all viz blocks"
-                className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-              >
-                Unfold viz
-              </button>
-            </>
-          )}
-          {isEditable ? (
-            <button
-              type="button"
-              onClick={onAnalyze}
-              disabled={isAnalyzing || !code.trim()}
-              className={`px-4 py-1 text-sm font-medium rounded transition-colors ${
-                isAnalyzing || !code.trim()
-                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                  : 'bg-indigo-600 text-white hover:bg-indigo-500'
-              }`}
-            >
-              {isAnalyzing ? 'Analyzing...' : 'Analyze'}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={onEdit}
-              className="px-4 py-1 text-sm font-medium bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors"
-            >
-              Edit Code
-            </button>
-          )}
-        </div>
+        {!isEditable && (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="px-4 py-1 text-sm font-medium bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors"
+          >
+            Edit Code
+          </button>
+        )}
       </div>
 
       {/* Editor */}
@@ -383,4 +336,4 @@ export function CombinedEditor({
       `}</style>
     </div>
   );
-}
+});

@@ -1,13 +1,14 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+
 import { Group, Panel, Separator } from 'react-resizable-panels';
-import { CombinedEditor, COMBINED_SAMPLE } from '../components/combined-editor/CombinedEditor';
+import { CombinedEditor, COMBINED_SAMPLE, type CombinedEditorHandle } from '../components/combined-editor/CombinedEditor';
 import { useTheme } from '../contexts/ThemeContext';
 import { AnimationContext } from '../animation/animationContext';
 import { loadPyodide, isPyodideLoaded, resetPythonState } from '../python-engine/code-builder/services/pythonExecutor';
 import { clearAll as clearTerminal, commitCurrentSegment, appendError, setCombinedEditorSteps } from '../output-terminal/terminalState';
 import { ApiReferencePanel } from '../api/ApiReferencePanel';
 import { TimelineControls } from '../timeline/TimelineControls';
+import { ExtrasMenu } from './ExtrasMenu';
 import { GridArea, type GridAreaHandle } from './GridArea';
 import { getStateAt, getMaxTime, clearTimeline, hydrateTimelineFromArray } from '../timeline/timelineState';
 import { clearCodeTimeline, setCodeTimeline } from '../python-engine/debugger-panel/codeTimelineState';
@@ -18,6 +19,7 @@ import type { TextBox } from '../text-boxes/types';
 import { migrateTextBox } from '../text-boxes/types';
 
 const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const AUTO_ANALYZE_ON_LOAD = true; // set to false to disable auto-analyze when loading a file
 
 // TODO: split samples into "public" (shipped in prod) and "dev" (local-only, e.g. rich-text-demo).
 // Dev samples should only appear when import.meta.env.DEV is true.
@@ -45,8 +47,6 @@ const buttonBase =
 const buttonNeutral =
   `${buttonBase} bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600`;
 
-const buttonLocal =
-  `${buttonBase} bg-amber-100 dark:bg-amber-900/40 hover:bg-amber-200 dark:hover:bg-amber-800/50 text-amber-800 dark:text-amber-300`;
 
 
 function App() {
@@ -54,6 +54,8 @@ function App() {
 
   const gridAreaRef = useRef<GridAreaHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const combinedEditorRef = useRef<CombinedEditorHandle>(null);
+  const pendingPostLoadRef = useRef(false);
   const [samplesOpen, setSamplesOpen] = useState(false);
   const [projectName, setProjectName] = useState('untitled');
 
@@ -252,7 +254,17 @@ function App() {
     setProjectName(name);
     setCombinedCode(data.combinedCode);
     setTextBoxes((data.textBoxes ?? [] as unknown[]).map((raw) => migrateTextBox(raw as Record<string, unknown>)));
+    pendingPostLoadRef.current = true;
   }, [handleReset]);
+
+  // After a load, fold viz blocks and optionally auto-analyze
+  useEffect(() => {
+    if (!pendingPostLoadRef.current || !combinedCode.trim()) return;
+    pendingPostLoadRef.current = false;
+    // rAF lets Monaco finish computing folding ranges before we trigger fold
+    requestAnimationFrame(() => combinedEditorRef.current?.foldVizBlocks());
+    if (AUTO_ANALYZE_ON_LOAD) handleAnalyzeCombined();
+  }, [combinedCode, handleAnalyzeCombined]);
 
   // Auto-load first sample and return to edit mode
   useEffect(() => {
@@ -307,38 +319,15 @@ function App() {
     <AnimationContext.Provider value={{ enabled: animationsEnabled, duration: animationDuration }}>
     <div className="w-screen h-screen overflow-hidden flex flex-col bg-gray-100 dark:bg-gray-900 dark:text-gray-100">
       {/* Header */}
-      <header className="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex items-center justify-between shadow-sm">
-        {/* Header left */}
-        <div className="flex items-center gap-4">
-          <h1 className="text-xl font-bold text-indigo-600 dark:text-indigo-400">Visual Debugger</h1>
-          <Link
-            to="/plan"
-            className="text-sm text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-          >
-            About
-          </Link>
-
-          {/* Project name */}
+      <header className="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-2 grid grid-cols-3 items-center shadow-sm">
+        {/* Left: project name + samples */}
+        <div className="flex items-center gap-3">
           <input
             type="text"
             value={projectName}
             onChange={e => setProjectName(e.target.value)}
             className="text-sm border-b border-gray-300 dark:border-gray-600 bg-transparent focus:outline-none focus:border-indigo-500 text-gray-700 dark:text-gray-200 w-36"
           />
-
-          {/* Save / Load / Samples */}
-          <button type="button" onClick={handleReset} className={buttonNeutral}>New</button>
-          <button type="button" onClick={handleSave} className={buttonNeutral}>Save</button>
-          <button type="button" onClick={() => fileInputRef.current?.click()} className={buttonNeutral}>Load</button>
-          {IS_LOCAL && (
-            <>
-              <button type="button" onClick={handleSaveToSamples} disabled={saveSampleStatus === 'saving'} className={buttonLocal}>
-                {saveSampleStatus === 'saving' ? 'Saving…' : 'Save to Samples'}
-              </button>
-              {saveSampleStatus === 'saved' && <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Saved!</span>}
-              {saveSampleStatus === 'error' && <span className="text-xs text-red-600 dark:text-red-400 font-medium">Error</span>}
-            </>
-          )}
           <input ref={fileInputRef} type="file" accept=".json" onChange={handleFileChange} className="hidden" />
           <div className="relative">
             <button type="button" onClick={() => setSamplesOpen((o) => !o)} className={buttonNeutral}>
@@ -377,9 +366,8 @@ function App() {
           </div>
         </div>
 
-        {/* Header right */}
-        <div className="flex items-center gap-4">
-          {/* Pyodide status */}
+        {/* Center: pyodide status + timeline controls */}
+        <div className="flex items-center justify-center gap-3">
           {pyodideLoading && (
             <span className="text-xs text-amber-600 flex items-center gap-1">
               <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
@@ -392,52 +380,21 @@ function App() {
               Python Ready
             </span>
           )}
+          <TimelineControls
+            currentStep={currentStep}
+            stepCount={stepCount}
+            onGoToStep={goToStep}
+            appMode={appMode}
+            onEnterInteractive={handleEnterInteractive}
+            onBackToInteractive={handleBackToInteractive}
+            onAnalyze={handleAnalyzeCombined}
+            isAnalyzing={isAnalyzingCombined}
+            canAnalyze={!!combinedCode.trim()}
+          />
+        </div>
 
-          {/* Timeline controls — invisible in interactive mode to keep header height stable */}
-          <div className={appMode === 'interactive' || appMode === 'idle' ? 'invisible' : ''}>
-            <TimelineControls
-              currentStep={currentStep}
-              stepCount={stepCount}
-              onGoToStep={goToStep}
-              appMode={appMode}
-              onEnterInteractive={handleEnterInteractive}
-              onBackToInteractive={handleBackToInteractive}
-            />
-          </div>
-
-          {/* Animation mode toggle */}
-          <button
-            onClick={() => setAnimationsEnabled((v) => !v)}
-            className={buttonNeutral}
-            title={animationsEnabled ? 'Switch to instant jumps' : 'Switch to smooth animations'}
-          >
-            {animationsEnabled ? 'Animated' : 'Jump'}
-          </button>
-
-          {/* Animation speed slider — only shown in animated step mode */}
-          {animationsEnabled && (appMode !== 'idle' ) && (
-            <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-              <input
-                type="range"
-                min={100} max={2000} step={100}
-                value={animationDuration}
-                onChange={(e) => setAnimationDuration(Number(e.target.value))}
-                className="w-24 accent-blue-500"
-                title="Animation duration"
-              />
-              <span className="w-10 text-right">{(animationDuration / 1000).toFixed(1)}s</span>
-            </div>
-          )}
-
-          {/* Dark mode toggle */}
-          <button
-            onClick={toggleDarkMode}
-            className={buttonNeutral}
-            title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-          >
-            {darkMode ? 'Light' : 'Dark'}
-          </button>
-
+        {/* Right: API reference + extras */}
+        <div className="flex items-center justify-end gap-2">
           <button
             type="button"
             onClick={() => setApiReferenceOpen((o) => !o)}
@@ -445,6 +402,21 @@ function App() {
           >
             {apiReferenceOpen ? 'Hide' : 'Show'} API
           </button>
+          <ExtrasMenu
+            darkMode={darkMode}
+            onToggleDark={toggleDarkMode}
+            animationsEnabled={animationsEnabled}
+            onToggleAnimations={() => setAnimationsEnabled((v) => !v)}
+            animationDuration={animationDuration}
+            onAnimationDurationChange={setAnimationDuration}
+            appMode={appMode}
+            onNew={handleReset}
+            onSave={handleSave}
+            onLoad={() => fileInputRef.current?.click()}
+            isLocal={IS_LOCAL}
+            onSaveToSamples={handleSaveToSamples}
+            saveSampleStatus={saveSampleStatus}
+          />
         </div>
       </header>
 
@@ -455,10 +427,10 @@ function App() {
           <Panel defaultSize={50} minSize={20}>
             <div className="h-full border-r border-gray-300 dark:border-gray-600">
               <CombinedEditor
+                  ref={combinedEditorRef}
                   code={combinedCode}
                   onChange={setCombinedCode}
                   isEditable={isCombinedEditable}
-                  isAnalyzing={isAnalyzingCombined}
                   currentStep={combinedTimeline.length > 0 ? currentStep : undefined}
                   currentLine={
                     appMode === 'trace' && combinedTimeline.length > 0 ? combinedTimeline[currentStep]?.line :
@@ -466,7 +438,6 @@ function App() {
                     undefined
                   }
                   appMode={appMode}
-                  onAnalyze={handleAnalyzeCombined}
                   onEdit={handleEditCombined}
                 />
             </div>
