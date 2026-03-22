@@ -86,11 +86,12 @@ def _init_combined_namespace(viz_ranges_json: str):
     _combined_ns['__viz_end__'] = __viz_end__  # tracer intercepts its call event
 
 
-def _exec_combined_code(code: str) -> str:
-    """Execute combined user code with V() change detection and viz-block snapshot hooks.
+def _exec_traced(execute_fn):
+    """Core traced execution with V()-change detection, viz-block snapshots, and post-exec flush.
 
-    Requires _init_combined_namespace to have been called first.
-    Returns the timeline as a JSON string.
+    Runs execute_fn under the combined tracer, then checks whether the last line produced
+    any V() changes or stdout output the tracer couldn't see, and appends a final snapshot
+    if so. Returns (steps, capture) where capture is the StringIO with full stdout.
     """
     import sys as _sys, io as _io
     last_stdout_pos = [0]
@@ -118,7 +119,7 @@ def _exec_combined_code(code: str) -> str:
     try:
         _sys.settrace(tracer)
         try:
-            exec(compile(code, '<combined_code>', 'exec'), _combined_ns)
+            execute_fn()
         finally:
             _sys.settrace(None)
         # Post-exec flush: the last line runs after the last 'line' event fires,
@@ -131,40 +132,17 @@ def _exec_combined_code(code: str) -> str:
             snap(final_scope, last_line[0])
     finally:
         _sys.stdout = old_stdout
-    return _json.dumps(steps)
+    return steps, capture
 
 
-# Sandbox namespace for user builder code. Populated by _exec_builder_code,
-# read by _visual_code_trace for hook calls.
-_user_code_ns: dict = {}
+def _exec_combined_code(code: str) -> str:
+    """Execute combined user code with V() change detection and viz-block snapshot hooks.
 
-
-def _exec_builder_code(code: str) -> str:
-    """Execute visual builder code in a sandboxed namespace with stdout capture
-    and infinite loop protection.
-
-    The sandbox is seeded from user_api defaults so the user sees Panel, Rect,
-    V, update, etc. but cannot reach engine internals in Pyodide globals.
-    Returns captured stdout from the builder code run.
+    Requires _init_combined_namespace to have been called first.
+    Returns the timeline as a JSON string.
     """
-    global _user_code_ns
-    import io as _io, sys as _sys
-
-    # Build a fresh sandbox from user_api defaults each run.
-    _user_code_ns = {
-        '__builtins__': __builtins__,
-        **vars(_user_api),
-    }
-
-    _old_stdout = _sys.stdout
-    _sys.stdout = _io.StringIO()
-    try:
-        _sys.settrace(_engine.make_step_guard())
-        exec(compile(code, '<builder_code>', 'exec'), _user_code_ns)
-        return _sys.stdout.getvalue()
-    finally:
-        _sys.settrace(None)
-        _sys.stdout = _old_stdout
+    steps, _ = _exec_traced(lambda: exec(compile(code, '<combined_code>', 'exec'), _combined_ns))
+    return _json.dumps(steps)
 
 
 import json as _json
@@ -241,40 +219,12 @@ def _find_element(elem_id: int):
 def _exec_handler_traced(fn):
     """Trace a single handler call with V()-change detection and viz-block snapshots.
 
-    Patches __viz_end__ in the combined namespace so viz-block endings are captured
-    with is_viz=True, matching the snapshot format of the main timeline.
     Returns (steps, output) where steps is a list of snapshot dicts.
     """
-    import sys as _sys, io as _io
-    last_stdout_pos = [0]
-    steps = []
-
-    def snap(frame, line, is_viz=False):
-        all_out = _sys.stdout.getvalue()
-        delta = all_out[last_stdout_pos[0]:]
-        last_stdout_pos[0] = len(all_out)
-        steps.append({
-            'visual': _json.loads(_serialize_visual_builder()),
-            'variables': _collect_variables(frame),
-            'line': line,
-            'output': delta,
-            'is_viz': is_viz,
-        })
-
-    old_stdout = _sys.stdout
-    capture = _io.StringIO()
-    _sys.stdout = capture
-    tracer, _ = _make_tracer(_viz_ranges, snap)
-    try:
-        _sys.settrace(tracer)
-        fn()
-    finally:
-        _sys.settrace(None)
-        _sys.stdout = old_stdout
-        # Refresh V.params from saved namespace so V() expressions re-evaluate correctly
-        _engine.V.params = {k: v for k, v in _combined_ns.items()
-                            if not k.startswith('_') and k != '__builtins__'}
-
+    steps, capture = _exec_traced(fn)
+    # Refresh V.params from saved namespace so V() expressions re-evaluate correctly
+    _engine.V.params = {k: v for k, v in _combined_ns.items()
+                        if not k.startswith('_') and k != '__builtins__'}
     return steps, capture.getvalue()
 
 
@@ -313,25 +263,3 @@ def _exec_combined_input_changed(elem_id: int, text: str) -> str:
                             'interactive_timeline': [], 'final_snapshot': [], 'handlers': {}, 'output': ''})
     steps, output = _exec_handler_traced(lambda: target.input_changed(text))
     return _handler_result(steps, output)
-
-
-def _execute_run_call(expression: str) -> str:
-    """Execute expression silently in _exec_context, return snapshot + handlers JSON."""
-    import io as _io, sys as _sys, json as _json
-    _old_stdout = _sys.stdout
-    _capture = _io.StringIO()
-    _sys.stdout = _capture
-    try:
-        _sys.settrace(_engine.make_step_guard())
-        exec(expression, _exec_context)
-    finally:
-        _sys.settrace(None)
-        _sys.stdout = _old_stdout
-    _engine.V.params = {k: v for k, v in _exec_context.items() if not k.startswith('__')}
-    snapshot = _json.loads(_serialize_visual_builder())
-    handlers = _serialize_handlers()
-    return _json.dumps({
-        'snapshot': snapshot,
-        'handlers': handlers,
-        'output': _capture.getvalue(),
-    })
