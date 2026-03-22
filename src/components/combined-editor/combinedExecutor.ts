@@ -154,7 +154,7 @@ export async function executeCombinedInputChanged(
       `_exec_combined_input_changed(${elemId}, _input_text)`
     );
     const result = JSON.parse(resultJson) as {
-      interactive_timeline: CombinedStep[];
+      interactive_timeline: Array<Omit<CombinedStep, 'isViz'> & { is_viz?: boolean }>;
       final_snapshot: VisualBuilderElementBase[];
       handlers: Record<string, string[]>;
       output: string;
@@ -167,7 +167,7 @@ export async function executeCombinedInputChanged(
     setHandlers(result.handlers ?? {});
     if (result.output) appendClickOutput(result.output);
     return {
-      interactiveTimeline: result.interactive_timeline,
+      interactiveTimeline: result.interactive_timeline.map(s => ({ ...s, isViz: s.is_viz })),
       finalSnapshot: result.final_snapshot,
     };
   } catch (error) {
@@ -194,7 +194,7 @@ export async function executeCombinedClickHandler(
       `_exec_combined_click_traced(${elemId}, ${row}, ${col})`
     );
     const result = JSON.parse(resultJson) as {
-      interactive_timeline: CombinedStep[];
+      interactive_timeline: Array<Omit<CombinedStep, 'isViz'> & { is_viz?: boolean }>;
       final_snapshot: VisualBuilderElementBase[];
       handlers: Record<string, string[]>;
       output: string;
@@ -207,7 +207,7 @@ export async function executeCombinedClickHandler(
     setHandlers(result.handlers ?? {});
     if (result.output) appendClickOutput(result.output);
     return {
-      interactiveTimeline: result.interactive_timeline,
+      interactiveTimeline: result.interactive_timeline.map(s => ({ ...s, isViz: s.is_viz })),
       finalSnapshot: result.final_snapshot,
     };
   } catch (error) {

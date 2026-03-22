@@ -232,120 +232,99 @@ def _serialize_combined_handlers() -> str:
     return _json.dumps(handlers)
 
 
-def _exec_combined_click_traced(elem_id: int, row: int, col: int) -> str:
-    """Call on_click on element with viz-aware tracing; return interactive_timeline + final snapshot."""
-    import sys as _sys, io as _io
-
-    target = None
+def _find_element(elem_id: int):
+    """Return the VisualElem with the given elem_id, or None."""
     for elem in _engine.VisualElem._registry:
         if elem._elem_id == elem_id:
-            target = elem
-            break
+            return elem
+    return None
 
+
+def _exec_handler_traced(fn):
+    """Trace a single handler call with V()-change detection and viz-block snapshots.
+
+    Patches __viz_end__ in the combined namespace so viz-block endings are captured
+    with is_viz=True, matching the snapshot format of the main timeline.
+    Returns (steps, output) where steps is a list of snapshot dicts.
+    """
+    import sys as _sys, io as _io
+    last_stdout_pos = [0]
+    steps = []
+
+    def snap(frame, line, is_viz=False):
+        all_out = _sys.stdout.getvalue()
+        delta = all_out[last_stdout_pos[0]:]
+        last_stdout_pos[0] = len(all_out)
+        steps.append({
+            'visual': _json.loads(_serialize_visual_builder()),
+            'variables': _collect_variables(frame),
+            'line': line,
+            'output': delta,
+            'is_viz': is_viz,
+        })
+
+    def _viz_end(frame_locals):
+        f = _sys._getframe(1)
+        snap(f, f.f_lineno, is_viz=True)
+
+    old_viz_end = _combined_ns.get('__viz_end__')
+    _combined_ns['__viz_end__'] = _viz_end
+
+    old_stdout = _sys.stdout
+    capture = _io.StringIO()
+    _sys.stdout = capture
+    try:
+        _sys.settrace(_make_tracer(_viz_ranges, snap))
+        fn()
+    finally:
+        _sys.settrace(None)
+        _sys.stdout = old_stdout
+        if old_viz_end is not None:
+            _combined_ns['__viz_end__'] = old_viz_end
+        else:
+            _combined_ns.pop('__viz_end__', None)
+        # Refresh V.params from saved namespace so V() expressions re-evaluate correctly
+        _engine.V.params = {k: v for k, v in _combined_ns.items()
+                            if not k.startswith('_') and k != '__builtins__'}
+
+    return steps, capture.getvalue()
+
+
+def _handler_result(steps, output):
+    """Assemble the JSON result returned by click/input handler dispatchers."""
+    return _json.dumps({
+        'interactive_timeline': steps,
+        'final_snapshot': _json.loads(_serialize_visual_builder()),
+        'handlers': _json.loads(_serialize_combined_handlers()),
+        'output': output,
+    })
+
+
+def _exec_combined_click_traced(elem_id: int, row: int, col: int) -> str:
+    """Call on_click on element with viz-aware tracing; return interactive_timeline + final snapshot."""
+    target = _find_element(elem_id)
     if target is None:
         return _json.dumps({'error': f'Element {elem_id} not found',
                             'interactive_timeline': [], 'final_snapshot': [], 'handlers': {}, 'output': ''})
-
     handler = getattr(target, 'on_click', None)
     if not callable(handler):
         return _json.dumps({'error': f'Element {elem_id} has no on_click',
                             'interactive_timeline': [], 'final_snapshot': [], 'handlers': {}, 'output': ''})
-
-    steps = []
-
-    def snap(frame, line):
-        steps.append({'visual': _json.loads(_serialize_visual_builder()), 'variables': _collect_variables(frame), 'line': line})
-
-    def _click_viz_end(frame_locals):
-        f = _sys._getframe(1)
-        snap(f, f.f_lineno)
-
-    _old_viz_end = _combined_ns.get('__viz_end__')
-    _combined_ns['__viz_end__'] = _click_viz_end
-
-    _old_stdout = _sys.stdout
-    _capture = _io.StringIO()
-    _sys.stdout = _capture
-    try:
-        _sys.settrace(_make_tracer(_viz_ranges, snap))
-        handler(col, row)
-    finally:
-        _sys.settrace(None)
-        _sys.stdout = _old_stdout
-        if _old_viz_end is not None:
-            _combined_ns['__viz_end__'] = _old_viz_end
-        else:
-            _combined_ns.pop('__viz_end__', None)
-
-    # Refresh V.params from saved namespace so V() expressions re-evaluate correctly
-    _engine.V.params = {k: v for k, v in _combined_ns.items()
-                        if not k.startswith('_') and k != '__builtins__'}
-    final_snapshot = _json.loads(_serialize_visual_builder())
-    handlers = _json.loads(_serialize_combined_handlers())
-
-    return _json.dumps({
-        'interactive_timeline': steps,
-        'final_snapshot': final_snapshot,
-        'handlers': handlers,
-        'output': _capture.getvalue(),
-    })
+    steps, output = _exec_handler_traced(lambda: handler(col, row))
+    return _handler_result(steps, output)
 
 
 def _exec_combined_input_changed(elem_id: int, text: str) -> str:
     """Call input_changed(text) on element with viz-aware tracing; return interactive_timeline + final snapshot."""
-    import sys as _sys, io as _io
-
-    target = None
-    for elem in _engine.VisualElem._registry:
-        if elem._elem_id == elem_id:
-            target = elem
-            break
-
+    target = _find_element(elem_id)
     if target is None:
         return _json.dumps({'error': f'Element {elem_id} not found',
                             'interactive_timeline': [], 'final_snapshot': [], 'handlers': {}, 'output': ''})
-
     if not isinstance(target, _user_api.Input):
         return _json.dumps({'error': f'Element {elem_id} is not an Input',
                             'interactive_timeline': [], 'final_snapshot': [], 'handlers': {}, 'output': ''})
-
-    steps = []
-
-    def snap(frame, line):
-        steps.append({'visual': _json.loads(_serialize_visual_builder()), 'variables': _collect_variables(frame), 'line': line})
-
-    def _input_viz_end(frame_locals):
-        f = _sys._getframe(1)
-        snap(f, f.f_lineno)
-
-    _old_viz_end = _combined_ns.get('__viz_end__')
-    _combined_ns['__viz_end__'] = _input_viz_end
-
-    _old_stdout = _sys.stdout
-    _capture = _io.StringIO()
-    _sys.stdout = _capture
-    try:
-        _sys.settrace(_make_tracer(_viz_ranges, snap))
-        target.input_changed(text)
-    finally:
-        _sys.settrace(None)
-        _sys.stdout = _old_stdout
-        if _old_viz_end is not None:
-            _combined_ns['__viz_end__'] = _old_viz_end
-        else:
-            _combined_ns.pop('__viz_end__', None)
-
-    _engine.V.params = {k: v for k, v in _combined_ns.items()
-                        if not k.startswith('_') and k != '__builtins__'}
-    final_snapshot = _json.loads(_serialize_visual_builder())
-    handlers = _json.loads(_serialize_combined_handlers())
-
-    return _json.dumps({
-        'interactive_timeline': steps,
-        'final_snapshot': final_snapshot,
-        'handlers': handlers,
-        'output': _capture.getvalue(),
-    })
+    steps, output = _exec_handler_traced(lambda: target.input_changed(text))
+    return _handler_result(steps, output)
 
 
 def _execute_run_call(expression: str) -> str:
