@@ -64,12 +64,14 @@ def _make_v_aware_tracer():
 # ── Persistent namespace for interactive mode ─────────────────────────────────
 
 _combined_ns: dict = {}
+_viz_ranges: list = []  # set by _exec_combined_code, read by click/input handlers
 
 
-def _exec_combined_code(code: str):
+def _exec_combined_code(code: str, viz_ranges_json: str):
     """Execute combined user code with V() change detection and viz-block snapshot hooks."""
-    global _combined_ns
+    global _combined_ns, _viz_ranges
     import sys as _sys, io as _io
+    _viz_ranges = [(r['startLine'], r['endLine']) for r in _json.loads(viz_ranges_json)]
     ns = {k: v for k, v in vars(_user_api).items() if not k.startswith('_')}
     ns['__builtins__'] = __builtins__
     ns['__viz_begin__'] = __viz_begin__
@@ -268,7 +270,7 @@ def _make_interactive_tracer(viz_ranges):
     return _trace, steps, _snap
 
 
-def _exec_combined_click_traced(elem_id: int, row: int, col: int, viz_ranges_json: str) -> str:
+def _exec_combined_click_traced(elem_id: int, row: int, col: int) -> str:
     """Call on_click on element with viz-aware tracing; return interactive_timeline + final snapshot."""
     import sys as _sys, io as _io
 
@@ -287,7 +289,7 @@ def _exec_combined_click_traced(elem_id: int, row: int, col: int, viz_ranges_jso
         return _json.dumps({'error': f'Element {elem_id} has no on_click',
                             'interactive_timeline': [], 'final_snapshot': [], 'handlers': {}, 'output': ''})
 
-    viz_ranges = [(r['startLine'], r['endLine']) for r in _json.loads(viz_ranges_json)]
+    viz_ranges = _viz_ranges
     _tracer, steps, snap = _make_interactive_tracer(viz_ranges)
 
     def _click_viz_end(frame_locals):
@@ -326,7 +328,7 @@ def _exec_combined_click_traced(elem_id: int, row: int, col: int, viz_ranges_jso
     })
 
 
-def _exec_combined_input_changed(elem_id: int, text: str, viz_ranges_json: str) -> str:
+def _exec_combined_input_changed(elem_id: int, text: str) -> str:
     """Call input_changed(text) on element with viz-aware tracing; return interactive_timeline + final snapshot."""
     import sys as _sys, io as _io
 
@@ -344,7 +346,7 @@ def _exec_combined_input_changed(elem_id: int, text: str, viz_ranges_json: str) 
         return _json.dumps({'error': f'Element {elem_id} is not an Input',
                             'interactive_timeline': [], 'final_snapshot': [], 'handlers': {}, 'output': ''})
 
-    viz_ranges = [(r['startLine'], r['endLine']) for r in _json.loads(viz_ranges_json)]
+    viz_ranges = _viz_ranges
     _tracer, steps, snap = _make_interactive_tracer(viz_ranges)
 
     def _input_viz_end(frame_locals):

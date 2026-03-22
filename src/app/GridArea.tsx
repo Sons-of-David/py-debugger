@@ -82,7 +82,7 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
 
     const handleElementClick = useCallback(async (elemId: number, x: number, y: number) => {
       if (combinedVizRanges) {
-        const result = await executeCombinedClickHandler(elemId, y, x, combinedVizRanges);
+        const result = await executeCombinedClickHandler(elemId, y, x);
         if (!result) return;
         if (result.interactiveTimeline.length > 0) {
           onCombinedTrace?.(result);
@@ -95,7 +95,7 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
 
     const handleElementInput = useCallback(async (elemId: number, text: string) => {
       if (!combinedVizRanges) return;
-      const result = await executeCombinedInputChanged(elemId, text, combinedVizRanges);
+      const result = await executeCombinedInputChanged(elemId, text);
       if (!result) return;
       if (result.interactiveTimeline.length > 0) {
         onCombinedTrace?.(result);

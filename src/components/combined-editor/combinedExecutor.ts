@@ -4,7 +4,7 @@ import type { VisualBuilderElementBase } from '../../api/visualBuilder';
 import VB_ENGINE_PYTHON from './_vb_engine.py?raw';
 import USER_API_PYTHON from './user_api.py?raw';
 import VISUAL_BUILDER_PYTHON from './vb_serializer.py?raw';
-import { validateVizBlocks, type VizRange } from './vizBlockParser';
+import { validateVizBlocks, getVizRanges } from './vizBlockParser';
 import { setHandlers } from '../../visual-panel/handlersState';
 import { appendClickOutput } from '../../output-terminal/terminalState';
 
@@ -101,9 +101,14 @@ export async function executeCombinedCode(code: string): Promise<CombinedResult>
     const preprocessed = preprocess(code);
     const escaped = escapeTripleQuote(preprocessed);
 
+    // Compute viz ranges from original code and send to Python so click/input
+    // handlers can read them without the TS side re-sending on every event.
+    const vizRangesJson = JSON.stringify(getVizRanges(code));
+    await py.runPythonAsync(`_viz_ranges_json = '${escapeTripleQuote(vizRangesJson)}'`);
+
     // _exec_combined_code builds its own namespace from user_api (Panel, Rect, V, …)
     // and installs the V()-change-detection tracer around exec.
-    await py.runPythonAsync(`_exec_combined_code('''${escaped}''')`);
+    await py.runPythonAsync(`_exec_combined_code('''${escaped}''', _viz_ranges_json)`);
 
     const timelineJson: string = await py.runPythonAsync(`_json.dumps(_combined_timeline)`);
     const rawTimeline = JSON.parse(timelineJson) as Array<{
@@ -149,15 +154,12 @@ export async function executeCombinedCode(code: string): Promise<CombinedResult>
 export async function executeCombinedInputChanged(
   elemId: number,
   text: string,
-  vizRanges: VizRange[],
 ): Promise<CombinedClickResult | null> {
   try {
     const py = await loadPyodide();
-    const vizRangesJson = JSON.stringify(vizRanges);
-    await py.runPythonAsync(`_viz_ranges_json = '${escapeTripleQuote(vizRangesJson)}'`);
     await py.runPythonAsync(`_input_text = ${JSON.stringify(text)}`);
     const resultJson: string = await py.runPythonAsync(
-      `_exec_combined_input_changed(${elemId}, _input_text, _viz_ranges_json)`
+      `_exec_combined_input_changed(${elemId}, _input_text)`
     );
     const result = JSON.parse(resultJson) as {
       interactive_timeline: CombinedStep[];
@@ -188,22 +190,16 @@ export async function executeCombinedInputChanged(
  * Algorithm functions called from the handler (defined outside viz blocks) are
  * automatically traced and returned as interactiveTimeline steps.
  * Use no_debug(fn)(...) in the handler to suppress tracing for specific calls.
- *
- * vizRanges must be the viz block ranges for the current code (from getVizRanges).
  */
 export async function executeCombinedClickHandler(
   elemId: number,
   row: number,
   col: number,
-  vizRanges: VizRange[],
 ): Promise<CombinedClickResult | null> {
   try {
     const py = await loadPyodide();
-    const vizRangesJson = JSON.stringify(vizRanges);
-    // Use a Python variable to avoid quoting issues with JSON in string interpolation
-    await py.runPythonAsync(`_viz_ranges_json = '${escapeTripleQuote(vizRangesJson)}'`);
     const resultJson: string = await py.runPythonAsync(
-      `_exec_combined_click_traced(${elemId}, ${row}, ${col}, _viz_ranges_json)`
+      `_exec_combined_click_traced(${elemId}, ${row}, ${col})`
     );
     const result = JSON.parse(resultJson) as {
       interactive_timeline: CombinedStep[];

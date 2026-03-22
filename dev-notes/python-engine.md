@@ -190,16 +190,18 @@ Same as before: `R` stores the `id` of the original Python object and resolves t
 
 ### Interactive Tracing
 
-When an element is clicked, `_exec_combined_click_traced(elem_id, row, col, viz_ranges_json)` runs:
+When an element is clicked, `_exec_combined_click_traced(elem_id, row, col)` runs:
 
 1. Finds the element by `_elem_id` in `_combined_ns` namespace (not re-exec'd)
-2. Sets up `_make_interactive_tracer(viz_ranges)`:
+2. Sets up `_make_interactive_tracer(_viz_ranges)`:
    - Same V() change-detection logic as the initial trace
    - **Per-frame skipping**: if a function's `co_firstlineno` falls inside a viz block range, returns `None` on the `'call'` event — skipping local tracing for that frame only. Algorithm functions called from within that frame still get traced (their `co_firstlineno` is outside viz ranges).
 3. Calls `target.on_click(row, col)` with the tracer active
 4. Returns `{ interactive_timeline, final_snapshot, handlers, output }`
 
-Input changes use `_exec_combined_input_changed(elem_id, text, viz_ranges_json)` — same pattern, calls `target.input_changed(text)`.
+Input changes use `_exec_combined_input_changed(elem_id, text)` — same pattern, calls `target.input_changed(text)`.
+
+`_viz_ranges` is a module-level Python list set by `_exec_combined_code` at execution time (sourced from `getVizRanges` on the TS side). Click and input handlers read it directly — viz ranges don't change between execution and interaction.
 
 ---
 
@@ -209,9 +211,9 @@ All calls go through `src/components/combined-editor/combinedExecutor.ts`.
 
 | TypeScript function | Python call | Returns |
 |--------------------|-------------|---------|
-| `executeCombinedCode(code)` | `_exec_combined_code(preprocessedCode)` | `CombinedResult: { timeline, handlers, error? }` |
-| `executeCombinedClickHandler(elemId, row, col, vizRanges)` | `_exec_combined_click_traced(...)` | `CombinedClickResult: { interactiveTimeline, finalSnapshot }` |
-| `executeCombinedInputChanged(elemId, text, vizRanges)` | `_exec_combined_input_changed(...)` | `CombinedClickResult: { interactiveTimeline, finalSnapshot }` |
+| `executeCombinedCode(code)` | `_exec_combined_code(preprocessedCode, vizRangesJson)` | `CombinedResult: { timeline, handlers, error? }` |
+| `executeCombinedClickHandler(elemId, row, col)` | `_exec_combined_click_traced(...)` | `CombinedClickResult: { interactiveTimeline, finalSnapshot }` |
+| `executeCombinedInputChanged(elemId, text)` | `_exec_combined_input_changed(...)` | `CombinedClickResult: { interactiveTimeline, finalSnapshot }` |
 
 Pyodide initialization (`loadPyodide()`) still lives in `src/python-engine/code-builder/services/pythonExecutor.ts` — loaded once per session. `combinedExecutor.ts` calls it before any Python execution.
 
