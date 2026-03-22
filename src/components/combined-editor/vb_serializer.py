@@ -58,31 +58,46 @@ def _make_v_aware_tracer(viz_ranges):
 # ── Persistent namespace for interactive mode ─────────────────────────────────
 
 _combined_ns: dict = {}
-_viz_ranges: list = []  # set by _exec_combined_code, read by click/input handlers
+_viz_ranges: list = []  # set by _init_combined_namespace, read by exec/click/input handlers
 
 
-def _exec_combined_code(code: str, viz_ranges_json: str):
-    """Execute combined user code with V() change detection and viz-block snapshot hooks."""
+def _init_combined_namespace(viz_ranges_json: str):
+    """Initialize namespace and viz ranges for a new combined-code run.
+
+    Resets all timeline state, parses viz block ranges, and seeds the execution
+    namespace from user_api. Must be called before _exec_combined_code.
+    """
     global _combined_ns, _viz_ranges
-    import sys as _sys, io as _io
+    global _combined_timeline, _last_v_values, _last_stdout_pos, _last_traced_line
+    _combined_timeline = []
+    _last_v_values = {}
+    _last_stdout_pos = 0
+    _last_traced_line = None
     _viz_ranges = [(r['startLine'], r['endLine']) for r in _json.loads(viz_ranges_json)]
-    ns = {k: v for k, v in vars(_user_api).items() if not k.startswith('_')}
-    ns['__builtins__'] = __builtins__
-    ns['__viz_begin__'] = lambda: None  # no-op: tracer uses in_viz() to skip viz block lines
-    ns['__viz_end__'] = __viz_end__
+    _combined_ns = {k: v for k, v in vars(_user_api).items() if not k.startswith('_')}
+    _combined_ns['__builtins__'] = __builtins__
+    _combined_ns['__viz_begin__'] = lambda: None  # no-op: tracer uses in_viz() to skip viz block lines
+    _combined_ns['__viz_end__'] = __viz_end__
+
+
+def _exec_combined_code(code: str):
+    """Execute combined user code with V() change detection and viz-block snapshot hooks.
+
+    Requires _init_combined_namespace to have been called first.
+    """
+    import sys as _sys, io as _io
     _old_stdout = _sys.stdout
     _sys.stdout = _io.StringIO()
     try:
         _sys.settrace(_make_v_aware_tracer(_viz_ranges))
         try:
-            exec(compile(code, '<combined_code>', 'exec'), ns)
+            exec(compile(code, '<combined_code>', 'exec'), _combined_ns)
         finally:
             _sys.settrace(None)
-            _combined_ns = ns  # persist for interactive click handlers
         # Post-exec flush: the last assignment/print runs after the last 'line' event fires,
         # so it's never observed by the tracer. Take one final snapshot if V() values changed
         # or there is remaining stdout output.
-        final_scope = {k: v for k, v in ns.items() if not k.startswith('_')}
+        final_scope = {k: v for k, v in _combined_ns.items() if not k.startswith('_')}
         _engine.V.params = final_scope
         current = _collect_v_values()
         remaining = _sys.stdout.getvalue()[_last_stdout_pos:]
@@ -133,14 +148,6 @@ _combined_timeline = []
 _last_stdout_pos: int = 0
 _last_traced_line: int = None
 
-
-def _reset_combined_timeline():
-    global _combined_timeline, _last_v_values, _combined_ns, _last_stdout_pos, _last_traced_line
-    _combined_timeline = []
-    _last_v_values = {}
-    _combined_ns = {}
-    _last_stdout_pos = 0
-    _last_traced_line = None
 
 
 def __record_snapshot__(frame_or_scope, line=None, is_viz=False):

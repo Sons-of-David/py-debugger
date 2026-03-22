@@ -62,7 +62,7 @@ function escapeTripleQuote(s: string): string {
   return s.replace(/'''/g, "\\'\\'\\'");
 }
 
-async function initializePythonEngine(): ReturnType<typeof loadPyodide> {
+async function initializePythonEngine(code: string): ReturnType<typeof loadPyodide> {
     const py = await loadPyodide();
 
     // Write engine modules to Pyodide VFS so visualBuilder.py can import them
@@ -79,11 +79,10 @@ for _m in ('user_api', '_vb_engine'):
     // Load visual builder classes and serialization helpers
     await py.runPythonAsync(VISUAL_BUILDER_PYTHON);
 
-    // Reset element registry
+    // Reset element registry, then init namespace + timeline state with viz ranges
+    const vizRangesJson = JSON.stringify(getVizRanges(code));
     await py.runPythonAsync('_engine.VisualElem._clear_registry()');
-
-    // Reset combined timeline and V() tracer state
-    await py.runPythonAsync('_reset_combined_timeline()');
+    await py.runPythonAsync(`_init_combined_namespace('${escapeTripleQuote(vizRangesJson)}')`);
 
     return py;
 }
@@ -95,20 +94,13 @@ for _m in ('user_api', '_vb_engine'):
  */
 export async function executeCombinedCode(code: string): Promise<CombinedResult> {
   try {
-    const py = await initializePythonEngine();
+    const py = await initializePythonEngine(code);
 
     // Preprocess user code (replaces # @viz / # @end with tracer hook calls)
     const preprocessed = preprocess(code);
     const escaped = escapeTripleQuote(preprocessed);
 
-    // Compute viz ranges from original code and send to Python so click/input
-    // handlers can read them without the TS side re-sending on every event.
-    const vizRangesJson = JSON.stringify(getVizRanges(code));
-    await py.runPythonAsync(`_viz_ranges_json = '${escapeTripleQuote(vizRangesJson)}'`);
-
-    // _exec_combined_code builds its own namespace from user_api (Panel, Rect, V, …)
-    // and installs the V()-change-detection tracer around exec.
-    await py.runPythonAsync(`_exec_combined_code('''${escaped}''', _viz_ranges_json)`);
+    await py.runPythonAsync(`_exec_combined_code('''${escaped}''')`);
 
     const timelineJson: string = await py.runPythonAsync(`_json.dumps(_combined_timeline)`);
     const rawTimeline = JSON.parse(timelineJson) as Array<{
