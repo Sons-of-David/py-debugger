@@ -100,9 +100,7 @@ export async function executeCombinedCode(code: string): Promise<CombinedResult>
     const preprocessed = preprocess(code);
     const escaped = escapeTripleQuote(preprocessed);
 
-    await py.runPythonAsync(`_exec_combined_code('''${escaped}''')`);
-
-    const timelineJson: string = await py.runPythonAsync(`_json.dumps(_combined_timeline)`);
+    const timelineJson: string = await py.runPythonAsync(`_exec_combined_code('''${escaped}''')`);
     const rawTimeline = JSON.parse(timelineJson) as Array<{
       visual: VisualBuilderElementBase[];
       variables: Record<string, CombinedVariable>;

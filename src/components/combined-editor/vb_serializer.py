@@ -112,6 +112,7 @@ def _exec_combined_code(code: str):
             __record_snapshot__(final_scope, _last_traced_line)
     finally:
         _sys.stdout = _old_stdout
+    return _json.dumps(_combined_timeline)
 
 
 # Sandbox namespace for user builder code. Populated by _exec_builder_code,
