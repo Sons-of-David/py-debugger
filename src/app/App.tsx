@@ -269,16 +269,9 @@ function App() {
   }, []);
 
   const handleCombinedTrace = useCallback((result: CombinedClickResult) => {
-    // A click handler traced into algorithm code — load the mini-timeline and enter stepping mode.
-    // Append final snapshot as last step so goToStep(getMaxTime()) in handleBackToInteractive
-    // restores the correct post-click visual state.
-    const allSteps = [
-      ...result.interactiveTimeline,
-      { visual: result.finalSnapshot, variables: {}, line: undefined },
-    ];
-    hydrateTimelineFromArray(allSteps.map(s => s.visual));
-    setInteractiveLineNumbers(allSteps.map(s => s.line));
-    setStepCount(allSteps.length);
+    hydrateTimelineFromArray(result.interactiveTimeline.map(s => s.visual));
+    setInteractiveLineNumbers(result.interactiveTimeline.map(s => s.line));
+    setStepCount(result.interactiveTimeline.length);
     goToStep(0);
     setAppMode('debug_in_event');
   }, [goToStep]);

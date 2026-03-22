@@ -142,7 +142,7 @@ def _exec_traced(execute_fn):
 
     Runs execute_fn under the combined tracer, then checks whether the last line produced
     any V() changes or stdout output the tracer couldn't see, and appends a final snapshot
-    if so. Returns (steps, capture) where capture is the StringIO with full stdout.
+    if so. Returns steps (list of snapshot dicts).
     """
     import sys as _sys, io as _io
     last_stdout_pos = [0]
@@ -183,7 +183,7 @@ def _exec_traced(execute_fn):
             snap(final_scope, last_line[0])
     finally:
         _sys.stdout = old_stdout
-    return steps, capture
+    return steps
 
 
 def _exec_combined_code(code: str) -> str:
@@ -192,7 +192,7 @@ def _exec_combined_code(code: str) -> str:
     Requires _init_combined_namespace to have been called first.
     Returns the timeline as a JSON string.
     """
-    steps, _ = _exec_traced(lambda: exec(compile(code, '<combined_code>', 'exec'), _combined_ns))
+    steps = _exec_traced(lambda: exec(compile(code, '<combined_code>', 'exec'), _combined_ns))
     return _json.dumps(steps)
 
 
@@ -221,25 +221,11 @@ def _find_element(elem_id: int):
     return None
 
 
-def _exec_handler_traced(fn):
-    """Trace a single handler call with V()-change detection and viz-block snapshots.
-
-    Returns (steps, output) where steps is a list of snapshot dicts.
-    """
-    steps, capture = _exec_traced(fn)
-    # Refresh V.params from saved namespace so V() expressions re-evaluate correctly
-    _engine.V.params = {k: v for k, v in _combined_ns.items()
-                        if not k.startswith('_') and k != '__builtins__'}
-    return steps, capture.getvalue()
-
-
-def _handler_result(steps, output):
+def _handler_result(steps):
     """Assemble the JSON result returned by click/input handler dispatchers."""
     return _json.dumps({
         'interactive_timeline': steps,
-        'final_snapshot': _json.loads(_serialize_visual_builder()),
         'handlers': _json.loads(_serialize_combined_handlers()),
-        'output': output,
     })
 
 
@@ -248,13 +234,13 @@ def _exec_combined_click_traced(elem_id: int, row: int, col: int) -> str:
     target = _find_element(elem_id)
     if target is None:
         return _json.dumps({'error': f'Element {elem_id} not found',
-                            'interactive_timeline': [], 'final_snapshot': [], 'handlers': {}, 'output': ''})
+                            'interactive_timeline': [], 'final_snapshot': [], 'handlers': {}})
     handler = getattr(target, 'on_click', None)
     if not callable(handler):
         return _json.dumps({'error': f'Element {elem_id} has no on_click',
-                            'interactive_timeline': [], 'final_snapshot': [], 'handlers': {}, 'output': ''})
-    steps, output = _exec_handler_traced(lambda: handler(col, row))
-    return _handler_result(steps, output)
+                            'interactive_timeline': [], 'final_snapshot': [], 'handlers': {}})
+    steps = _exec_traced(lambda: handler(col, row))
+    return _handler_result(steps)
 
 
 def _exec_combined_input_changed(elem_id: int, text: str) -> str:
@@ -262,9 +248,9 @@ def _exec_combined_input_changed(elem_id: int, text: str) -> str:
     target = _find_element(elem_id)
     if target is None:
         return _json.dumps({'error': f'Element {elem_id} not found',
-                            'interactive_timeline': [], 'final_snapshot': [], 'handlers': {}, 'output': ''})
+                            'interactive_timeline': [], 'final_snapshot': [], 'handlers': {}})
     if not isinstance(target, _user_api.Input):
         return _json.dumps({'error': f'Element {elem_id} is not an Input',
-                            'interactive_timeline': [], 'final_snapshot': [], 'handlers': {}, 'output': ''})
-    steps, output = _exec_handler_traced(lambda: target.input_changed(text))
-    return _handler_result(steps, output)
+                            'interactive_timeline': [], 'final_snapshot': [], 'handlers': {}})
+    steps = _exec_traced(lambda: target.input_changed(text))
+    return _handler_result(steps)

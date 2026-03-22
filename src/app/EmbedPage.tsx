@@ -178,12 +178,8 @@ export function EmbedPage() {
   }, [goToStep]);
 
   const handleCombinedTrace = useCallback((result: CombinedClickResult) => {
-    const allSteps = [
-      ...result.interactiveTimeline,
-      { visual: result.finalSnapshot, variables: {}, line: undefined },
-    ];
-    hydrateTimelineFromArray(allSteps.map((s) => s.visual));
-    setStepCount(allSteps.length);
+    hydrateTimelineFromArray(result.interactiveTimeline.map((s) => s.visual));
+    setStepCount(result.interactiveTimeline.length);
     goToStep(0);
     setAppMode('debug_in_event');
   }, [goToStep]);

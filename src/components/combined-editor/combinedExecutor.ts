@@ -6,7 +6,6 @@ import USER_API_PYTHON from './user_api.py?raw';
 import VISUAL_BUILDER_PYTHON from './vb_serializer.py?raw';
 import { validateVizBlocks, getVizRanges } from './vizBlockParser';
 import { setHandlers } from '../../visual-panel/handlersState';
-import { appendClickOutput } from '../../output-terminal/terminalState';
 
 export interface CombinedVariable {
   type: string;
@@ -30,7 +29,6 @@ export interface CombinedResult {
 
 export interface CombinedClickResult {
   interactiveTimeline: CombinedStep[];
-  finalSnapshot: VisualBuilderElementBase[];
 }
 
 /**
@@ -153,9 +151,7 @@ export async function executeCombinedInputChanged(
     );
     const result = JSON.parse(resultJson) as {
       interactive_timeline: Array<Omit<CombinedStep, 'isViz'> & { is_viz?: boolean }>;
-      final_snapshot: VisualBuilderElementBase[];
       handlers: Record<string, string[]>;
-      output: string;
       error?: string;
     };
     if (result.error) {
@@ -163,10 +159,8 @@ export async function executeCombinedInputChanged(
       return null;
     }
     setHandlers(result.handlers ?? {});
-    if (result.output) appendClickOutput(result.output);
     return {
       interactiveTimeline: result.interactive_timeline.map(s => ({ ...s, isViz: s.is_viz })),
-      finalSnapshot: result.final_snapshot,
     };
   } catch (error) {
     console.error('executeCombinedInputChanged error:', error);
@@ -193,9 +187,7 @@ export async function executeCombinedClickHandler(
     );
     const result = JSON.parse(resultJson) as {
       interactive_timeline: Array<Omit<CombinedStep, 'isViz'> & { is_viz?: boolean }>;
-      final_snapshot: VisualBuilderElementBase[];
       handlers: Record<string, string[]>;
-      output: string;
       error?: string;
     };
     if (result.error) {
@@ -203,10 +195,8 @@ export async function executeCombinedClickHandler(
       return null;
     }
     setHandlers(result.handlers ?? {});
-    if (result.output) appendClickOutput(result.output);
     return {
       interactiveTimeline: result.interactive_timeline.map(s => ({ ...s, isViz: s.is_viz })),
-      finalSnapshot: result.final_snapshot,
     };
   } catch (error) {
     console.error('executeCombinedClickHandler error:', error);
