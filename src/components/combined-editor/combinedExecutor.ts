@@ -28,7 +28,7 @@ export interface CombinedResult {
 }
 
 export interface CombinedClickResult {
-  interactiveTimeline: CombinedStep[];
+  timeline: CombinedStep[];
 }
 
 /**
@@ -150,7 +150,7 @@ export async function executeCombinedInputChanged(
       `_exec_combined_input_changed(${elemId}, _input_text)`
     );
     const result = JSON.parse(resultJson) as {
-      interactive_timeline: Array<Omit<CombinedStep, 'isViz'> & { is_viz?: boolean }>;
+      timeline: Array<Omit<CombinedStep, 'isViz'> & { is_viz?: boolean }>;
       handlers: Record<string, string[]>;
       error?: string;
     };
@@ -160,7 +160,7 @@ export async function executeCombinedInputChanged(
     }
     setHandlers(result.handlers ?? {});
     return {
-      interactiveTimeline: result.interactive_timeline.map(s => ({ ...s, isViz: s.is_viz })),
+      timeline: result.timeline.map(s => ({ ...s, isViz: s.is_viz })),
     };
   } catch (error) {
     console.error('executeCombinedInputChanged error:', error);
@@ -172,7 +172,7 @@ export async function executeCombinedInputChanged(
  * Dispatch an on_click event to a combined-editor element with viz-aware tracing.
  *
  * Algorithm functions called from the handler (defined outside viz blocks) are
- * automatically traced and returned as interactiveTimeline steps.
+ * automatically traced and returned as timeline steps.
  * Use no_debug(fn)(...) in the handler to suppress tracing for specific calls.
  */
 export async function executeCombinedClickHandler(
@@ -186,7 +186,7 @@ export async function executeCombinedClickHandler(
       `_exec_combined_click_traced(${elemId}, ${row}, ${col})`
     );
     const result = JSON.parse(resultJson) as {
-      interactive_timeline: Array<Omit<CombinedStep, 'isViz'> & { is_viz?: boolean }>;
+      timeline: Array<Omit<CombinedStep, 'isViz'> & { is_viz?: boolean }>;
       handlers: Record<string, string[]>;
       error?: string;
     };
@@ -196,7 +196,7 @@ export async function executeCombinedClickHandler(
     }
     setHandlers(result.handlers ?? {});
     return {
-      interactiveTimeline: result.interactive_timeline.map(s => ({ ...s, isViz: s.is_viz })),
+      timeline: result.timeline.map(s => ({ ...s, isViz: s.is_viz })),
     };
   } catch (error) {
     console.error('executeCombinedClickHandler error:', error);

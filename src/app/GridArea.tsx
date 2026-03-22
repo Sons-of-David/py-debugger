@@ -84,25 +84,21 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
       if (combinedVizRanges) {
         const result = await executeCombinedClickHandler(elemId, y, x);
         if (!result) return;
-        if (result.interactiveTimeline.length > 0) {
+        if (result.timeline.length > 0) {
           onCombinedTrace?.(result);
-        } else {
-          loadVisualBuilderObjects(result.finalSnapshot.map((el) => hydrateElement(el)));
         }
         return;
       }
-    }, [combinedVizRanges, loadVisualBuilderObjects, onCombinedTrace]);
+    }, [combinedVizRanges, onCombinedTrace]);
 
     const handleElementInput = useCallback(async (elemId: number, text: string) => {
       if (!combinedVizRanges) return;
       const result = await executeCombinedInputChanged(elemId, text);
       if (!result) return;
-      if (result.interactiveTimeline.length > 0) {
+      if (result.timeline.length > 0) {
         onCombinedTrace?.(result);
-      } else {
-        loadVisualBuilderObjects(result.finalSnapshot.map((el) => hydrateElement(el)));
       }
-    }, [combinedVizRanges, loadVisualBuilderObjects, onCombinedTrace]);
+    }, [combinedVizRanges, onCombinedTrace]);
 
     const applyEventResult = useCallback((result: ClickHandlerResult) => {
       if (!result || result.error) {

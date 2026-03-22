@@ -193,10 +193,7 @@ def _exec_combined_code(code: str) -> str:
     Returns timeline + handlers as a JSON string.
     """
     steps = _exec_traced(lambda: exec(compile(code, '<combined_code>', 'exec'), _combined_ns))
-    return _json.dumps({
-        'timeline': steps,
-        'handlers': _json.loads(_serialize_combined_handlers()),
-    })
+    return _handler_result(steps)
 
 
 # ── Interactive mode ──────────────────────────────────────────────────────────
@@ -227,33 +224,33 @@ def _find_element(elem_id: int):
 def _handler_result(steps):
     """Assemble the JSON result returned by click/input handler dispatchers."""
     return _json.dumps({
-        'interactive_timeline': steps,
+        'timeline': steps,
         'handlers': _json.loads(_serialize_combined_handlers()),
     })
 
 
 def _exec_combined_click_traced(elem_id: int, row: int, col: int) -> str:
-    """Call on_click on element with viz-aware tracing; return interactive_timeline + final snapshot."""
+    """Call on_click on element with viz-aware tracing; return timeline + handlers."""
     target = _find_element(elem_id)
     if target is None:
         return _json.dumps({'error': f'Element {elem_id} not found',
-                            'interactive_timeline': [], 'final_snapshot': [], 'handlers': {}})
+                            'timeline': [], 'handlers': {}})
     handler = getattr(target, 'on_click', None)
     if not callable(handler):
         return _json.dumps({'error': f'Element {elem_id} has no on_click',
-                            'interactive_timeline': [], 'final_snapshot': [], 'handlers': {}})
+                            'timeline': [], 'handlers': {}})
     steps = _exec_traced(lambda: handler(col, row))
     return _handler_result(steps)
 
 
 def _exec_combined_input_changed(elem_id: int, text: str) -> str:
-    """Call input_changed(text) on element with viz-aware tracing; return interactive_timeline + final snapshot."""
+    """Call input_changed(text) on element with viz-aware tracing; return timeline + handlers."""
     target = _find_element(elem_id)
     if target is None:
         return _json.dumps({'error': f'Element {elem_id} not found',
-                            'interactive_timeline': [], 'final_snapshot': [], 'handlers': {}})
+                            'timeline': [], 'handlers': {}})
     if not isinstance(target, _user_api.Input):
         return _json.dumps({'error': f'Element {elem_id} is not an Input',
-                            'interactive_timeline': [], 'final_snapshot': [], 'handlers': {}})
+                            'timeline': [], 'handlers': {}})
     steps = _exec_traced(lambda: target.input_changed(text))
     return _handler_result(steps)

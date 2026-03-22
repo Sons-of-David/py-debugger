@@ -269,9 +269,9 @@ function App() {
   }, []);
 
   const handleCombinedTrace = useCallback((result: CombinedClickResult) => {
-    hydrateTimelineFromArray(result.interactiveTimeline.map(s => s.visual));
-    setInteractiveLineNumbers(result.interactiveTimeline.map(s => s.line));
-    setStepCount(result.interactiveTimeline.length);
+    hydrateTimelineFromArray(result.timeline.map(s => s.visual));
+    setInteractiveLineNumbers(result.timeline.map(s => s.line));
+    setStepCount(result.timeline.length);
     goToStep(0);
     setAppMode('debug_in_event');
   }, [goToStep]);
