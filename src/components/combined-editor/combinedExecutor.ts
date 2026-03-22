@@ -50,8 +50,8 @@ function preprocess(code: string): string {
 }
 
 function escapeTripleQuote(s: string): string {
-  // Escape ''' so the string can be safely embedded in Python '''...'''
-  return s.replace(/'''/g, "\\'\\'\\'");
+  // Escape backslashes first, then ''' so the string can be safely embedded in Python '''...'''
+  return s.replace(/\\/g, '\\\\').replace(/'''/g, "\\'\\'\\'");
 }
 
 function cleanPythonError(rawError: string): string {
