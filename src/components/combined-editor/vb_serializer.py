@@ -1,20 +1,58 @@
 import _vb_engine as _engine
 import user_api as _user_api
+import json as _json
+
+
+# ── Snapshot helpers ──────────────────────────────────────────────────────────
 
 
 def _serialize_visual_builder():
     """Walk VisualElem._registry and return list of serialized elements."""
-    import json
-    return json.dumps([elem._serialize() for elem in _engine.VisualElem._registry])
+    return _json.dumps([elem._serialize() for elem in _engine.VisualElem._registry])
 
 
-# ── V() change detection ──────────────────────────────────────────────────────
+def _build_scope(frame):
+    """Merge all variables visible at frame: globals → enclosing frames → current frame.
+
+    Inner scope overrides outer. Skips private names (starting with '_').
+    Used for both V.params (V() expression evaluation) and variable display.
+    """
+    merged = {}
+    for k, v in frame.f_globals.items():
+        if not k.startswith('_'):
+            merged[k] = v
+    chain = []
+    f = frame
+    while f is not None:
+        if f.f_code.co_filename == '<combined_code>':
+            chain.append(f)
+        f = f.f_back
+    chain.reverse()  # outermost first so inner scope wins
+    for f in chain:
+        for k, v in f.f_locals.items():
+            if not k.startswith('_'):
+                merged[k] = v
+    return merged
 
 
-def __viz_end__(_):
-    pass  # no-op marker; _make_tracer intercepts its 'call' event to fire on_snap(is_viz=True)
+def _collect_variables(frame_or_scope):
+    """Extract serializable variables from the full scope visible at frame.
 
-_VIZ_END_CODE = __viz_end__.__code__
+    frame_or_scope: a Python frame object, or a plain dict used as the scope directly.
+    """
+    scope = frame_or_scope if isinstance(frame_or_scope, dict) else _build_scope(frame_or_scope)
+    variables = {}
+    for k, v in scope.items():
+        if isinstance(v, (int, float, str, bool)):
+            variables[k] = {'type': type(v).__name__, 'value': v}
+        elif isinstance(v, (list, tuple)):
+            if len(v) == 0:
+                variables[k] = {'type': 'list', 'value': []}
+            elif isinstance(v[0], (list, tuple)):
+                variables[k] = {'type': 'list2d', 'value': [list(row) for row in v]}
+            else:
+                variables[k] = {'type': 'list', 'value': list(v)}
+    return variables
 
 
 def _collect_v_values():
@@ -25,6 +63,15 @@ def _collect_v_values():
             if isinstance(raw_val, _engine.V):
                 result[f"{elem._elem_id}.{attr}"] = raw_val.eval()
     return result
+
+
+# ── Tracer ────────────────────────────────────────────────────────────────────
+
+
+def __viz_end__(_):
+    pass  # no-op marker; _make_tracer intercepts its 'call' event to fire on_snap(is_viz=True)
+
+_VIZ_END_CODE = __viz_end__.__code__
 
 
 def _make_tracer(viz_ranges, on_snap):
@@ -66,7 +113,8 @@ def _make_tracer(viz_ranges, on_snap):
     return _trace, last_line
 
 
-# ── Persistent namespace for interactive mode ─────────────────────────────────
+# ── Persistent namespace ──────────────────────────────────────────────────────
+
 
 _combined_ns: dict = {}
 _viz_ranges: list = []  # set by _init_combined_namespace, read by exec/click/input handlers
@@ -84,6 +132,9 @@ def _init_combined_namespace(viz_ranges_json: str):
     _combined_ns['__builtins__'] = __builtins__
     _combined_ns['__viz_begin__'] = lambda: None  # no-op: tracer uses in_viz() to skip viz block lines
     _combined_ns['__viz_end__'] = __viz_end__  # tracer intercepts its call event
+
+
+# ── Timeline execution ────────────────────────────────────────────────────────
 
 
 def _exec_traced(execute_fn):
@@ -145,54 +196,8 @@ def _exec_combined_code(code: str) -> str:
     return _json.dumps(steps)
 
 
-import json as _json
+# ── Interactive mode ──────────────────────────────────────────────────────────
 
-
-def _build_scope(frame):
-    """Merge all variables visible at frame: globals → enclosing frames → current frame.
-
-    Inner scope overrides outer. Skips private names (starting with '_').
-    Used for both V.params (V() expression evaluation) and variable display.
-    """
-    merged = {}
-    for k, v in frame.f_globals.items():
-        if not k.startswith('_'):
-            merged[k] = v
-    chain = []
-    f = frame
-    while f is not None:
-        if f.f_code.co_filename == '<combined_code>':
-            chain.append(f)
-        f = f.f_back
-    chain.reverse()  # outermost first so inner scope wins
-    for f in chain:
-        for k, v in f.f_locals.items():
-            if not k.startswith('_'):
-                merged[k] = v
-    return merged
-
-
-def _collect_variables(frame_or_scope):
-    """Extract serializable variables from the full scope visible at frame.
-
-    frame_or_scope: a Python frame object, or a plain dict used as the scope directly.
-    """
-    scope = frame_or_scope if isinstance(frame_or_scope, dict) else _build_scope(frame_or_scope)
-    variables = {}
-    for k, v in scope.items():
-        if isinstance(v, (int, float, str, bool)):
-            variables[k] = {'type': type(v).__name__, 'value': v}
-        elif isinstance(v, (list, tuple)):
-            if len(v) == 0:
-                variables[k] = {'type': 'list', 'value': []}
-            elif isinstance(v[0], (list, tuple)):
-                variables[k] = {'type': 'list2d', 'value': [list(row) for row in v]}
-            else:
-                variables[k] = {'type': 'list', 'value': list(v)}
-    return variables
-
-
-# ── Interactive mode: handler detection and traced click dispatch ──────────────
 
 def _serialize_combined_handlers() -> str:
     """Return JSON dict of {elem_id: ["on_click"]} for elements with on_click set."""
