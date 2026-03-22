@@ -190,10 +190,13 @@ def _exec_combined_code(code: str) -> str:
     """Execute combined user code with V() change detection and viz-block snapshot hooks.
 
     Requires _init_combined_namespace to have been called first.
-    Returns the timeline as a JSON string.
+    Returns timeline + handlers as a JSON string.
     """
     steps = _exec_traced(lambda: exec(compile(code, '<combined_code>', 'exec'), _combined_ns))
-    return _json.dumps(steps)
+    return _json.dumps({
+        'timeline': steps,
+        'handlers': _json.loads(_serialize_combined_handlers()),
+    })
 
 
 # ── Interactive mode ──────────────────────────────────────────────────────────

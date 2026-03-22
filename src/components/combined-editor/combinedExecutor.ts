@@ -98,15 +98,18 @@ export async function executeCombinedCode(code: string): Promise<CombinedResult>
     const preprocessed = preprocess(code);
     const escaped = escapeTripleQuote(preprocessed);
 
-    const timelineJson: string = await py.runPythonAsync(`_exec_combined_code('''${escaped}''')`);
-    const rawTimeline = JSON.parse(timelineJson) as Array<{
-      visual: VisualBuilderElementBase[];
-      variables: Record<string, CombinedVariable>;
-      line?: number;
-      output?: string;
-      is_viz?: boolean;
-    }>;
-    const timeline: CombinedStep[] = rawTimeline.map(s => ({
+    const resultJson: string = await py.runPythonAsync(`_exec_combined_code('''${escaped}''')`);
+    const result = JSON.parse(resultJson) as {
+      timeline: Array<{
+        visual: VisualBuilderElementBase[];
+        variables: Record<string, CombinedVariable>;
+        line?: number;
+        output?: string;
+        is_viz?: boolean;
+      }>;
+      handlers: Record<string, string[]>;
+    };
+    const timeline: CombinedStep[] = result.timeline.map(s => ({
       visual: s.visual,
       variables: s.variables,
       line: s.line,
@@ -114,10 +117,7 @@ export async function executeCombinedCode(code: string): Promise<CombinedResult>
       isViz: s.is_viz,
     }));
 
-    const handlersJson: string = await py.runPythonAsync('_serialize_combined_handlers()');
-    const handlers = JSON.parse(handlersJson) as Record<string, string[]>;
-
-    return { success: true, timeline, handlers };
+    return { success: true, timeline, handlers: result.handlers };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     let cleanError = errorMessage;
