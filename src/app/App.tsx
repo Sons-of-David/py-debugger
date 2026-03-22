@@ -523,6 +523,7 @@ function App() {
                 appMode={appMode}
                 onCreateGif={handleCreateGif}
                 isCreatingGif={isCreatingGif}
+                allowGif={IS_LOCAL}
               />
 
               {apiReferenceOpen && (

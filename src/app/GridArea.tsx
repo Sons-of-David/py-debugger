@@ -43,10 +43,11 @@ interface GridAreaProps {
   appMode?: 'idle' | 'trace' | 'interactive';
   onCreateGif?: (region: CaptureRegion | null) => void;
   isCreatingGif?: boolean;
+  allowGif?: boolean;
 }
 
 export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
-  function GridArea({ darkMode, mouseEnabled, textBoxes, onTextBoxesChange, combinedVizRanges, onCombinedTrace, appMode = 'idle', onCreateGif, isCreatingGif = false }, ref) {
+  function GridArea({ darkMode, mouseEnabled, textBoxes, onTextBoxesChange, combinedVizRanges, onCombinedTrace, appMode = 'idle', onCreateGif, isCreatingGif = false, allowGif = false }, ref) {
     const {
       cells,
       overlayCells,
@@ -250,7 +251,7 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
             >
               {isCapturing ? '⏳' : '📷'}
             </button>
-            {appMode === 'trace' && (
+            {appMode === 'trace' && allowGif && (
               <button
                 onClick={handleGifClick}
                 disabled={isCreatingGif}
