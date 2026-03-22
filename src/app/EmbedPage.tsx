@@ -28,7 +28,7 @@ const SAMPLES = Object.entries(SAMPLE_MODULES).map(([path, data]) => {
 // EmbedPage
 // ---------------------------------------------------------------------------
 
-type AppMode = 'idle' | 'trace' | 'interactive' | 'debug_in_event';
+type AppMode = 'idle' | 'trace' | 'interactive';
 
 export function EmbedPage() {
   const [searchParams] = useSearchParams();
@@ -172,16 +172,11 @@ export function EmbedPage() {
     setAppMode('interactive');
   }, [goToStep]);
 
-  const handleBackToInteractive = useCallback(() => {
-    goToStep(getMaxTime());
-    setAppMode('interactive');
-  }, [goToStep]);
-
   const handleCombinedTrace = useCallback((result: CombinedResult) => {
     hydrateTimelineFromArray(result.timeline.map((s) => s.visual));
     setStepCount(result.timeline.length);
     goToStep(0);
-    setAppMode('debug_in_event');
+    setAppMode('trace');
   }, [goToStep]);
 
   // ---------------------------------------------------------------------------
@@ -250,7 +245,6 @@ export function EmbedPage() {
           onGoToStep={goToStep}
           appMode={appMode}
           onEnterInteractive={handleEnterInteractive}
-          onBackToInteractive={handleBackToInteractive}
           hasInteractiveElements={hasInteractiveElements}
           isStaticSnapshot={stepCount === 1 && !hasInteractiveElements && appMode !== 'idle'}
         />

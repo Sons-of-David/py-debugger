@@ -14,7 +14,7 @@ type TerminalTab = 'builder' | 'debugger' | 'combined';
 
 interface OutputTerminalProps {
   currentStep: number;
-  appMode: 'idle' | 'trace' | 'interactive' | 'debug_in_event';
+  appMode: 'idle' | 'trace' | 'interactive';
   hideTabs?: boolean;
 }
 

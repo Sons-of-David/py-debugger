@@ -74,11 +74,10 @@ function App() {
   // Combined editor state
   const [combinedCode, setCombinedCode] = useState(COMBINED_SAMPLE);
   const [combinedTimeline, setCombinedTimeline] = useState<CombinedStep[]>([]);
-  const [interactiveLineNumbers, setInteractiveLineNumbers] = useState<(number | undefined)[]>([]);
   const [isCombinedEditable, setIsCombinedEditable] = useState(true);
   const [isAnalyzingCombined, setIsAnalyzingCombined] = useState(false);
 
-  type AppMode = 'idle' | 'trace' | 'interactive' | 'debug_in_event';
+  type AppMode = 'idle' | 'trace' | 'interactive';
   const [appMode, setAppMode] = useState<AppMode>('idle');
   const mouseEnabled = appMode === 'interactive';
 
@@ -203,19 +202,29 @@ function App() {
     setAppMode('idle');
   }, []);
 
-  const enterInteractive = useCallback((from: 'trace' | 'debug') => {
+  const handleEnterInteractive = useCallback(() => {
     goToStep(getMaxTime());
-    commitCurrentSegment(from === 'debug' ? '----- end debug call -----' : '----- end trace -----');
+    commitCurrentSegment('----- end trace -----');
     setAppMode('interactive');
   }, [goToStep]);
-
-  const handleEnterInteractive = useCallback(() => enterInteractive('trace'), [enterInteractive]);
-  const handleBackToInteractive = useCallback(() => enterInteractive('debug'), [enterInteractive]);
 
 
   // ---------------------------------------------------------------------------
   // Combined editor handlers
   // ---------------------------------------------------------------------------
+
+  const applyCombinedResult = useCallback((result: CombinedResult, mode: AppMode) => {
+    setCombinedTimeline(result.timeline);
+    hydrateTimelineFromArray(result.timeline.map(s => s.visual));
+    setCodeTimeline(result.timeline.map(s => ({ variables: s.variables, scope: [] })));
+    setHandlers(result.handlers ?? {});
+    setHasInteractiveElements(hasAnyClickHandler());
+    setStepCount(getMaxTime() + 1);
+    gridAreaRef.current?.loadVisualBuilderObjects(getStateAt(0) ?? []);
+    setCombinedEditorSteps(result.timeline.map(s => ({ text: s.output ?? '', isViz: s.isViz ?? false })));
+    goToStep(0);
+    setAppMode(mode);
+  }, [goToStep]);
 
   const handleAnalyzeCombined = useCallback(async () => {
     if (!combinedCode.trim()) return;
@@ -224,26 +233,12 @@ function App() {
     try {
       const result = await executeCombinedCode(combinedCode);
       if (!result.error) {
-        setCombinedTimeline(result.timeline);
-        hydrateTimelineFromArray(result.timeline.map(s => s.visual));
-        setCodeTimeline(result.timeline.map(s => ({ variables: s.variables, scope: [] })));
-        setHandlers(result.handlers ?? {});
-        const hasInteractive = hasAnyClickHandler();
-        setHasInteractiveElements(hasInteractive);
-        const isOneFrame = getMaxTime() === 0;
-        setStepCount(getMaxTime() + 1);
-        setCurrentStep(0);
-        gridAreaRef.current?.loadVisualBuilderObjects(getStateAt(0) ?? []);
-        setCombinedEditorSteps(
-          result.timeline.map(s => ({ text: s.output ?? '', isViz: s.isViz ?? false }))
-        );
+        const hasInteractive = Object.values(result.handlers ?? {}).some(h => h.includes('on_click'));
+        const isOneFrame = result.timeline.length <= 1;
+        const mode: AppMode = isOneFrame && hasInteractive ? 'interactive' : 'trace';
+        if (mode === 'interactive') commitCurrentSegment('----- end trace -----');
         setIsCombinedEditable(false);
-        if (isOneFrame && hasInteractive) {
-          commitCurrentSegment('----- end trace -----');
-          setAppMode('interactive');
-        } else {
-          setAppMode('trace');
-        }
+        applyCombinedResult(result, mode);
       } else {
         appendError(result.error ?? 'Unknown error');
       }
@@ -252,7 +247,7 @@ function App() {
     } finally {
       setIsAnalyzingCombined(false);
     }
-  }, [combinedCode]);
+  }, [combinedCode, applyCombinedResult]);
 
   const handleEditCombined = useCallback(() => {
     setIsCombinedEditable(true);
@@ -269,12 +264,8 @@ function App() {
   }, []);
 
   const handleCombinedTrace = useCallback((result: CombinedResult) => {
-    hydrateTimelineFromArray(result.timeline.map(s => s.visual));
-    setInteractiveLineNumbers(result.timeline.map(s => s.line));
-    setStepCount(result.timeline.length);
-    goToStep(0);
-    setAppMode('debug_in_event');
-  }, [goToStep]);
+    applyCombinedResult(result, 'trace');
+  }, [applyCombinedResult]);
 
   // viz block ranges for the current combined code; stable until code changes
   const combinedVizRanges = useMemo(() => getVizRanges(combinedCode), [combinedCode]);
@@ -458,7 +449,6 @@ function App() {
             onGoToStep={goToStep}
             appMode={appMode}
             onEnterInteractive={handleEnterInteractive}
-            onBackToInteractive={handleBackToInteractive}
             onAnalyze={handleAnalyzeCombined}
             isAnalyzing={isAnalyzingCombined}
             canAnalyze={!!combinedCode.trim()}
@@ -507,9 +497,9 @@ function App() {
                   isEditable={isCombinedEditable}
                   currentStep={combinedTimeline.length > 0 ? currentStep : undefined}
                   currentLine={
-                    appMode === 'trace' && combinedTimeline.length > 0 ? combinedTimeline[currentStep]?.line :
-                    appMode === 'debug_in_event' ? interactiveLineNumbers[currentStep] :
-                    undefined
+                    appMode === 'trace' && combinedTimeline.length > 0
+                      ? combinedTimeline[currentStep]?.line
+                      : undefined
                   }
                   appMode={appMode}
                   onEdit={handleEditCombined}

@@ -7,7 +7,6 @@ interface TimelineControlsProps {
   onGoToStep: (step: number) => void;
   appMode?: string;
   onEnterInteractive?: () => void;
-  onBackToInteractive?: () => void;
   onAnalyze?: () => void;
   isAnalyzing?: boolean;
   canAnalyze?: boolean;
@@ -23,7 +22,6 @@ export function TimelineControls({
   onGoToStep,
   appMode,
   onEnterInteractive,
-  onBackToInteractive,
   onAnalyze,
   isAnalyzing,
   canAnalyze,
@@ -162,18 +160,6 @@ export function TimelineControls({
           </>
         )}
 
-        {appMode === 'debug_in_event' && onBackToInteractive && (
-          <>
-            <div className="w-px h-5 bg-gray-300 dark:bg-gray-500 mx-0.5" />
-            <button
-              onClick={onBackToInteractive}
-              className={btnActive}
-              title="Back to interactive mode"
-            >
-              <MousePointerClick size={14} />
-            </button>
-          </>
-        )}
       </div>
     </div>
   );

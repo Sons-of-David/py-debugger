@@ -23,10 +23,9 @@ interface CodeEditorAreaProps {
   currentVariables?: Record<string, VariableValue>;
   breakpoints?: Set<number>;
   onBreakpointsChange?: (next: Set<number>) => void;
-  appMode: 'idle' | 'trace' | 'interactive' | 'debug_in_event';
+  appMode: 'idle' | 'trace' | 'interactive';
   readOnly?: boolean;
   onEnterInteractive: () => void;
-  onBackToInteractive?: () => void;
   currentStep: number;
 }
 
@@ -51,7 +50,6 @@ export function CodeEditorArea({
   appMode,
   readOnly = false,
   onEnterInteractive,
-  onBackToInteractive,
   currentStep,
 }: CodeEditorAreaProps) {
   const [activeTab, setActiveTab] = useState<ActiveTab>('code');
@@ -92,32 +90,12 @@ export function CodeEditorArea({
               Interactive
             </span>
           )}
-          {appMode === 'debug_in_event' && (
-            <span className="px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 font-medium">
-              Debugging event
-            </span>
-          )}
-
-          {/* Finish & Interact button — only in trace mode */}
           {appMode === 'trace' && (
             <button
               type="button"
               onClick={onEnterInteractive}
               className="flex items-center gap-1.5 px-3 py-1 text-sm rounded transition-colors bg-indigo-500 text-white hover:bg-indigo-600"
               title="Finish trace and enter mouse interaction mode"
-            >
-              <MousePointerClick size={14} />
-              Interact
-            </button>
-          )}
-
-          {/* Back to Interactive button — only in debug_in_event mode */}
-          {appMode === 'debug_in_event' && (
-            <button
-              type="button"
-              onClick={onBackToInteractive}
-              className="flex items-center gap-1.5 px-3 py-1 text-sm rounded transition-colors bg-amber-500 text-white hover:bg-amber-600"
-              title="Return to interactive mode"
             >
               <MousePointerClick size={14} />
               Interact
@@ -160,7 +138,7 @@ export function CodeEditorArea({
                 <DebuggerCodeEditor
                   code={debuggerCode}
                   onChange={onDebuggerCodeChange}
-                  highlightedLines={appMode === 'trace' || appMode === 'debug_in_event' ? highlightedLines : undefined}
+                  highlightedLines={appMode === 'trace' ? highlightedLines : undefined}
                   breakpoints={breakpoints}
                   onBreakpointsChange={onBreakpointsChange}
                   readOnly={readOnly}

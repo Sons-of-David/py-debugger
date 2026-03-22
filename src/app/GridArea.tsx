@@ -5,7 +5,6 @@ import { useGridState } from '../visual-panel/hooks/useGridState';
 import type { VisualBuilderElementBase } from '../api/visualBuilder';
 import { executeEventHandler, type ClickHandlerResult, type DragType } from '../python-engine/code-builder/services/pythonExecutor';
 import { executeCombinedClickHandler, executeCombinedInputChanged, type CombinedResult } from '../components/combined-editor/combinedExecutor';
-import { setHandlers } from '../visual-panel/handlersState';
 import { appendError } from '../output-terminal/terminalState';
 import { hydrateElement } from '../visual-panel/types/elementRegistry';
 import type { TextBox } from '../text-boxes/types';
@@ -41,7 +40,7 @@ interface GridAreaProps {
   combinedVizRanges?: VizRange[];
   /** Combined-editor: called when a click produces a traced mini-timeline. */
   onCombinedTrace?: (result: CombinedResult) => void;
-  appMode?: 'idle' | 'trace' | 'interactive' | 'debug_in_event';
+  appMode?: 'idle' | 'trace' | 'interactive';
   onCreateGif?: (region: CaptureRegion | null) => void;
   isCreatingGif?: boolean;
 }
@@ -86,7 +85,6 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
       if (combinedVizRanges) {
         const result = await executeCombinedClickHandler(elemId, y, x);
         if (result.error) { appendError(result.error); return; }
-        setHandlers(result.handlers);
         if (result.timeline.length > 0) onCombinedTrace?.(result);
         return;
       }
@@ -96,7 +94,6 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
       if (!combinedVizRanges) return;
       const result = await executeCombinedInputChanged(elemId, text);
       if (result.error) { appendError(result.error); return; }
-      setHandlers(result.handlers);
       if (result.timeline.length > 0) onCombinedTrace?.(result);
     }, [combinedVizRanges, onCombinedTrace]);
 

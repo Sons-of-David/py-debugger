@@ -20,7 +20,7 @@ interface CombinedEditorProps {
   isEditable: boolean;
   currentStep?: number;
   currentLine?: number;
-  appMode: 'idle' | 'trace' | 'interactive' | 'debug_in_event';
+  appMode: 'idle' | 'trace' | 'interactive';
   onEdit: () => void;
 }
 
