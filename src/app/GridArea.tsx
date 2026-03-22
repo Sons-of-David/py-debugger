@@ -4,7 +4,9 @@ import { Grid, type GridHandle, CELL_SIZE } from '../visual-panel/components/Gri
 import { useGridState } from '../visual-panel/hooks/useGridState';
 import type { VisualBuilderElementBase } from '../api/visualBuilder';
 import { executeEventHandler, type ClickHandlerResult, type DragType } from '../python-engine/code-builder/services/pythonExecutor';
-import { executeCombinedClickHandler, executeCombinedInputChanged, type CombinedClickResult } from '../components/combined-editor/combinedExecutor';
+import { executeCombinedClickHandler, executeCombinedInputChanged, type CombinedResult } from '../components/combined-editor/combinedExecutor';
+import { setHandlers } from '../visual-panel/handlersState';
+import { appendError } from '../output-terminal/terminalState';
 import { hydrateElement } from '../visual-panel/types/elementRegistry';
 import type { TextBox } from '../text-boxes/types';
 import type { VizRange } from '../components/combined-editor/vizBlockParser';
@@ -38,7 +40,7 @@ interface GridAreaProps {
   /** Combined-editor: viz block ranges for the current code, used for auto-tracing clicks. */
   combinedVizRanges?: VizRange[];
   /** Combined-editor: called when a click produces a traced mini-timeline. */
-  onCombinedTrace?: (result: CombinedClickResult) => void;
+  onCombinedTrace?: (result: CombinedResult) => void;
   appMode?: 'idle' | 'trace' | 'interactive' | 'debug_in_event';
   onCreateGif?: (region: CaptureRegion | null) => void;
   isCreatingGif?: boolean;
@@ -83,10 +85,9 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
     const handleElementClick = useCallback(async (elemId: number, x: number, y: number) => {
       if (combinedVizRanges) {
         const result = await executeCombinedClickHandler(elemId, y, x);
-        if (!result) return;
-        if (result.timeline.length > 0) {
-          onCombinedTrace?.(result);
-        }
+        if (result.error) { appendError(result.error); return; }
+        setHandlers(result.handlers);
+        if (result.timeline.length > 0) onCombinedTrace?.(result);
         return;
       }
     }, [combinedVizRanges, onCombinedTrace]);
@@ -94,10 +95,9 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
     const handleElementInput = useCallback(async (elemId: number, text: string) => {
       if (!combinedVizRanges) return;
       const result = await executeCombinedInputChanged(elemId, text);
-      if (!result) return;
-      if (result.timeline.length > 0) {
-        onCombinedTrace?.(result);
-      }
+      if (result.error) { appendError(result.error); return; }
+      setHandlers(result.handlers);
+      if (result.timeline.length > 0) onCombinedTrace?.(result);
     }, [combinedVizRanges, onCombinedTrace]);
 
     const applyEventResult = useCallback((result: ClickHandlerResult) => {

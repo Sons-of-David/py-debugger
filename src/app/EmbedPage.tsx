@@ -5,7 +5,7 @@ import { loadPyodide, isPyodideLoaded } from '../python-engine/code-builder/serv
 import { TimelineControls } from '../timeline/TimelineControls';
 import { GridArea, type GridAreaHandle } from './GridArea';
 import { getStateAt, getMaxTime, clearTimeline, hydrateTimelineFromArray } from '../timeline/timelineState';
-import { executeCombinedCode, type CombinedStep, type CombinedClickResult } from '../components/combined-editor/combinedExecutor';
+import { executeCombinedCode, type CombinedStep, type CombinedResult } from '../components/combined-editor/combinedExecutor';
 import { setHandlers, hasAnyClickHandler } from '../visual-panel/handlersState';
 import { getVizRanges } from '../components/combined-editor/vizBlockParser';
 import { migrateTextBox, type TextBox } from '../text-boxes/types';
@@ -116,7 +116,7 @@ export function EmbedPage() {
 
     try {
       const result = await executeCombinedCode(code);
-      if (result.success) {
+      if (!result.error) {
         setCombinedTimeline(result.timeline);
         hydrateTimelineFromArray(result.timeline.map((s) => s.visual));
         setHandlers(result.handlers ?? {});
@@ -177,7 +177,7 @@ export function EmbedPage() {
     setAppMode('interactive');
   }, [goToStep]);
 
-  const handleCombinedTrace = useCallback((result: CombinedClickResult) => {
+  const handleCombinedTrace = useCallback((result: CombinedResult) => {
     hydrateTimelineFromArray(result.timeline.map((s) => s.visual));
     setStepCount(result.timeline.length);
     goToStep(0);

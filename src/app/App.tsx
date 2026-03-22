@@ -14,7 +14,7 @@ import { ExtrasMenu } from './ExtrasMenu';
 import { GridArea, type GridAreaHandle } from './GridArea';
 import { getStateAt, getMaxTime, clearTimeline, hydrateTimelineFromArray } from '../timeline/timelineState';
 import { clearCodeTimeline, setCodeTimeline } from '../python-engine/debugger-panel/codeTimelineState';
-import { executeCombinedCode, type CombinedStep, type CombinedClickResult } from '../components/combined-editor/combinedExecutor';
+import { executeCombinedCode, type CombinedStep, type CombinedResult } from '../components/combined-editor/combinedExecutor';
 import { setHandlers, hasAnyClickHandler } from '../visual-panel/handlersState';
 import { getVizRanges } from '../components/combined-editor/vizBlockParser';
 import type { TextBox } from '../text-boxes/types';
@@ -223,7 +223,7 @@ function App() {
     clearTerminal();
     try {
       const result = await executeCombinedCode(combinedCode);
-      if (result.success) {
+      if (!result.error) {
         setCombinedTimeline(result.timeline);
         hydrateTimelineFromArray(result.timeline.map(s => s.visual));
         setCodeTimeline(result.timeline.map(s => ({ variables: s.variables, scope: [] })));
@@ -268,7 +268,7 @@ function App() {
     setAppMode('idle');
   }, []);
 
-  const handleCombinedTrace = useCallback((result: CombinedClickResult) => {
+  const handleCombinedTrace = useCallback((result: CombinedResult) => {
     hydrateTimelineFromArray(result.timeline.map(s => s.visual));
     setInteractiveLineNumbers(result.timeline.map(s => s.line));
     setStepCount(result.timeline.length);

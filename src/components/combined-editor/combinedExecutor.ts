@@ -5,7 +5,6 @@ import VB_ENGINE_PYTHON from './_vb_engine.py?raw';
 import USER_API_PYTHON from './user_api.py?raw';
 import VISUAL_BUILDER_PYTHON from './vb_serializer.py?raw';
 import { validateVizBlocks, getVizRanges } from './vizBlockParser';
-import { setHandlers } from '../../visual-panel/handlersState';
 
 export interface CombinedVariable {
   type: string;
@@ -21,14 +20,9 @@ export interface CombinedStep {
 }
 
 export interface CombinedResult {
-  success: boolean;
   timeline: CombinedStep[];
   handlers: Record<string, string[]>;  // elem_id (string key) → handler names
   error?: string;
-}
-
-export interface CombinedClickResult {
-  timeline: CombinedStep[];
 }
 
 /**
@@ -60,6 +54,38 @@ function escapeTripleQuote(s: string): string {
   return s.replace(/'''/g, "\\'\\'\\'");
 }
 
+function cleanPythonError(rawError: string): string {
+  let clean = rawError;
+  if (clean.includes('PythonError:')) {
+    clean = clean.split('PythonError:')[1]?.trim() || clean;
+  }
+  // If the traceback contains a user code frame, strip internal engine frames
+  // so the error appears to originate from user code.
+  if (clean.includes('File "<combined_code>"')) {
+    const lines = clean.split('\n');
+    const firstLine = lines[0]; // "Traceback (most recent call last):"
+    const userFrameIndex = lines.findIndex(l => l.includes('File "<combined_code>"'));
+    clean = [firstLine, ...lines.slice(userFrameIndex)].join('\n');
+  }
+  return clean;
+}
+
+function parseRawTimeline(raw: Array<{
+  visual: VisualBuilderElementBase[];
+  variables: Record<string, CombinedVariable>;
+  line?: number;
+  output?: string;
+  is_viz?: boolean;
+}>): CombinedStep[] {
+  return raw.map(s => ({
+    visual: s.visual,
+    variables: s.variables,
+    line: s.line,
+    output: s.output,
+    isViz: s.is_viz,
+  }));
+}
+
 async function initializePythonEngine(code: string): ReturnType<typeof loadPyodide> {
     const py = await loadPyodide();
 
@@ -85,6 +111,16 @@ for _m in ('user_api', '_vb_engine'):
     return py;
 }
 
+type RawResult = {
+  timeline: Array<{
+    visual: VisualBuilderElementBase[];
+    variables: Record<string, CombinedVariable>;
+    line?: number;
+    output?: string;
+    is_viz?: boolean;
+  }>;
+  handlers: Record<string, string[]>;
+};
 
 /**
  * Execute combined Python code (with # @viz / # @end blocks) and return
@@ -93,46 +129,14 @@ for _m in ('user_api', '_vb_engine'):
 export async function executeCombinedCode(code: string): Promise<CombinedResult> {
   try {
     const py = await initializePythonEngine(code);
-
-    // Preprocess user code (replaces # @viz / # @end with tracer hook calls)
     const preprocessed = preprocess(code);
-    const escaped = escapeTripleQuote(preprocessed);
-
-    const resultJson: string = await py.runPythonAsync(`_exec_combined_code('''${escaped}''')`);
-    const result = JSON.parse(resultJson) as {
-      timeline: Array<{
-        visual: VisualBuilderElementBase[];
-        variables: Record<string, CombinedVariable>;
-        line?: number;
-        output?: string;
-        is_viz?: boolean;
-      }>;
-      handlers: Record<string, string[]>;
-    };
-    const timeline: CombinedStep[] = result.timeline.map(s => ({
-      visual: s.visual,
-      variables: s.variables,
-      line: s.line,
-      output: s.output,
-      isViz: s.is_viz,
-    }));
-
-    return { success: true, timeline, handlers: result.handlers };
+    const resultJson: string = await py.runPythonAsync(
+      `_exec_combined_code('''${escapeTripleQuote(preprocessed)}''')`
+    );
+    const result = JSON.parse(resultJson) as RawResult;
+    return { timeline: parseRawTimeline(result.timeline), handlers: result.handlers };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    let cleanError = errorMessage;
-    if (errorMessage.includes('PythonError:')) {
-      cleanError = errorMessage.split('PythonError:')[1]?.trim() || errorMessage;
-    }
-    // If the traceback contains a user code frame, strip internal engine frames
-    // so the error appears to originate from user code.
-    if (cleanError.includes('File "<combined_code>"')) {
-      const lines = cleanError.split('\n');
-      const firstLine = lines[0]; // "Traceback (most recent call last):"
-      const userFrameIndex = lines.findIndex(l => l.includes('File "<combined_code>"'));
-      cleanError = [firstLine, ...lines.slice(userFrameIndex)].join('\n');
-    }
-    return { success: false, timeline: [], handlers: {}, error: cleanError };
+    return { timeline: [], handlers: {}, error: cleanPythonError(error instanceof Error ? error.message : String(error)) };
   }
 }
 
@@ -142,29 +146,17 @@ export async function executeCombinedCode(code: string): Promise<CombinedResult>
 export async function executeCombinedInputChanged(
   elemId: number,
   text: string,
-): Promise<CombinedClickResult | null> {
+): Promise<CombinedResult> {
   try {
     const py = await loadPyodide();
     await py.runPythonAsync(`_input_text = ${JSON.stringify(text)}`);
     const resultJson: string = await py.runPythonAsync(
       `_exec_combined_input_changed(${elemId}, _input_text)`
     );
-    const result = JSON.parse(resultJson) as {
-      timeline: Array<Omit<CombinedStep, 'isViz'> & { is_viz?: boolean }>;
-      handlers: Record<string, string[]>;
-      error?: string;
-    };
-    if (result.error) {
-      console.error('Combined input_changed error:', result.error);
-      return null;
-    }
-    setHandlers(result.handlers ?? {});
-    return {
-      timeline: result.timeline.map(s => ({ ...s, isViz: s.is_viz })),
-    };
+    const result = JSON.parse(resultJson) as RawResult;
+    return { timeline: parseRawTimeline(result.timeline), handlers: result.handlers };
   } catch (error) {
-    console.error('executeCombinedInputChanged error:', error);
-    return null;
+    return { timeline: [], handlers: {}, error: cleanPythonError(error instanceof Error ? error.message : String(error)) };
   }
 }
 
@@ -179,27 +171,15 @@ export async function executeCombinedClickHandler(
   elemId: number,
   row: number,
   col: number,
-): Promise<CombinedClickResult | null> {
+): Promise<CombinedResult> {
   try {
     const py = await loadPyodide();
     const resultJson: string = await py.runPythonAsync(
       `_exec_combined_click_traced(${elemId}, ${row}, ${col})`
     );
-    const result = JSON.parse(resultJson) as {
-      timeline: Array<Omit<CombinedStep, 'isViz'> & { is_viz?: boolean }>;
-      handlers: Record<string, string[]>;
-      error?: string;
-    };
-    if (result.error) {
-      console.error('Combined click handler error:', result.error);
-      return null;
-    }
-    setHandlers(result.handlers ?? {});
-    return {
-      timeline: result.timeline.map(s => ({ ...s, isViz: s.is_viz })),
-    };
+    const result = JSON.parse(resultJson) as RawResult;
+    return { timeline: parseRawTimeline(result.timeline), handlers: result.handlers };
   } catch (error) {
-    console.error('executeCombinedClickHandler error:', error);
-    return null;
+    return { timeline: [], handlers: {}, error: cleanPythonError(error instanceof Error ? error.message : String(error)) };
   }
 }

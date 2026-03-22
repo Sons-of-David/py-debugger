@@ -233,24 +233,18 @@ def _exec_combined_click_traced(elem_id: int, row: int, col: int) -> str:
     """Call on_click on element with viz-aware tracing; return timeline + handlers."""
     target = _find_element(elem_id)
     if target is None:
-        return _json.dumps({'error': f'Element {elem_id} not found',
-                            'timeline': [], 'handlers': {}})
+        raise ValueError(f'Element {elem_id} not found')
     handler = getattr(target, 'on_click', None)
     if not callable(handler):
-        return _json.dumps({'error': f'Element {elem_id} has no on_click',
-                            'timeline': [], 'handlers': {}})
-    steps = _exec_traced(lambda: handler(col, row))
-    return _handler_result(steps)
+        raise ValueError(f'Element {elem_id} has no on_click')
+    return _handler_result(_exec_traced(lambda: handler(col, row)))
 
 
 def _exec_combined_input_changed(elem_id: int, text: str) -> str:
     """Call input_changed(text) on element with viz-aware tracing; return timeline + handlers."""
     target = _find_element(elem_id)
     if target is None:
-        return _json.dumps({'error': f'Element {elem_id} not found',
-                            'timeline': [], 'handlers': {}})
+        raise ValueError(f'Element {elem_id} not found')
     if not isinstance(target, _user_api.Input):
-        return _json.dumps({'error': f'Element {elem_id} is not an Input',
-                            'timeline': [], 'handlers': {}})
-    steps = _exec_traced(lambda: target.input_changed(text))
-    return _handler_result(steps)
+        raise ValueError(f'Element {elem_id} is not an Input')
+    return _handler_result(_exec_traced(lambda: target.input_changed(text)))
