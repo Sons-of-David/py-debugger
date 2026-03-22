@@ -17,6 +17,19 @@ class PopupException(Exception):
     pass
 
 
+class SerializationException(Exception):
+    """Raised when element serialization or handler validation fails.
+
+    Carries a user-facing message and the line number in the combined code
+    where the offending handler is defined. The terminal shows just
+    'line N: message' without the full traceback.
+    """
+    def __init__(self, message: str, line: int | None = None):
+        self.line = line
+        formatted = f"line {line}: {message}" if line is not None else message
+        super().__init__(formatted)
+
+
 MAX_EXEC_STEPS = 100_000
 
 

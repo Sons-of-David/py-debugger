@@ -230,9 +230,12 @@ def _has_valid_event_handler(elem, ref_fn) -> bool:
     if len(ref_params) != len(handler_params):
         ref_str = ', '.join(p.name for p in ref_params)
         got_str = ', '.join(p.name for p in handler_params) or '(none)'
-        raise _engine.PopupException(
+        code_obj = getattr(handler, '__code__', None) or getattr(getattr(handler, '__func__', None), '__code__', None)
+        line = getattr(code_obj, 'co_firstlineno', None)
+        raise _engine.SerializationException(
             f"{type(elem).__name__}.{ref_fn.__name__} has wrong signature: "
-            f"expected ({ref_str}), got ({got_str})"
+            f"expected ({ref_str}), got ({got_str})",
+            line=line,
         )
 
     return True

@@ -59,6 +59,10 @@ function cleanPythonError(rawError: string): string {
   if (clean.includes('PythonError:')) {
     clean = clean.split('PythonError:')[1]?.trim() || clean;
   }
+  // SerializationException already has a clean "line N: message" string — show it directly.
+  const serMatch = clean.match(/SerializationException:\s*([\s\S]*?)(?:\n\s*\n|$)/);
+  if (serMatch) return serMatch[1].trim();
+
   // If the traceback contains a user code frame, strip internal engine frames
   // so the error appears to originate from user code.
   if (clean.includes('File "<combined_code>"')) {
