@@ -11,6 +11,12 @@ def _serialize_visual_builder():
 # ── V() change detection ──────────────────────────────────────────────────────
 
 
+def __viz_end__(_):
+    pass  # no-op marker; _make_tracer intercepts its 'call' event to fire on_snap(is_viz=True)
+
+_VIZ_END_CODE = __viz_end__.__code__
+
+
 def _collect_v_values():
     """Evaluate all V() instances in the registry. Returns {elem_id.attr: value}."""
     result = {}
@@ -22,8 +28,13 @@ def _collect_v_values():
 
 
 def _make_tracer(viz_ranges, on_snap):
-    """Return (tracer, last_line) where tracer calls on_snap(frame, lineno) when V() values
-    change outside viz blocks, and last_line is a [int|None] container updated each traced line."""
+    """Return (tracer, last_line).
+
+    tracer fires on_snap(frame, lineno, is_viz) on two triggers:
+      - V() value change outside a viz block  (is_viz=False)
+      - __viz_end__ call from user code        (is_viz=True, caller frame used)
+    last_line is a [int|None] container updated on every traced line.
+    """
     last_v = {}
     last_line = [None]
     guard = _engine.make_step_guard()
@@ -33,8 +44,13 @@ def _make_tracer(viz_ranges, on_snap):
 
     def _trace(frame, event, arg):
         guard(frame, event, arg)
+        if event == 'call' and frame.f_code is _VIZ_END_CODE:
+            caller = frame.f_back
+            if caller:
+                on_snap(caller, caller.f_lineno, is_viz=True)
+            return None
         if frame.f_code.co_filename != '<combined_code>':
-            return _trace
+            return None
         if event == 'call':
             return None if in_viz(frame.f_code.co_firstlineno) else _trace
         if event == 'line' and not in_viz(frame.f_lineno):
@@ -44,7 +60,7 @@ def _make_tracer(viz_ranges, on_snap):
             if current and current != last_v:
                 last_v.clear()
                 last_v.update(current)
-                on_snap(frame, frame.f_lineno)
+                on_snap(frame, frame.f_lineno, is_viz=False)
         return _trace
 
     return _trace, last_line
@@ -67,7 +83,7 @@ def _init_combined_namespace(viz_ranges_json: str):
     _combined_ns = {k: v for k, v in vars(_user_api).items() if not k.startswith('_')}
     _combined_ns['__builtins__'] = __builtins__
     _combined_ns['__viz_begin__'] = lambda: None  # no-op: tracer uses in_viz() to skip viz block lines
-    _combined_ns['__viz_end__'] = lambda _: None  # patched by exec functions before each run
+    _combined_ns['__viz_end__'] = __viz_end__  # tracer intercepts its call event
 
 
 def _exec_combined_code(code: str) -> str:
@@ -95,13 +111,6 @@ def _exec_combined_code(code: str) -> str:
             'is_viz': is_viz,
         })
 
-    def _viz_end(frame_locals):
-        f = _sys._getframe(1)
-        snap(f, f.f_lineno, is_viz=True)
-
-    old_viz_end = _combined_ns.get('__viz_end__')
-    _combined_ns['__viz_end__'] = _viz_end
-
     old_stdout = _sys.stdout
     capture = _io.StringIO()
     _sys.stdout = capture
@@ -122,10 +131,6 @@ def _exec_combined_code(code: str) -> str:
             snap(final_scope, last_line[0])
     finally:
         _sys.stdout = old_stdout
-        if old_viz_end is not None:
-            _combined_ns['__viz_end__'] = old_viz_end
-        else:
-            _combined_ns.pop('__viz_end__', None)
     return _json.dumps(steps)
 
 
@@ -256,13 +261,6 @@ def _exec_handler_traced(fn):
             'is_viz': is_viz,
         })
 
-    def _viz_end(frame_locals):
-        f = _sys._getframe(1)
-        snap(f, f.f_lineno, is_viz=True)
-
-    old_viz_end = _combined_ns.get('__viz_end__')
-    _combined_ns['__viz_end__'] = _viz_end
-
     old_stdout = _sys.stdout
     capture = _io.StringIO()
     _sys.stdout = capture
@@ -273,10 +271,6 @@ def _exec_handler_traced(fn):
     finally:
         _sys.settrace(None)
         _sys.stdout = old_stdout
-        if old_viz_end is not None:
-            _combined_ns['__viz_end__'] = old_viz_end
-        else:
-            _combined_ns.pop('__viz_end__', None)
         # Refresh V.params from saved namespace so V() expressions re-evaluate correctly
         _engine.V.params = {k: v for k, v in _combined_ns.items()
                             if not k.startswith('_') and k != '__builtins__'}
