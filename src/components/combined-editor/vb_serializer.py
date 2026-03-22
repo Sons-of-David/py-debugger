@@ -1,6 +1,7 @@
 import _vb_engine as _engine
 import user_api as _user_api
 import json as _json
+import inspect as _inspect
 
 
 # ── Snapshot helpers ──────────────────────────────────────────────────────────
@@ -203,13 +204,49 @@ def _exec_combined_code(code: str) -> str:
 # ── Interactive mode ──────────────────────────────────────────────────────────
 
 
+def _has_valid_event_handler(elem, ref_fn) -> bool:
+    """Return True if elem has a callable handler with the right signature for ref_fn.
+
+    Returns False if the handler is absent or not callable.
+    Raises PopupException if the handler is callable but has the wrong signature.
+
+    ref_fn is a user_api function (includes self). The handler is retrieved via
+    getattr(elem, ...) so bound methods already exclude self; lambdas assigned to
+    instances also have no self. We compare non-self params of ref_fn vs the handler.
+    """
+    handler = getattr(elem, ref_fn.__name__, None)
+    if not callable(handler):
+        return False
+
+    try:
+        ref_sig = _inspect.signature(ref_fn)
+        handler_sig = _inspect.signature(handler)
+    except (ValueError, TypeError):
+        return True  # can't inspect; allow it
+
+    ref_params = [p for p in ref_sig.parameters.values() if p.name != 'self']
+    handler_params = list(handler_sig.parameters.values())
+
+    if len(ref_params) != len(handler_params):
+        ref_str = ', '.join(p.name for p in ref_params)
+        got_str = ', '.join(p.name for p in handler_params) or '(none)'
+        raise _engine.PopupException(
+            f"{type(elem).__name__}.{ref_fn.__name__} has wrong signature: "
+            f"expected ({ref_str}), got ({got_str})"
+        )
+
+    return True
+
+
+_EVENT_HANDLER_REFS = [_user_api.on_click, _user_api.on_drag]
+
+
 def _serialize_combined_handlers() -> str:
-    """Return JSON dict of {elem_id: ["on_click"]} for elements with on_click set."""
+    """Return JSON dict of {elem_id: [handler_names]} for elements with event handlers set."""
     handlers = {}
     for elem in _engine.VisualElem._registry:
-        names = []
-        if hasattr(elem, 'on_click') and callable(elem.on_click):
-            names.append('on_click')
+        names = [ref_fn.__name__ for ref_fn in _EVENT_HANDLER_REFS
+                 if _has_valid_event_handler(elem, ref_fn)]
         if isinstance(elem, _user_api.Input):
             names.append('input_changed')
         if names:
