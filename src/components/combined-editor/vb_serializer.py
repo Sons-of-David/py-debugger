@@ -10,21 +10,12 @@ def _serialize_visual_builder():
 
 # ── V() change detection ──────────────────────────────────────────────────────
 
-_tracing_active = True
 _last_v_values: dict = {}
 
 
-def __viz_begin__():
-    """Called at the start of each viz block; tells the tracer to pause V() detection."""
-    global _tracing_active
-    _tracing_active = False
-
-
 def __viz_end__(frame_locals):
-    """Called at the end of each viz block; resumes V() detection and records a snapshot."""
+    """Called at the end of each viz block; records a snapshot."""
     import sys as _sys
-    global _tracing_active
-    _tracing_active = True
     caller = _sys._getframe(1)
     __record_snapshot__(caller, caller.f_lineno, is_viz=True)
 
@@ -39,16 +30,19 @@ def _collect_v_values():
     return result
 
 
-def _make_v_aware_tracer():
+def _make_v_aware_tracer(viz_ranges):
     """Return a sys.settrace tracer that records snapshots when V() values change outside viz blocks."""
     global _last_v_values
     _last_v_values = {}
     guard = _engine.make_step_guard()
 
+    def in_viz(lineno):
+        return any(start <= lineno <= end for start, end in viz_ranges)
+
     def _tracer(frame, event, arg):
         global _last_traced_line
         guard(frame, event, arg)
-        if event == 'line' and frame.f_code.co_filename == '<combined_code>' and _tracing_active:
+        if event == 'line' and frame.f_code.co_filename == '<combined_code>' and not in_viz(frame.f_lineno):
             _last_traced_line = frame.f_lineno
             _engine.V.params = _build_scope(frame)
             current = _collect_v_values()
@@ -74,12 +68,12 @@ def _exec_combined_code(code: str, viz_ranges_json: str):
     _viz_ranges = [(r['startLine'], r['endLine']) for r in _json.loads(viz_ranges_json)]
     ns = {k: v for k, v in vars(_user_api).items() if not k.startswith('_')}
     ns['__builtins__'] = __builtins__
-    ns['__viz_begin__'] = __viz_begin__
+    ns['__viz_begin__'] = lambda: None  # no-op: tracer uses in_viz() to skip viz block lines
     ns['__viz_end__'] = __viz_end__
     _old_stdout = _sys.stdout
     _sys.stdout = _io.StringIO()
     try:
-        _sys.settrace(_make_v_aware_tracer())
+        _sys.settrace(_make_v_aware_tracer(_viz_ranges))
         try:
             exec(compile(code, '<combined_code>', 'exec'), ns)
         finally:
@@ -141,9 +135,8 @@ _last_traced_line: int = None
 
 
 def _reset_combined_timeline():
-    global _combined_timeline, _tracing_active, _last_v_values, _combined_ns, _last_stdout_pos, _last_traced_line
+    global _combined_timeline, _last_v_values, _combined_ns, _last_stdout_pos, _last_traced_line
     _combined_timeline = []
-    _tracing_active = True
     _last_v_values = {}
     _combined_ns = {}
     _last_stdout_pos = 0

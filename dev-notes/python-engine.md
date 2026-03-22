@@ -14,8 +14,8 @@ The user writes a single Python file. It contains two kinds of code interleaved:
 
 - **Algorithm code** — runs normally; the V() change detection tracer records a snapshot whenever any bound V() expression changes value.
 - **Viz blocks** (`# @viz … # @end`) — visual builder code that declares and updates visual elements. Before execution, they are preprocessed into engine calls:
-  - `# @viz` → `__viz_begin__()` (pauses V() detection)
-  - `# @end` → `__viz_end__(dict(locals()))` (resumes detection and records a snapshot)
+  - `# @viz` → `__viz_begin__()` (no-op marker; the tracer skips viz block lines via `in_viz()`)
+  - `# @end` → `__viz_end__(dict(locals()))` (records a snapshot at the viz block boundary)
 
 The two kinds of code share one namespace (`_combined_ns`). Variables declared in algorithm code are visible inside viz blocks and vice versa.
 
@@ -139,8 +139,8 @@ Called by TypeScript for each Analyze run.
 ```
 1. Reset combined timeline and namespace
 2. Preprocess code (# @viz → __viz_begin__(), # @end → __viz_end__(dict(locals())))
-3. Seed namespace: user_api exports + __viz_begin__ + __viz_end__
-4. sys.settrace(_make_v_aware_tracer())
+3. Seed namespace: user_api exports + __viz_begin__ (no-op) + __viz_end__
+4. sys.settrace(_make_v_aware_tracer(_viz_ranges))
 5. exec(compile(code, '<combined_code>', 'exec'), _combined_ns)
 6. sys.settrace(None)
 7. _combined_ns = ns  # persist for interactive mode
@@ -153,9 +153,9 @@ Two conditions cause a snapshot to be recorded into `_combined_timeline`:
 
 1. **Viz block exit** — `__viz_end__(dict(locals()))` is called. Snapshot includes the visual state, current locals, and the line number. `is_viz=True` in the step.
 
-2. **V() value change** — `_make_v_aware_tracer()` sets up a `sys.settrace` tracer that fires on every `'line'` event. If `_tracing_active` (i.e., not inside a viz block) and any V() expression has changed value since the last check, a snapshot is recorded.
+2. **V() value change** — `_make_v_aware_tracer(_viz_ranges)` sets up a `sys.settrace` tracer that fires on every `'line'` event. If the line is outside all viz block ranges (`in_viz()` returns false) and any V() expression has changed value since the last check, a snapshot is recorded.
 
-`__viz_begin__()` sets `_tracing_active = False` to suppress V() snapshots during viz block execution. `__viz_end__()` sets it back to `True` then records the snapshot.
+`__viz_begin__()` is a no-op — viz block lines are skipped by the tracer itself via `in_viz()`. `__viz_end__()` records the snapshot at the block boundary.
 
 ### `_collect_variables(frame_locals)`
 
