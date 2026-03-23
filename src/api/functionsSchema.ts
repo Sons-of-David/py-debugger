@@ -1,8 +1,8 @@
 import type { ObjDoc } from './visualBuilder';
 // Library schemas (not yet surfaced in the UI — see roadmap: "Import library discoverability")
-export { ARRAY_UTILS_SCHEMA } from '../python-engine/builder-imports/array_utils.schema';
-export { GRAPHS_SCHEMA } from '../python-engine/builder-imports/graphs.schema';
-export { LIST_HELPERS_SCHEMA } from '../python-engine/debugger-imports/list_helpers.schema';
+export { ARRAY_UTILS_SCHEMA } from '../components/combined-editor/imports/array_utils.schema';
+export { GRAPHS_SCHEMA } from '../components/combined-editor/imports/graphs.schema';
+export { LIST_HELPERS_SCHEMA } from '../components/combined-editor/imports/list_helpers.schema';
 
 export const DEBUGGER_SCHEMA: ObjDoc[] = [
   {
