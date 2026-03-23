@@ -200,7 +200,7 @@ class V:
 
     def eval(self):
         try:
-            return R._wrap(eval(self.expr, {"__builtins__": {}}, {**V.SAFE_GLOBALS, **V.params}))
+            return _copy.deepcopy(eval(self.expr, {"__builtins__": {}}, {**V.SAFE_GLOBALS, **V.params}))
         except NameError as e:
             undefined = str(e).split("'")[1] if "'" in str(e) else None
             if undefined in self._deps:

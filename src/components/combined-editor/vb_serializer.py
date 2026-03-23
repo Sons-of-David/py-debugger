@@ -83,7 +83,7 @@ def _make_tracer(viz_ranges, on_snap):
       - __viz_end__ call from user code        (is_viz=True, caller frame used)
     last_line is a [int|None] container updated on every traced line.
     """
-    last_v = {}
+    last_v = _collect_v_values()
     last_line = [None]
     guard = _engine.make_step_guard()
 
