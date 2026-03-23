@@ -12,37 +12,58 @@ function toLines(text: string, source: LineSource): TerminalLine[] {
   return parts.map((t) => ({ text: t, source }));
 }
 
+// ── Committed output (survives entering interactive mode) ──────────────────────
+// Cleared only on Analyze / load file.
+let _committedLines: TerminalLine[] = [];
+
+// ── Current trace segment (per-step deltas) ───────────────────────────────────
+let _currentSteps: Array<{ text: string; isViz: boolean }> = [];
+
+export function setOutputTimeline(steps: Array<{ text: string; isViz: boolean }>): void {
+  _currentSteps = steps;
+  _notify();
+}
+
 /**
- * Append an error to the terminal in red.
- * Use this for any execution error: click handlers, builder code, debugger code, etc.
+ * Seal the current trace segment into committed lines, then optionally append
+ * a marker. Called when transitioning trace → interactive.
+ */
+export function commitCombinedSegment(marker?: string): void {
+  for (const { text, isViz } of _currentSteps) {
+    if (text) _committedLines.push(...toLines(text, isViz ? 'viz' : 'debugger'));
+  }
+  if (marker) _committedLines.push({ text: marker, source: 'marker' });
+  _currentSteps = [];
+  _notify();
+}
+
+/**
+ * Append an error to committed lines in red.
  */
 export function appendError(text: string): void {
   if (!text) return;
-  _combinedEditorSteps.push({ text: text.trimEnd(), isViz: false });
+  _committedLines.push(...toLines(text.trimEnd(), 'error'));
   _notify();
 }
 
-// ── Combined editor per-step output ───────────────────────────────────────────
-let _combinedEditorSteps: Array<{ text: string; isViz: boolean }> = [];
+// ── Getter ────────────────────────────────────────────────────────────────────
 
-export function setOutputTimeline(steps: Array<{ text: string; isViz: boolean }>): void {
-  _combinedEditorSteps = steps;
-  _notify();
-}
-
+/** Committed lines from past segments + current segment up to currentStep. */
 export function getCombinedEditorOutput(currentStep: number): TerminalLine[] {
-  const lines: TerminalLine[] = [];
-  const end = Math.min(currentStep + 1, _combinedEditorSteps.length);
+  const lines = [..._committedLines];
+  const end = Math.min(currentStep + 1, _currentSteps.length);
   for (let i = 0; i < end; i++) {
-    const { text, isViz } = _combinedEditorSteps[i];
+    const { text, isViz } = _currentSteps[i];
     if (!text) continue;
     lines.push(...toLines(text, isViz ? 'viz' : 'debugger'));
   }
   return lines;
 }
 
+/** Cleared only on Analyze / load file. */
 export function clearAll(): void {
-  _combinedEditorSteps = [];
+  _committedLines = [];
+  _currentSteps = [];
   _notify();
 }
 
