@@ -185,7 +185,9 @@ def _exec_traced(execute_fn):
         _engine.V.params = final_scope
         current = _collect_v_values()
         if (current and current != last_v_snap) or capture.getvalue()[last_stdout_pos[0]:]:
-            snap(final_scope, last_line[0])
+            # If last_line is None, no non-viz line was ever traced — all executed code
+            # was inside viz blocks (e.g. a click handler defined in a viz block).
+            snap(final_scope, last_line[0], is_viz=last_line[0] is None)
     finally:
         _sys.stdout = old_stdout
     return steps
