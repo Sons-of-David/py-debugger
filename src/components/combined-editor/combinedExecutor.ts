@@ -1,4 +1,4 @@
-import { loadPyodide } from '../../python-engine/code-builder/services/pythonExecutor';
+import { loadPyodide } from './pyodideRuntime';
 
 import type { VisualBuilderElementBase } from '../../api/visualBuilder';
 import VB_ENGINE_PYTHON from './_vb_engine.py?raw';

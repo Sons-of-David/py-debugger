@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AnimationContext } from '../animation/animationContext';
-import { loadPyodide, isPyodideLoaded } from '../python-engine/code-builder/services/pythonExecutor';
+import { loadPyodide, isPyodideLoaded } from '../components/combined-editor/pyodideRuntime';
 import { TimelineControls } from '../timeline/TimelineControls';
 import { GridArea, type GridAreaHandle } from './GridArea';
 import { getStateAt, getMaxTime, clearTimeline, hydrateVisualTimelineFromArray } from '../timeline/timelineState';

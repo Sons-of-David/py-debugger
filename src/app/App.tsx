@@ -6,7 +6,7 @@ import { Group, Panel, Separator } from 'react-resizable-panels';
 import { CombinedEditor, COMBINED_SAMPLE, type CombinedEditorHandle } from '../components/combined-editor/CombinedEditor';
 import { useTheme } from '../contexts/ThemeContext';
 import { AnimationContext } from '../animation/animationContext';
-import { loadPyodide, isPyodideLoaded, resetPythonState } from '../python-engine/code-builder/services/pythonExecutor';
+import { loadPyodide, isPyodideLoaded, resetPythonState } from '../components/combined-editor/pyodideRuntime';
 import { clearAll as clearTerminal, commitCurrentSegment, appendError, setOutputTimeline } from '../output-terminal/terminalState';
 import { ApiReferencePanel } from '../api/ApiReferencePanel';
 import { TimelineControls } from '../timeline/TimelineControls';
