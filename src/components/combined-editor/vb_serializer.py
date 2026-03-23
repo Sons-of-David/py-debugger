@@ -152,6 +152,7 @@ def _exec_traced(execute_fn):
     import sys as _sys, io as _io
     last_stdout_pos = [0]
     last_v_snap = {}
+    last_visual_snap = [_serialize_visual_builder()]  # track visual state at last snap
     steps = []
 
     def snap(frame, line, is_viz=False):
@@ -160,8 +161,10 @@ def _exec_traced(execute_fn):
         last_stdout_pos[0] = len(all_out)
         last_v_snap.clear()
         last_v_snap.update(_collect_v_values())
+        visual_json = _serialize_visual_builder()
+        last_visual_snap[0] = visual_json
         steps.append({
-            'visual': _json.loads(_serialize_visual_builder()),
+            'visual': _json.loads(visual_json),
             'variables': _collect_variables(frame),
             'line': line,
             'output': delta,
@@ -179,12 +182,13 @@ def _exec_traced(execute_fn):
         finally:
             _sys.settrace(None)
         # Post-exec flush: the last line runs after the last 'line' event fires,
-        # so it's never observed by the tracer. Take one final snapshot if V() values changed
+        # so it's never observed by the tracer. Take one final snapshot if the visual
+        # state changed (covers V() bindings, plain attribute mutations, drag handlers, etc.)
         # or there is remaining stdout output.
         final_scope = {k: v for k, v in _combined_ns.items() if not k.startswith('_')}
         _engine.V.params = final_scope
-        current = _collect_v_values()
-        if (current and current != last_v_snap) or capture.getvalue()[last_stdout_pos[0]:]:
+        final_visual = _serialize_visual_builder()
+        if capture.getvalue()[last_stdout_pos[0]:] or final_visual != last_visual_snap[0]:
             # If last_line is None, no non-viz line was ever traced — all executed code
             # was inside viz blocks (e.g. a click handler defined in a viz block).
             snap(final_scope, last_line[0], is_viz=last_line[0] is None)
