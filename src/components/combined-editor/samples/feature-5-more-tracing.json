@@ -1,0 +1,4 @@
+{
+  "combinedCode": "# Fibonacci / domino tiling — f(n) = f(n-1) + f(n-2).\n# Press Analyze, then step through the timeline to watch the recursion unfold.\n# Look at the visual builder editor for more details.\n\nn = 5\n\n# @viz\npanel = Panel(x=1, y=1)\npanel.add(Rect(width=n, height=2, color=(150,20,40)))\n# @end\n\n\ndef fib(n: int) -> int:\n    if n <= 0:\n        print('Empty Board!')\n        return 1 # One (empty) way to fill an empty board\n\n    # Either remove 1 and compute the rest:\n    a = fib(n-1)\n    # Or remove 2 (if possible) and compute the rest:\n    b = fib(n-2) if n >= 2 else 0\n    # The computation was split into two lines instead of just \n    #       return fib(n-1) + fib(n-2)\n    # so that n is restored to this call's scope before fib(n-2) runs,\n    # giving function_call a chance to see the correct diff=2 step.\n    return a + b\n\nresult = fib(n)\nprint(result)",
+  "textBoxes": []
+}
