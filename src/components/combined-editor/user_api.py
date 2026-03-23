@@ -345,6 +345,8 @@ def no_debug(fn):
 
     Example:
         arr.on_click = lambda x, y: no_debug(sort)(arr)
+
+    TODO: separate output to viz and standard code
     """
     import sys as _sys
     def wrapper(*args, **kwargs):
