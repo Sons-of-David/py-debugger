@@ -12,5 +12,7 @@ export function hasHandler(elemId: number, handlerName: string): boolean {
 }
 
 export function hasAnyClickHandler(): boolean {
-  return Object.values(handlers).some(h => h.includes('on_click'));
+  return Object.values(handlers).some(h =>
+    h.includes('on_click') || h.includes('on_drag') || h.includes('input_changed')
+  );
 }
