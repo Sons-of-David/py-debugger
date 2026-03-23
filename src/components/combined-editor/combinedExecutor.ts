@@ -6,21 +6,21 @@ import USER_API_PYTHON from './user_api.py?raw';
 import VISUAL_BUILDER_PYTHON from './vb_serializer.py?raw';
 import { validateVizBlocks, getVizRanges } from './vizBlockParser';
 
-export interface CombinedVariable {
+export interface TraceVariable {
   type: string;
   value: unknown;
 }
 
-export interface CombinedStep {
+export interface TraceStep {
   visual: VisualBuilderElementBase[];
-  variables: Record<string, CombinedVariable>;
+  variables: Record<string, TraceVariable>;
   line?: number;
   output?: string;   // stdout delta since previous snapshot
   isViz?: boolean;   // true if triggered by __viz_end__ (viz block)
 }
 
-export interface CombinedResult {
-  timeline: CombinedStep[];
+export interface TraceStageInfo {
+  timeline: TraceStep[];
   handlers: Record<string, string[]>;  // elem_id (string key) → handler names
   error?: string;
 }
@@ -76,11 +76,11 @@ function cleanPythonError(rawError: string): string {
 
 function parseRawTimeline(raw: Array<{
   visual: VisualBuilderElementBase[];
-  variables: Record<string, CombinedVariable>;
+  variables: Record<string, TraceVariable>;
   line?: number;
   output?: string;
   is_viz?: boolean;
-}>): CombinedStep[] {
+}>): TraceStep[] {
   return raw.map(s => ({
     visual: s.visual,
     variables: s.variables,
@@ -118,7 +118,7 @@ for _m in ('user_api', '_vb_engine'):
 type RawResult = {
   timeline: Array<{
     visual: VisualBuilderElementBase[];
-    variables: Record<string, CombinedVariable>;
+    variables: Record<string, TraceVariable>;
     line?: number;
     output?: string;
     is_viz?: boolean;
@@ -130,7 +130,7 @@ type RawResult = {
  * Execute combined Python code (with # @viz / # @end blocks) and return
  * a timeline of snapshots, one per # @end marker.
  */
-export async function executeCombinedCode(code: string): Promise<CombinedResult> {
+export async function executeCombinedCode(code: string): Promise<TraceStageInfo> {
   try {
     const py = await initializePythonEngine(code);
     const preprocessed = preprocess(code);
@@ -150,7 +150,7 @@ export async function executeCombinedCode(code: string): Promise<CombinedResult>
 export async function executeCombinedInputChanged(
   elemId: number,
   text: string,
-): Promise<CombinedResult> {
+): Promise<TraceStageInfo> {
   try {
     const py = await loadPyodide();
     await py.runPythonAsync(`_input_text = ${JSON.stringify(text)}`);
@@ -175,7 +175,7 @@ export async function executeCombinedClickHandler(
   elemId: number,
   row: number,
   col: number,
-): Promise<CombinedResult> {
+): Promise<TraceStageInfo> {
   try {
     const py = await loadPyodide();
     const resultJson: string = await py.runPythonAsync(

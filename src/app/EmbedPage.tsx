@@ -5,7 +5,7 @@ import { loadPyodide, isPyodideLoaded } from '../python-engine/code-builder/serv
 import { TimelineControls } from '../timeline/TimelineControls';
 import { GridArea, type GridAreaHandle } from './GridArea';
 import { getStateAt, getMaxTime, clearTimeline, hydrateTimelineFromArray } from '../timeline/timelineState';
-import { executeCombinedCode, type CombinedStep, type CombinedResult } from '../components/combined-editor/combinedExecutor';
+import { executeCombinedCode, type TraceStep, type TraceStageInfo } from '../components/combined-editor/combinedExecutor';
 import { setHandlers, hasAnyClickHandler } from '../visual-panel/handlersState';
 import { getVizRanges } from '../components/combined-editor/vizBlockParser';
 import { migrateTextBox, type TextBox } from '../text-boxes/types';
@@ -67,7 +67,7 @@ export function EmbedPage() {
   const [stepCount, setStepCount] = useState(0);
   const [hasInteractiveElements, setHasInteractiveElements] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_combinedTimeline, setCombinedTimeline] = useState<CombinedStep[]>([]);
+  const [_combinedTimeline, setCombinedTimeline] = useState<TraceStep[]>([]);
   const [textBoxes, setTextBoxes] = useState<TextBox[]>([]);
 
   const mouseEnabled = appMode === 'interactive';
@@ -172,7 +172,7 @@ export function EmbedPage() {
     setAppMode('interactive');
   }, [goToStep]);
 
-  const handleCombinedTrace = useCallback((result: CombinedResult) => {
+  const handleCombinedTrace = useCallback((result: TraceStageInfo) => {
     hydrateTimelineFromArray(result.timeline.map((s) => s.visual));
     setStepCount(result.timeline.length);
     goToStep(0);

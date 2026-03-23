@@ -14,7 +14,7 @@ import { ExtrasMenu } from './ExtrasMenu';
 import { GridArea, type GridAreaHandle } from './GridArea';
 import { getStateAt, getMaxTime, clearTimeline, hydrateTimelineFromArray } from '../timeline/timelineState';
 import { clearCodeTimeline, setCodeTimeline } from '../python-engine/debugger-panel/codeTimelineState';
-import { executeCombinedCode, type CombinedStep, type CombinedResult } from '../components/combined-editor/combinedExecutor';
+import { executeCombinedCode, type TraceStep, type TraceStageInfo } from '../components/combined-editor/combinedExecutor';
 import { setHandlers, hasAnyClickHandler } from '../visual-panel/handlersState';
 import { getVizRanges } from '../components/combined-editor/vizBlockParser';
 import type { TextBox } from '../text-boxes/types';
@@ -73,7 +73,7 @@ function App() {
 
   // Combined editor state
   const [combinedCode, setCombinedCode] = useState(COMBINED_SAMPLE);
-  const [combinedTimeline, setCombinedTimeline] = useState<CombinedStep[]>([]);
+  const [combinedTimeline, setCombinedTimeline] = useState<TraceStep[]>([]);
   const [isCombinedEditable, setIsCombinedEditable] = useState(true);
   const [isAnalyzingCombined, setIsAnalyzingCombined] = useState(false);
 
@@ -213,7 +213,7 @@ function App() {
   // Combined editor handlers
   // ---------------------------------------------------------------------------
 
-  const startTrace = useCallback((result: CombinedResult) => {
+  const startTrace = useCallback((result: TraceStageInfo) => {
     setCombinedTimeline(result.timeline);
     hydrateTimelineFromArray(result.timeline.map(s => s.visual));
     setCodeTimeline(result.timeline.map(s => ({ variables: s.variables, scope: [] })));
@@ -266,7 +266,7 @@ function App() {
     setAppMode('idle');
   }, []);
 
-  const handleCombinedTrace = useCallback((result: CombinedResult) => {
+  const handleCombinedTrace = useCallback((result: TraceStageInfo) => {
     startTrace(result);
   }, [startTrace]);
 

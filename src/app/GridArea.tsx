@@ -4,7 +4,7 @@ import { Grid, type GridHandle, CELL_SIZE } from '../visual-panel/components/Gri
 import { useGridState } from '../visual-panel/hooks/useGridState';
 import type { VisualBuilderElementBase } from '../api/visualBuilder';
 import { executeEventHandler, type ClickHandlerResult, type DragType } from '../python-engine/code-builder/services/pythonExecutor';
-import { executeCombinedClickHandler, executeCombinedInputChanged, type CombinedResult } from '../components/combined-editor/combinedExecutor';
+import { executeCombinedClickHandler, executeCombinedInputChanged, type TraceStageInfo } from '../components/combined-editor/combinedExecutor';
 import { appendError } from '../output-terminal/terminalState';
 import { hydrateElement } from '../visual-panel/types/elementRegistry';
 import type { TextBox } from '../text-boxes/types';
@@ -39,7 +39,7 @@ interface GridAreaProps {
   /** Combined-editor: viz block ranges for the current code, used for auto-tracing clicks. */
   combinedVizRanges?: VizRange[];
   /** Combined-editor: called when a click produces a traced mini-timeline. */
-  onCombinedTrace?: (result: CombinedResult) => void;
+  onCombinedTrace?: (result: TraceStageInfo) => void;
   appMode?: 'idle' | 'trace' | 'interactive';
   onCreateGif?: (region: CaptureRegion | null) => void;
   isCreatingGif?: boolean;
