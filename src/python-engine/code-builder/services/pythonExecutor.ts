@@ -7,7 +7,8 @@ import PYTHON_TRACER from '../../debugger-panel/pythonTracer.py?raw';
 import { hydrateVisualTimelineFromArray } from '../../../timeline/timelineState';
 import { setCodeTimeline, type TraceStep } from '../../debugger-panel/codeTimelineState';
 import { setHandlers } from '../../../visual-panel/handlersState';
-import { setCurrentStepOutputs, setBuilderStepOutputs, setBuilderOutput, appendClickOutput, appendError } from '../../../output-terminal/terminalState';
+// setCurrentStepOutputs, setBuilderStepOutputs, setBuilderOutput, appendClickOutput removed from terminalState (classic path dead)
+import { appendError } from '../../../output-terminal/terminalState';
 
 // ---------------------------------------------------------------------------
 // Pyodide runtime
@@ -180,8 +181,7 @@ function applyTimeline(parsed: TraceResult): void {
   setHandlers(parsed.handlers ?? {});
   setCodeTimeline(parsed.code_timeline);
   hydrateVisualTimelineFromArray(parsed.visual_timeline);
-  setCurrentStepOutputs(parsed.code_timeline.map((s) => s.output ?? ''));
-  setBuilderStepOutputs(parsed.code_timeline.map((s) => s.builder_output ?? ''));
+  // setCurrentStepOutputs / setBuilderStepOutputs removed (classic path dead)
 }
 
 // ---------------------------------------------------------------------------
@@ -193,7 +193,7 @@ async function initializeBuilderCode(py: PyodideRuntime, visualBuilderCode: stri
   await py.runPythonAsync('_engine.VisualElem._clear_registry()');
   const escapedVB = escapeForTripleQuote(visualBuilderCode);
   const builderOutput: string = await py.runPythonAsync(`_exec_builder_code('''${escapedVB}''')`);
-  setBuilderOutput(builderOutput);
+  void builderOutput; // setBuilderOutput removed (classic path dead)
 }
 
 function validateTimeline(parsed: TraceResult): string | null {
@@ -287,7 +287,7 @@ export async function executeEventHandler(
       runCall: string | null;
       output: string;
     };
-    appendClickOutput(eventResult.output);
+    // appendClickOutput removed (classic path dead) — eventResult.output
     if (eventResult.runCall) {
       const escaped = escapeForTripleQuote(eventResult.runCall);
       const runResultJson: string = await pyodide.runPythonAsync(
@@ -298,7 +298,7 @@ export async function executeEventHandler(
         handlers: Record<string, string[]>;
         output: string;
       };
-      appendClickOutput(runResult.output);
+      // appendClickOutput removed (classic path dead) — runResult.output
       setHandlers(runResult.handlers ?? {});
       return { snapshot: runResult.snapshot };
     }

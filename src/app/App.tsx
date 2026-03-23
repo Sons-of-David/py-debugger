@@ -7,7 +7,7 @@ import { CombinedEditor, COMBINED_SAMPLE, type CombinedEditorHandle } from '../c
 import { useTheme } from '../contexts/ThemeContext';
 import { AnimationContext } from '../animation/animationContext';
 import { loadPyodide, isPyodideLoaded, resetPythonState } from '../components/combined-editor/pyodideRuntime';
-import { clearAll as clearTerminal, commitCurrentSegment, appendError, setOutputTimeline } from '../output-terminal/terminalState';
+import { clearAll as clearTerminal, appendError, setOutputTimeline } from '../output-terminal/terminalState';
 import { ApiReferencePanel } from '../api/ApiReferencePanel';
 import { TimelineControls } from '../timeline/TimelineControls';
 import { ExtrasMenu } from './ExtrasMenu';
@@ -207,7 +207,6 @@ function App() {
   }, [appMode, goToStep]);
 
   const handleEnterInteractive = useCallback(() => {
-    commitCurrentSegment('----- end trace -----');
     setAppMode('interactive');
   }, []);
 
@@ -231,8 +230,6 @@ function App() {
     const isOneFrame = (getMaxTime() === 0);
 
     if (isOneFrame && interactive) {
-      goToStep(getMaxTime());
-      commitCurrentSegment('----- end trace -----');
       setAppMode('interactive');
     } else {
       setAppMode('trace');

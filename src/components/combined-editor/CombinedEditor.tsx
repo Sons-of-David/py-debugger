@@ -324,7 +324,7 @@ export const CombinedEditor = forwardRef<CombinedEditorHandle, CombinedEditorPro
         />
       </div>
 
-      <OutputTerminal currentStep={currentStep ?? 0} hideTabs />
+      <OutputTerminal currentStep={currentStep ?? 0} />
 
       <style>{`
         .viz-block-line {
