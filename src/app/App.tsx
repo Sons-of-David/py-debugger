@@ -201,11 +201,15 @@ function App() {
     setAppMode('idle');
   }, []);
 
+  // Whenever appMode becomes 'interactive' (from any path), jump to the last step.
+  useEffect(() => {
+    if (appMode === 'interactive') goToStep(getMaxTime());
+  }, [appMode, goToStep]);
+
   const handleEnterInteractive = useCallback(() => {
-    goToStep(getMaxTime());
     commitCurrentSegment('----- end trace -----');
     setAppMode('interactive');
-  }, [goToStep]);
+  }, []);
 
 
   // ---------------------------------------------------------------------------
@@ -227,6 +231,7 @@ function App() {
     const isOneFrame = (getMaxTime() === 0);
 
     if (isOneFrame && interactive) {
+      goToStep(getMaxTime());
       commitCurrentSegment('----- end trace -----');
       setAppMode('interactive');
     } else {
@@ -503,7 +508,6 @@ function App() {
                       ? timeline[currentStep]?.line
                       : undefined
                   }
-                  appMode={appMode}
                   onEdit={handleEditCombined}
                 />
             </div>

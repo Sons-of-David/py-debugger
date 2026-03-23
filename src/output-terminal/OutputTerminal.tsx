@@ -14,7 +14,6 @@ type TerminalTab = 'builder' | 'debugger' | 'combined';
 
 interface OutputTerminalProps {
   currentStep: number;
-  appMode: 'idle' | 'trace' | 'interactive';
   hideTabs?: boolean;
 }
 
@@ -29,7 +28,7 @@ function splitLines(text: string): string[] {
   return parts;
 }
 
-export function OutputTerminal({ currentStep, appMode, hideTabs }: OutputTerminalProps) {
+export function OutputTerminal({ currentStep, hideTabs }: OutputTerminalProps) {
   useSyncExternalStore(subscribeTerminal, getTerminalVersion);
   const [collapsed, setCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<TerminalTab>('combined');
@@ -170,7 +169,7 @@ export function OutputTerminal({ currentStep, appMode, hideTabs }: OutputTermina
   };
 
   const renderContent = () => {
-    if (hideTabs && appMode === 'trace') return renderCombinedEditorOutput();
+    if (hideTabs) return renderCombinedEditorOutput();
     if (effectiveTab === 'builder') return renderBuilderTab();
     if (effectiveTab === 'debugger') return renderDebuggerTab();
     return renderCombinedTab();

@@ -186,7 +186,7 @@ export function CodeEditorArea({
           </div>
         )}
 
-        <OutputTerminal currentStep={currentStep} appMode={appMode} />
+        <OutputTerminal currentStep={currentStep} />
       </div>
     </div>
   );

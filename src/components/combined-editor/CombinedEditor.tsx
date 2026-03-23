@@ -20,7 +20,6 @@ interface CombinedEditorProps {
   isEditable: boolean;
   currentStep?: number;
   currentLine?: number;
-  appMode: 'idle' | 'trace' | 'interactive';
   onEdit: () => void;
 }
 
@@ -30,7 +29,6 @@ export const CombinedEditor = forwardRef<CombinedEditorHandle, CombinedEditorPro
   isEditable,
   currentStep,
   currentLine,
-  appMode,
   onEdit,
 }: CombinedEditorProps, ref) {
   const { darkMode } = useTheme();
@@ -326,7 +324,7 @@ export const CombinedEditor = forwardRef<CombinedEditorHandle, CombinedEditorPro
         />
       </div>
 
-      <OutputTerminal currentStep={currentStep ?? 0} appMode={appMode} hideTabs />
+      <OutputTerminal currentStep={currentStep ?? 0} hideTabs />
 
       <style>{`
         .viz-block-line {
