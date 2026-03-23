@@ -13,7 +13,6 @@ import { TimelineControls } from '../timeline/TimelineControls';
 import { ExtrasMenu } from './ExtrasMenu';
 import { GridArea, type GridAreaHandle } from './GridArea';
 import { getStateAt, getMaxTime, clearTimeline, hydrateVisualTimelineFromArray } from '../timeline/timelineState';
-import { clearCodeTimeline } from '../python-engine/debugger-panel/codeTimelineState';
 import { executeCombinedCode, type TraceStep, type TraceStageInfo } from '../components/combined-editor/combinedExecutor';
 import { setHandlers, hasAnyClickHandler } from '../visual-panel/handlersState';
 import { getVizRanges } from '../components/combined-editor/vizBlockParser';
@@ -185,10 +184,9 @@ function App() {
   // ---------------------------------------------------------------------------
 
   const handleReset = useCallback(() => {
-    clearTerminal();
+    // TODO: DAMMIT. Stop duplicate code! combine with handleEditCombined
     resetPythonState();
     clearTimeline();
-    clearCodeTimeline();
     setCurrentStep(0);
     setStepCount(0);
     gridAreaRef.current?.loadVisualBuilderObjects([]);
@@ -259,7 +257,6 @@ function App() {
     setTimeline([]);
     clearTerminal();
     clearTimeline();
-    clearCodeTimeline();
     setHandlers({});
     setHasInteractiveElements(false);
     setCurrentStep(0);
