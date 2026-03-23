@@ -146,7 +146,7 @@ export function getCombinedLines(currentStep: number): TerminalLine[] {
 // ── Combined editor per-step output ───────────────────────────────────────────
 let _combinedEditorSteps: Array<{ text: string; isViz: boolean }> = [];
 
-export function setCombinedEditorSteps(steps: Array<{ text: string; isViz: boolean }>): void {
+export function setOutputTimeline(steps: Array<{ text: string; isViz: boolean }>): void {
   _combinedEditorSteps = steps;
   _notify();
 }

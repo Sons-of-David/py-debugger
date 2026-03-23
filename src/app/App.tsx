@@ -7,13 +7,13 @@ import { CombinedEditor, COMBINED_SAMPLE, type CombinedEditorHandle } from '../c
 import { useTheme } from '../contexts/ThemeContext';
 import { AnimationContext } from '../animation/animationContext';
 import { loadPyodide, isPyodideLoaded, resetPythonState } from '../python-engine/code-builder/services/pythonExecutor';
-import { clearAll as clearTerminal, commitCurrentSegment, appendError, setCombinedEditorSteps } from '../output-terminal/terminalState';
+import { clearAll as clearTerminal, commitCurrentSegment, appendError, setOutputTimeline } from '../output-terminal/terminalState';
 import { ApiReferencePanel } from '../api/ApiReferencePanel';
 import { TimelineControls } from '../timeline/TimelineControls';
 import { ExtrasMenu } from './ExtrasMenu';
 import { GridArea, type GridAreaHandle } from './GridArea';
 import { getStateAt, getMaxTime, clearTimeline, hydrateVisualTimelineFromArray } from '../timeline/timelineState';
-import { clearCodeTimeline, setCodeTimeline } from '../python-engine/debugger-panel/codeTimelineState';
+import { clearCodeTimeline } from '../python-engine/debugger-panel/codeTimelineState';
 import { executeCombinedCode, type TraceStep, type TraceStageInfo } from '../components/combined-editor/combinedExecutor';
 import { setHandlers, hasAnyClickHandler } from '../visual-panel/handlersState';
 import { getVizRanges } from '../components/combined-editor/vizBlockParser';
@@ -73,7 +73,7 @@ function App() {
 
   // Combined editor state
   const [combinedCode, setCombinedCode] = useState(COMBINED_SAMPLE);
-  const [combinedTimeline, setCombinedTimeline] = useState<TraceStep[]>([]);
+  const [timeline, setTimeline] = useState<TraceStep[]>([]);
   const [isCombinedEditable, setIsCombinedEditable] = useState(true);
   const [isAnalyzingCombined, setIsAnalyzingCombined] = useState(false);
 
@@ -195,7 +195,7 @@ function App() {
     setProjectName('untitled');
     setTextBoxes([]);
     setCombinedCode('');
-    setCombinedTimeline([]);
+    setTimeline([]);
     setIsCombinedEditable(true);
     setHandlers({});
     setHasInteractiveElements(false);
@@ -214,10 +214,9 @@ function App() {
   // ---------------------------------------------------------------------------
 
   const startTrace = useCallback((result: TraceStageInfo) => {
-    setCombinedTimeline(result.timeline);
+    setTimeline(result.timeline);
     hydrateVisualTimelineFromArray(result.timeline.map(s => s.visual));
-    setCodeTimeline(result.timeline.map(s => ({ variables: s.variables, scope: [] })));
-    setCombinedEditorSteps(result.timeline.map(s => ({ text: s.output ?? '', isViz: s.isViz ?? false })));
+    setOutputTimeline(result.timeline.map(s => ({ text: s.output ?? '', isViz: s.isViz ?? false })));
 
     gridAreaRef.current?.loadVisualBuilderObjects(getStateAt(0) ?? []);
     goToStep(0);
@@ -257,7 +256,7 @@ function App() {
 
   const handleEditCombined = useCallback(() => {
     setIsCombinedEditable(true);
-    setCombinedTimeline([]);
+    setTimeline([]);
     clearTerminal();
     clearTimeline();
     clearCodeTimeline();
@@ -501,10 +500,10 @@ function App() {
                   code={combinedCode}
                   onChange={setCombinedCode}
                   isEditable={isCombinedEditable}
-                  currentStep={combinedTimeline.length > 0 ? currentStep : undefined}
+                  currentStep={timeline.length > 0 ? currentStep : undefined}
                   currentLine={
-                    appMode === 'trace' && combinedTimeline.length > 0
-                      ? combinedTimeline[currentStep]?.line
+                    appMode === 'trace' && timeline.length > 0
+                      ? timeline[currentStep]?.line
                       : undefined
                   }
                   appMode={appMode}
