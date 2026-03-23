@@ -29,10 +29,13 @@ export function setOutputTimeline(steps: Array<{ text: string; isViz: boolean }>
  * a marker. Called when transitioning trace → interactive.
  */
 export function commitCombinedSegment(marker?: string): void {
+  const before = _committedLines.length;
   for (const { text, isViz } of _currentSteps) {
     if (text) _committedLines.push(...toLines(text, isViz ? 'viz' : 'debugger'));
   }
-  if (marker) _committedLines.push({ text: marker, source: 'marker' });
+  if (marker && _committedLines.length > before) {
+    _committedLines.push({ text: marker, source: 'marker' });
+  }
   _currentSteps = [];
   _notify();
 }
