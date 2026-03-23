@@ -164,6 +164,29 @@ export async function executeCombinedInputChanged(
   }
 }
 
+export type DragType = 'start' | 'mid' | 'end';
+
+/**
+ * Dispatch an on_drag event to a combined-editor element with viz-aware tracing.
+ */
+export async function executeCombinedDragHandler(
+  elemId: number,
+  row: number,
+  col: number,
+  dragType: DragType,
+): Promise<TraceStageInfo> {
+  try {
+    const py = await loadPyodide();
+    const resultJson: string = await py.runPythonAsync(
+      `_exec_combined_drag_traced(${elemId}, ${row}, ${col}, '${dragType}')`
+    );
+    const result = JSON.parse(resultJson) as RawResult;
+    return { timeline: parseRawTimeline(result.timeline), handlers: result.handlers };
+  } catch (error) {
+    return { timeline: [], handlers: {}, error: cleanPythonError(error instanceof Error ? error.message : String(error)) };
+  }
+}
+
 /**
  * Dispatch an on_click event to a combined-editor element with viz-aware tracing.
  *

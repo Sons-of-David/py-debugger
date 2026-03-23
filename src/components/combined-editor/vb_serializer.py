@@ -284,6 +284,17 @@ def _exec_combined_click_traced(elem_id: int, row: int, col: int) -> str:
     return _handler_result(_exec_traced(lambda: handler(col, row)))
 
 
+def _exec_combined_drag_traced(elem_id: int, row: int, col: int, drag_type: str) -> str:
+    """Call on_drag on element with viz-aware tracing; return timeline + handlers."""
+    target = _find_element(elem_id)
+    if target is None:
+        raise ValueError(f'Element {elem_id} not found')
+    handler = getattr(target, 'on_drag', None)
+    if not callable(handler):
+        raise ValueError(f'Element {elem_id} has no on_drag')
+    return _handler_result(_exec_traced(lambda: handler(col, row, drag_type)))
+
+
 def _exec_combined_input_changed(elem_id: int, text: str) -> str:
     """Call input_changed(text) on element with viz-aware tracing; return timeline + handlers."""
     target = _find_element(elem_id)

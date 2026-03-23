@@ -3,10 +3,8 @@ import { toCanvas } from 'html-to-image';
 import { Grid, type GridHandle, CELL_SIZE } from '../visual-panel/components/Grid';
 import { useGridState } from '../visual-panel/hooks/useGridState';
 import type { VisualBuilderElementBase } from '../api/visualBuilder';
-import { executeEventHandler, type ClickHandlerResult, type DragType } from '../python-engine/code-builder/services/pythonExecutor';
-import { executeCombinedClickHandler, executeCombinedInputChanged, type TraceStageInfo } from '../components/combined-editor/combinedExecutor';
+import { executeCombinedClickHandler, executeCombinedDragHandler, executeCombinedInputChanged, type TraceStageInfo, type DragType } from '../components/combined-editor/combinedExecutor';
 import { appendError } from '../output-terminal/terminalState';
-import { hydrateElement } from '../visual-panel/types/elementRegistry';
 import type { TextBox } from '../text-boxes/types';
 import type { VizRange } from '../components/combined-editor/vizBlockParser';
 import type { CaptureRegion } from '../visual-panel/components/CaptureRegionLayer';
@@ -98,17 +96,12 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
       if (result.timeline.length > 0) onCombinedTrace?.(result);
     }, [combinedVizRanges, onCombinedTrace]);
 
-    const applyEventResult = useCallback((result: ClickHandlerResult) => {
-      if (!result || result.error) {
-        return;
-      }
-      const hydrated = result.snapshot.map((el) => hydrateElement(el));
-      loadVisualBuilderObjects(hydrated);
-    }, [loadVisualBuilderObjects]);
-
     const handleElementDrag = useCallback(async (elemId: number, x: number, y: number, dragType: DragType) => {
-      applyEventResult(await executeEventHandler('on_drag', elemId, y, x, dragType));
-    }, [applyEventResult]);
+      if (!combinedVizRanges) return;
+      const result = await executeCombinedDragHandler(elemId, y, x, dragType);
+      if (result.error) { appendError(result.error); return; }
+      if (result.timeline.length > 0) onCombinedTrace?.(result);
+    }, [combinedVizRanges, onCombinedTrace]);
 
     const handleTextBoxAdded = useCallback((box: TextBox) => {
       onTextBoxesChange([...textBoxes, box]);
