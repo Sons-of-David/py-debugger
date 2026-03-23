@@ -213,17 +213,24 @@ function App() {
   // Combined editor handlers
   // ---------------------------------------------------------------------------
 
-  const applyCombinedResult = useCallback((result: CombinedResult, mode: AppMode) => {
+  const startTrace = useCallback((result: CombinedResult) => {
     setCombinedTimeline(result.timeline);
     hydrateTimelineFromArray(result.timeline.map(s => s.visual));
     setCodeTimeline(result.timeline.map(s => ({ variables: s.variables, scope: [] })));
     setHandlers(result.handlers ?? {});
-    setHasInteractiveElements(hasAnyClickHandler());
+    const interactive = hasAnyClickHandler();
+    setHasInteractiveElements(interactive);
     setStepCount(getMaxTime() + 1);
     gridAreaRef.current?.loadVisualBuilderObjects(getStateAt(0) ?? []);
     setCombinedEditorSteps(result.timeline.map(s => ({ text: s.output ?? '', isViz: s.isViz ?? false })));
     goToStep(0);
-    setAppMode(mode);
+    const isOneFrame = result.timeline.length <= 1;
+    if (isOneFrame && interactive) {
+      commitCurrentSegment('----- end trace -----');
+      setAppMode('interactive');
+    } else {
+      setAppMode('trace');
+    }
   }, [goToStep]);
 
   const handleAnalyzeCombined = useCallback(async () => {
@@ -233,12 +240,8 @@ function App() {
     try {
       const result = await executeCombinedCode(combinedCode);
       if (!result.error) {
-        const hasInteractive = Object.values(result.handlers ?? {}).some(h => h.includes('on_click'));
-        const isOneFrame = result.timeline.length <= 1;
-        const mode: AppMode = isOneFrame && hasInteractive ? 'interactive' : 'trace';
-        if (mode === 'interactive') commitCurrentSegment('----- end trace -----');
         setIsCombinedEditable(false);
-        applyCombinedResult(result, mode);
+        startTrace(result);
       } else {
         appendError(result.error ?? 'Unknown error');
       }
@@ -247,7 +250,7 @@ function App() {
     } finally {
       setIsAnalyzingCombined(false);
     }
-  }, [combinedCode, applyCombinedResult]);
+  }, [combinedCode, startTrace]);
 
   const handleEditCombined = useCallback(() => {
     setIsCombinedEditable(true);
@@ -264,8 +267,8 @@ function App() {
   }, []);
 
   const handleCombinedTrace = useCallback((result: CombinedResult) => {
-    applyCombinedResult(result, 'trace');
-  }, [applyCombinedResult]);
+    startTrace(result);
+  }, [startTrace]);
 
   // viz block ranges for the current combined code; stable until code changes
   const combinedVizRanges = useMemo(() => getVizRanges(combinedCode), [combinedCode]);
