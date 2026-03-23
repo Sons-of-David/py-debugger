@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
+import { useState, useCallback, useRef, forwardRef, useImperativeHandle, useEffect } from 'react';
 import { toCanvas } from 'html-to-image';
 import { Grid, type GridHandle, CELL_SIZE } from '../visual-panel/components/Grid';
 import { useGridState } from '../visual-panel/hooks/useGridState';
@@ -34,6 +34,8 @@ interface GridAreaProps {
   mouseEnabled: boolean;
   textBoxes: TextBox[];
   onTextBoxesChange: (boxes: TextBox[]) => void;
+  /** Visual elements to display; updated reactively when currentStep changes. */
+  elements?: VisualBuilderElementBase[];
   /** Combined-editor: viz block ranges for the current code, used for auto-tracing clicks. */
   combinedVizRanges?: VizRange[];
   /** Combined-editor: called when a click produces a traced mini-timeline. */
@@ -45,7 +47,7 @@ interface GridAreaProps {
 }
 
 export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
-  function GridArea({ darkMode, mouseEnabled, textBoxes, onTextBoxesChange, combinedVizRanges, onCombinedTrace, appMode = 'idle', onCreateGif, isCreatingGif = false, allowGif = false }, ref) {
+  function GridArea({ darkMode, mouseEnabled, textBoxes, onTextBoxesChange, elements, combinedVizRanges, onCombinedTrace, appMode = 'idle', onCreateGif, isCreatingGif = false, allowGif = false }, ref) {
     const {
       cells,
       overlayCells,
@@ -57,6 +59,10 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
       loadVisualBuilderObjects,
       occupancyMap,
     } = useGridState();
+
+    useEffect(() => {
+      loadVisualBuilderObjects(elements ?? []);
+    }, [elements, loadVisualBuilderObjects]);
 
     const gridRef = useRef<GridHandle>(null);
     const [isCapturing, setIsCapturing] = useState(false);

@@ -108,11 +108,13 @@ function App() {
   // ---------------------------------------------------------------------------
 
 
+  // timeline is a required dep: forces recompute when a new trace loads,
+  // even if currentStep stays at 0 between analyses.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const currentElements = useMemo(() => getStateAt(currentStep) ?? [], [currentStep, timeline]);
+
   const goToStep = useCallback((step: number) => {
-    const clamped = Math.max(0, Math.min(getMaxTime(), step));
-    const state = getStateAt(clamped);
-    if (state) gridAreaRef.current?.loadVisualBuilderObjects(state);
-    setCurrentStep(clamped);
+    setCurrentStep(Math.max(0, Math.min(getMaxTime(), step)));
   }, []);
 
   const handleCreateGif = useCallback(async (region: CaptureRegion | null) => {
@@ -189,7 +191,6 @@ function App() {
     clearTimeline();
     setCurrentStep(0);
     setStepCount(0);
-    gridAreaRef.current?.loadVisualBuilderObjects([]);
     setProjectName('untitled');
     setTextBoxes([]);
     setCombinedCode('');
@@ -212,18 +213,18 @@ function App() {
   // ---------------------------------------------------------------------------
 
   const startTrace = useCallback((result: TraceStageInfo) => {
+    console.log('timeline result:', result.timeline);
     setTimeline(result.timeline);
     hydrateVisualTimelineFromArray(result.timeline.map(s => s.visual));
     setOutputTimeline(result.timeline.map(s => ({ text: s.output ?? '', isViz: s.isViz ?? false })));
 
-    gridAreaRef.current?.loadVisualBuilderObjects(getStateAt(0) ?? []);
-    goToStep(0);
     setStepCount(getMaxTime() + 1);
+    goToStep(0);
 
     setHandlers(result.handlers ?? {});
     const interactive = hasAnyClickHandler();
     setHasInteractiveElements(interactive);
-    const isOneFrame = result.timeline.length <= 1;
+    const isOneFrame = (getMaxTime() === 0);
 
     if (isOneFrame && interactive) {
       commitCurrentSegment('----- end trace -----');
@@ -261,7 +262,6 @@ function App() {
     setHasInteractiveElements(false);
     setCurrentStep(0);
     setStepCount(0);
-    gridAreaRef.current?.loadVisualBuilderObjects([]);
     setAppMode('idle');
   }, []);
 
@@ -520,6 +520,7 @@ function App() {
                 mouseEnabled={mouseEnabled}
                 textBoxes={textBoxes}
                 onTextBoxesChange={setTextBoxes}
+                elements={currentElements}
                 combinedVizRanges={combinedVizRanges}
                 onCombinedTrace={handleCombinedTrace}
                 appMode={appMode}
