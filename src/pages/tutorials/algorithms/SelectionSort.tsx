@@ -152,13 +152,13 @@ export function SelectionSort() {
       {/* Title */}
       <div>
         <p className="text-xs font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wider mb-1">
-          Algorithm Walkthrough
+          Getting Started
         </p>
-        <h1 className={`${t.heading1} mb-3`}>Selection Sort</h1>
+        <h1 className={`${t.heading1} mb-3`}>Learn AlgoPlay with Selection Sort</h1>
         <p className={`${t.body} leading-relaxed max-w-xl`}>
           Selection sort finds the minimum element in the unsorted region and swaps it into
-          place — one element per pass. It's a great first example because the visualization
-          is clear and the code is short enough to read in full.
+          place — one element per pass. As a first example, we will use it to learn the
+          interesting features that AlgoPlay has — the algorithm itself is just a vehicle.
         </p>
         <p className={`${t.body} leading-relaxed max-w-xl mt-3`}>
           This page builds the visualization in three steps: first with raw{' '}
