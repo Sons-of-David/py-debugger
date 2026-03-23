@@ -4,7 +4,7 @@ import { AnimationContext } from '../animation/animationContext';
 import { loadPyodide, isPyodideLoaded } from '../python-engine/code-builder/services/pythonExecutor';
 import { TimelineControls } from '../timeline/TimelineControls';
 import { GridArea, type GridAreaHandle } from './GridArea';
-import { getStateAt, getMaxTime, clearTimeline, hydrateTimelineFromArray } from '../timeline/timelineState';
+import { getStateAt, getMaxTime, clearTimeline, hydrateVisualTimelineFromArray } from '../timeline/timelineState';
 import { executeCombinedCode, type TraceStep, type TraceStageInfo } from '../components/combined-editor/combinedExecutor';
 import { setHandlers, hasAnyClickHandler } from '../visual-panel/handlersState';
 import { getVizRanges } from '../components/combined-editor/vizBlockParser';
@@ -118,7 +118,7 @@ export function EmbedPage() {
       const result = await executeCombinedCode(code);
       if (!result.error) {
         setCombinedTimeline(result.timeline);
-        hydrateTimelineFromArray(result.timeline.map((s) => s.visual));
+        hydrateVisualTimelineFromArray(result.timeline.map((s) => s.visual));
         setHandlers(result.handlers ?? {});
         const hasInteractive = hasAnyClickHandler();
         setHasInteractiveElements(hasInteractive);
@@ -173,7 +173,7 @@ export function EmbedPage() {
   }, [goToStep]);
 
   const handleCombinedTrace = useCallback((result: TraceStageInfo) => {
-    hydrateTimelineFromArray(result.timeline.map((s) => s.visual));
+    hydrateVisualTimelineFromArray(result.timeline.map((s) => s.visual));
     setStepCount(result.timeline.length);
     goToStep(0);
     setAppMode('trace');

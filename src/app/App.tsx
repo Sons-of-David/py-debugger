@@ -12,7 +12,7 @@ import { ApiReferencePanel } from '../api/ApiReferencePanel';
 import { TimelineControls } from '../timeline/TimelineControls';
 import { ExtrasMenu } from './ExtrasMenu';
 import { GridArea, type GridAreaHandle } from './GridArea';
-import { getStateAt, getMaxTime, clearTimeline, hydrateTimelineFromArray } from '../timeline/timelineState';
+import { getStateAt, getMaxTime, clearTimeline, hydrateVisualTimelineFromArray } from '../timeline/timelineState';
 import { clearCodeTimeline, setCodeTimeline } from '../python-engine/debugger-panel/codeTimelineState';
 import { executeCombinedCode, type TraceStep, type TraceStageInfo } from '../components/combined-editor/combinedExecutor';
 import { setHandlers, hasAnyClickHandler } from '../visual-panel/handlersState';
@@ -215,16 +215,19 @@ function App() {
 
   const startTrace = useCallback((result: TraceStageInfo) => {
     setCombinedTimeline(result.timeline);
-    hydrateTimelineFromArray(result.timeline.map(s => s.visual));
+    hydrateVisualTimelineFromArray(result.timeline.map(s => s.visual));
     setCodeTimeline(result.timeline.map(s => ({ variables: s.variables, scope: [] })));
+    setCombinedEditorSteps(result.timeline.map(s => ({ text: s.output ?? '', isViz: s.isViz ?? false })));
+
+    gridAreaRef.current?.loadVisualBuilderObjects(getStateAt(0) ?? []);
+    goToStep(0);
+    setStepCount(getMaxTime() + 1);
+
     setHandlers(result.handlers ?? {});
     const interactive = hasAnyClickHandler();
     setHasInteractiveElements(interactive);
-    setStepCount(getMaxTime() + 1);
-    gridAreaRef.current?.loadVisualBuilderObjects(getStateAt(0) ?? []);
-    setCombinedEditorSteps(result.timeline.map(s => ({ text: s.output ?? '', isViz: s.isViz ?? false })));
-    goToStep(0);
     const isOneFrame = result.timeline.length <= 1;
+
     if (isOneFrame && interactive) {
       commitCurrentSegment('----- end trace -----');
       setAppMode('interactive');
