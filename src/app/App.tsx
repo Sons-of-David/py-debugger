@@ -11,6 +11,7 @@ import { clearAll as clearTerminal, commitCombinedSegment, appendError, setOutpu
 import { ApiReferencePanel } from '../api/ApiReferencePanel';
 import { TimelineControls } from '../timeline/TimelineControls';
 import { ExtrasMenu } from './ExtrasMenu';
+import { FeedbackModal } from '../components/FeedbackModal';
 import { GridArea, type GridAreaHandle } from './GridArea';
 import { getStateAt, getMaxTime, clearTimeline, hydrateVisualTimelineFromArray } from '../timeline/timelineState';
 import { executeCombinedCode, type TraceStep, type TraceStageInfo } from '../components/combined-editor/combinedExecutor';
@@ -65,6 +66,7 @@ function App() {
   const [pyodideReady, setPyodideReady] = useState(false);
   const [apiReferenceOpen, setApiReferenceOpen] = useState(false);
   const [saveSampleStatus, setSaveSampleStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   const [textBoxes, setTextBoxes] = useState<TextBox[]>([]);
   const [animationsEnabled, setAnimationsEnabled] = useState(true);
@@ -485,6 +487,7 @@ function App() {
             isLocal={IS_LOCAL}
             onSaveToSamples={handleSaveToSamples}
             saveSampleStatus={saveSampleStatus}
+            onFeedback={() => setFeedbackOpen(true)}
           />
         </div>
       </header>
@@ -544,6 +547,13 @@ function App() {
       {/* Footer */}
       <footer className="flex-shrink-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
       </footer>
+      {feedbackOpen && (
+        <FeedbackModal
+          combinedCode={combinedCode}
+          textBoxes={textBoxes}
+          onClose={() => setFeedbackOpen(false)}
+        />
+      )}
     </div>
     </AnimationContext.Provider>
   );

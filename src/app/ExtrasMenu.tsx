@@ -14,6 +14,7 @@ interface ExtrasMenuProps {
   isLocal: boolean;
   onSaveToSamples: () => void;
   saveSampleStatus: 'idle' | 'saving' | 'saved' | 'error';
+  onFeedback: () => void;
 }
 
 const btnBase = 'px-3 py-1 rounded text-sm font-medium transition-colors';
@@ -33,6 +34,7 @@ export function ExtrasMenu({
   isLocal,
   onSaveToSamples,
   saveSampleStatus,
+  onFeedback,
 }: ExtrasMenuProps) {
   const [open, setOpen] = useState(false);
 
@@ -55,6 +57,15 @@ export function ExtrasMenu({
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute right-0 top-full mt-1 z-50 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded shadow-lg py-1">
+
+            {/* Feedback */}
+            <button
+              type="button"
+              onClick={() => { onFeedback(); setOpen(false); }}
+              className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              Send Feedback
+            </button>
 
             {/* Tutorials link */}
             <a
