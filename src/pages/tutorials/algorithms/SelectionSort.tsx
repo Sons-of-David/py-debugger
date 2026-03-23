@@ -212,16 +212,6 @@ export function SelectionSort() {
             </div>
           ))}
         </div>
-        <p className={`${t.muted} mt-4`}>
-          The shapes used here — <code className={t.inlineCode}>Array</code>,{' '}
-          <code className={t.inlineCode}>Rect</code>,{' '}
-          <code className={t.inlineCode}>Arrow</code>, and{' '}
-          <code className={t.inlineCode}>Label</code> — are all covered in the{' '}
-          <Link to="/tutorials/visual-elements" className={t.linkAccent}>
-            Visual Elements
-          </Link>{' '}
-          reference.
-        </p>
       </section>
 
       {/* ------------------------------------------------------------------ */}
@@ -249,7 +239,7 @@ export function SelectionSort() {
         {/* Emphasis callout */}
         <div className="border-l-4 border-amber-400 dark:border-amber-500 pl-4 py-2 bg-amber-50 dark:bg-amber-900/20 rounded-r-lg">
           <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
-            This code gets much simpler.
+            This gets much simpler really soon!
           </p>
           <p className="text-sm text-amber-700 dark:text-amber-400 mt-0.5">
             All those manual <code className="font-mono text-xs">x = 2 + min_index</code> updates
@@ -285,6 +275,18 @@ export function SelectionSort() {
             </p>
           </div>
         </div>
+        <p className={`${t.muted} mt-2`}>
+          Notice that the viz blocks define an{' '}
+          <code className={t.inlineCode}>Array</code>,{' '}
+          a <code className={t.inlineCode}>Rect</code>, a couple of{' '}
+          <code className={t.inlineCode}>Arrow</code>s and{' '}
+          <code className={t.inlineCode}>Label</code>s — which we can see in the
+          visualization itself. More details about these shapes and more can be found in the{' '}
+          <Link to="/tutorials/visual-elements" className={t.linkAccent}>
+            Visual Elements
+          </Link>{' '}
+          reference.
+        </p>
       </section>
 
       {/* ------------------------------------------------------------------ */}
@@ -345,7 +347,9 @@ export function SelectionSort() {
             <code className={t.inlineCode}>V("expr")</code> binds an element property to a
             Python expression. Every time that expression's value changes during the
             algorithm, a new frame is automatically recorded — without any{' '}
-            <code className={t.inlineCode}># @viz</code> block needed.
+            <code className={t.inlineCode}># @viz</code> block needed. For example, the{' '}
+            <code className={t.inlineCode}>min_index</code> arrow should be bound to the{' '}
+            <code className={t.inlineCode}>min_index</code> value.
           </p>
         </div>
 
@@ -369,8 +373,13 @@ export function SelectionSort() {
               <code className={t.inlineCode}>min_index = 0</code> and{' '}
               <code className={t.inlineCode}>j = 0</code> are set before the{' '}
               <code className={t.inlineCode}># @viz</code> block so the initial snapshot has
-              valid starting values for the arrows. Without these, the first frame would show
-              the arrows at a default position instead.
+              valid starting values for the arrows. Alternatively,{' '}
+              <code className={t.inlineCode}>V()</code> accepts a{' '}
+              <code className={t.inlineCode}>default=</code> argument — see{' '}
+              <Link to="/tutorials/tracing" className={t.linkAccent}>
+                Tracing &amp; Variables
+              </Link>{' '}
+              for details.
             </p>
           </div>
           <div className={`${t.card} p-4`}>
@@ -389,7 +398,7 @@ export function SelectionSort() {
               <code className={t.inlineCode}>LabeledArrow</code> is a{' '}
               <code className={t.inlineCode}>Panel</code> subclass that bundles an{' '}
               <code className={t.inlineCode}>Arrow</code> and a{' '}
-              <code className={t.inlineCode}>Label</code> together. It accepts{' '}
+              <code className={t.inlineCode}>Label</code> together. It can accept{' '}
               <code className={t.inlineCode}>x=V('min_index')</code> directly on the outer
               panel, so both children move together as a unit.
             </p>
