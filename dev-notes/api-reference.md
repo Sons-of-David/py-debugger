@@ -149,6 +149,67 @@ for i in range(5):  # rect.width updates automatically
 
 ---
 
+## Sample Architecture: Algorithm / Visual Separation
+
+For interactive samples, keep algorithm state separate from visual elements.
+
+### Where things live
+
+| What | Where |
+|------|-------|
+| Algorithm data structures (`grid`, `graph`, arrays) | **Outside** `# @viz` — plain Python |
+| Algorithm functions (`set_block`, `do_bfs`, `clear`) | **Outside** `# @viz` |
+| Visual layout constants (`BOARD_X`, `BOARD_Y`, colors) | **Inside** `# @viz` |
+| Element creation and class definitions | **Inside** `# @viz` |
+
+### Updating visuals from event handlers
+
+After an event handler returns, the system **automatically re-serializes all element properties**. There is no explicit "refresh" call. Just mutate element properties directly:
+
+```python
+# Algorithm function — mutates state AND updates element properties
+def set_block(r, c):
+    grid[r][c] = -2                  # update algorithm state
+    cells[r][c].sync(-2)             # update visual properties
+
+def do_bfs(start_r, start_c):
+    # ... BFS logic on grid ...
+    for r in range(ROWS):            # sync all visuals after BFS
+        for c in range(COLS):
+            cells[r][c].sync(grid[r][c])
+```
+
+**No refresh calls, no viz blocks in handlers.** The system picks up all property changes automatically.
+
+### V() vs direct mutation
+
+- **`V('expr')`** — for trace-mode samples where element properties should track algorithm variables step by step during the initial trace
+- **Direct mutation** (`elem.color = X`) — for interactive-mode samples where event handlers drive visual changes
+
+### Elements as views over algorithm state
+
+```python
+class Cell(Panel):
+    def sync(self, val):
+        """Map algorithm value to visual state. -2=wall, -1=empty, 0+=BFS dist."""
+        if val == -2:   self._bg.color = WALL_COLOR;  self._lbl.label = ''
+        elif val == -1: self._bg.color = EMPTY_COLOR; self._lbl.label = ''
+        elif val == 0:  self._bg.color = START_COLOR; self._lbl.label = '0'
+        else:           self._bg.color = FILL_COLOR;  self._lbl.label = str(val)
+```
+
+### Converting drag coordinates to board-relative
+
+`on_drag` always gives absolute grid coords. To convert to panel-relative:
+```python
+# board Panel is at absolute (BOARD_X, BOARD_Y)
+def on_drag(self, x, y, drag_type):
+    r = y - board.y   # board-relative row
+    c = x - board.x   # board-relative col
+```
+
+---
+
 ## Common Patterns
 
 ### Clickable button
