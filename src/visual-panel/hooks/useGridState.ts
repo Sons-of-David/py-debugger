@@ -22,6 +22,7 @@ interface GridObject {
   zOrder: number;
 }
 
+
 export function useGridState() {
   const [objects, setObjects] = useState<Map<string, GridObject>>(new Map());
   const [zoom, setZoomLevel] = useState(1);
@@ -248,92 +249,52 @@ export function useGridState() {
     setZoomLevel(Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value)));
   }, []);
 
-  const VB_PREFIX = 'vb-';
-
-  // TODO: loadVisualBuilderObjects is too long — consider splitting into
-  // buildPanelMap(), resolveNonPanelElement(), and resolveArrayElement() helpers.
   const loadVisualBuilderObjects = useCallback((elements: VisualBuilderElementBase[]) => {
-    setObjects((prev) => {
-      const next = new Map(prev);
-      for (const [id] of next) {
-        if (id.startsWith(VB_PREFIX)) next.delete(id);
-      }
+    // ── Tree node types ─────────────────────────────────────────────────────
+    interface PanelTreeNode { el: VisualBuilderElementBase; gridId: string; children: TreeNodeEntry[]; }
+    interface LeafTreeNode  { el: VisualBuilderElementBase; gridId: string; }
+    type TreeNodeEntry = PanelTreeNode | LeafTreeNode;
+    const isPanelNode = (n: TreeNodeEntry): n is PanelTreeNode => 'children' in n;
 
-      const panelIdMap = new Map<string, { gridId: string; origin: CellPosition }>();
+    setObjects(() => {
+      const next = new Map<string, GridObject>();
       let idx = 0;
       let z = zOrderCounter.current++;
 
-      // Build elem_id → grid ID map (panel-N based on original array position)
-      const serializedPanelIdToGridId = new Map<string, string>();
-      let panelIndex = 0;
+      // ── Build panel tree ────────────────────────────────────────────────
+      // Panel grid ID = panel-e{_elem_id}. Children reference parents by
+      // el.panelId (Python _elem_id string), so no translation map is needed.
+
+      const panelNodeMap = new Map<string, PanelTreeNode>();
+      const allNodes: TreeNodeEntry[] = [];
+
       for (const el of elements) {
         if (el.type === 'panel') {
-          const elemId = (el as any)._elem_id;
-          if (elemId != null) serializedPanelIdToGridId.set(String(elemId), `${VB_PREFIX}panel-${panelIndex}`);
-          panelIndex++;
+          const gridId = `panel-e${(el as any)._elem_id}`;
+          const node: PanelTreeNode = { el, gridId, children: [] };
+          panelNodeMap.set(gridId, node);
+          allNodes.push(node);
+        } else {
+          const rawElemId = (el as { _elemId?: number })._elemId;
+          const gridId = rawElemId != null ? `elem-${rawElemId}` : `${idx++}`;
+          allNodes.push({ el, gridId });
         }
       }
 
-      // Pre-compute hidden panel elem IDs, propagating down to all descendants
-      const hiddenPanelElemIds = new Set<string>();
-      for (const el of elements) {
-        if (el.type === 'panel' && (el as any).visible === false) {
-          const id = (el as any)._elem_id;
-          if (id != null) hiddenPanelElemIds.add(String(id));
-        }
-      }
-      let changed = true;
-      while (changed) {
-        changed = false;
-        for (const el of elements) {
-          if (el.type !== 'panel') continue;
-          const id = (el as any)._elem_id;
-          if (id == null || hiddenPanelElemIds.has(String(id))) continue;
-          if (el.panelId && hiddenPanelElemIds.has(el.panelId)) {
-            hiddenPanelElemIds.add(String(id));
-            changed = true;
-          }
-        }
+      const rootChildren: TreeNodeEntry[] = [];
+      for (const node of allNodes) {
+        const parentNode = node.el.panelId ? panelNodeMap.get(`panel-e${node.el.panelId}`) : undefined;
+        if (parentNode) parentNode.children.push(node);
+        else rootChildren.push(node);
       }
 
-      // Topologically sort panels: parent before child so panelIdMap always has the parent resolved
-      const panelElements = elements.filter(el => el.type === 'panel');
-      const panelElemIdToEl = new Map(panelElements.map(el => [String((el as any)._elem_id), el]));
-      const sortedPanels: typeof panelElements = [];
-      const visitedPanels = new Set<string>();
-      const visitPanel = (el: VisualBuilderElementBase) => {
-        const id = String((el as any)._elem_id);
-        if (visitedPanels.has(id)) return;
-        if (el.panelId && panelElemIdToEl.has(el.panelId)) {
-          visitPanel(panelElemIdToEl.get(el.panelId)!);
-        }
-        visitedPanels.add(id);
-        sortedPanels.push(el);
-      };
-      for (const el of panelElements) visitPanel(el);
+      // ── Emit helpers ────────────────────────────────────────────────────
 
-      // First pass: add regular panels in topological order (parent before child)
-      for (const el of sortedPanels) {
-        const elAny = el as any;
-        const elemIdStr = elAny._elem_id != null ? String(elAny._elem_id) : null;
-        if (elemIdStr && hiddenPanelElemIds.has(elemIdStr)) continue;
-
-        const row = el.y;
-        const col = el.x;
+      const emitPanel = (node: PanelTreeNode, parentGridId: string | undefined) => {
+        const elAny = node.el as any;
+        const { gridId } = node;
         const width = elAny.width ?? 5;
         const height = elAny.height ?? 5;
-        // Use the pre-assigned grid ID from serializedPanelIdToGridId so parent refs stay consistent
-        const gridId = (elemIdStr && serializedPanelIdToGridId.get(elemIdStr)) ?? `${VB_PREFIX}panel-${idx++}`;
-
-        // Resolve parent panel for nested panels (guaranteed to be in panelIdMap due to topo order)
-        let parentGridId: string | undefined;
-        if (el.panelId) {
-          const resolved = serializedPanelIdToGridId.get(el.panelId) ?? el.panelId;
-          if (panelIdMap.has(resolved)) parentGridId = resolved;
-        }
-        const parentOrigin = parentGridId ? panelIdMap.get(parentGridId)!.origin : { row: 0, col: 0 };
-        panelIdMap.set(gridId, { gridId, origin: { row: row + parentOrigin.row, col: col + parentOrigin.col } });
-
         const panelCell = new PanelCell({ id: gridId, title: elAny.name, showBorder: elAny.show_border ?? false });
         next.set(gridId, {
           id: gridId,
@@ -345,113 +306,114 @@ export function useGridState() {
             zOrder: z,
             ...(parentGridId ? { panelId: parentGridId } : {}),
           },
-          position: { row, col },
+          position: { row: node.el.y, col: node.el.x },
           zOrder: z++,
         });
-      }
+      };
 
-      // Start non-panel idx after the panel ID space to avoid collisions
-      idx = panelIndex;
+      const emitLeaf = (node: LeafTreeNode, parentGridId: string | undefined, parentAlpha: number) => {
+        const { el } = node;
+        const elAny = el as any;
+        if (!('draw' in el && typeof elAny.draw === 'function')) return;
 
-      // Second pass: add non-panel elements
-      for (const el of elements) {
-        if (el.type === 'panel') continue;
-        if (el.panelId && hiddenPanelElemIds.has(el.panelId)) continue;
-        const rawElemId = (el as any)._elemId as number | undefined;
-        const gridId = rawElemId != null ? `${VB_PREFIX}elem-${rawElemId}` : `${VB_PREFIX}${idx++}`;
-        let row = el.y;
-        let col = el.x;
-        let parentPanelId: string | undefined;
-        if (el.panelId) {
-          const gridPanelId = serializedPanelIdToGridId.get(el.panelId) ?? el.panelId;
-          const info = panelIdMap.get(gridPanelId);
-          if (info) {
-            row = row + info.origin.row;
-            col = col + info.origin.col;
-            parentPanelId = gridPanelId;
-          }
-        }
-        const pos: CellPosition = { row, col };
-        const targetPosition = parentPanelId ? { row: el.y, col: el.x } : pos;
+        const drawResult = (elAny.draw as (i: number, elemId?: number) => Record<string, unknown>)(idx, elAny._elemId);
 
-        if ('draw' in el && typeof (el as Record<string, unknown>).draw === 'function') {
-          const drawElemId = (el as any)._elemId as number | undefined;
-          const drawResult = (el as Record<string, unknown> & { draw: (i: number, prefix: string, elemId?: number) => Record<string, unknown> }).draw(idx, VB_PREFIX, drawElemId);
-
-          if ('panel' in drawResult && 'cells' in drawResult) {
-            // Array panel draw result: { panel, panelOffset, cells, nextIdx }
-            const { panel: panelInfo, panelOffset, cells: drawCells, nextIdx } =
-              drawResult as unknown as ArrayDrawResult;
-
-            const panelRow = el.y + (panelOffset?.row ?? 0);
-            const panelCol = el.x + (panelOffset?.col ?? 0);
-
-            const panelGridId = panelInfo.id;
-            panelIdMap.set(panelGridId, { gridId: panelGridId, origin: { row: panelRow + (parentPanelId ? panelIdMap.get(parentPanelId)!.origin.row : 0), col: panelCol + (parentPanelId ? panelIdMap.get(parentPanelId)!.origin.col : 0) } });
-            const arrayPanelCell = new PanelCell({ id: panelGridId, title: panelInfo.title });
-            next.set(panelGridId, {
-              id: panelGridId,
-              data: {
-                objectId: panelGridId,
-                elementInfo: arrayPanelCell as any,
-                panel: {
-                  id: panelGridId,
-                  width: panelInfo.width,
-                  height: panelInfo.height,
-                  title: panelInfo.title,
-                  panelStyle: panelInfo.panelStyle,
-                  showBorder: panelInfo.showBackground !== false,
-                },
-                shapeProps: { width: panelInfo.width, height: panelInfo.height },
-                panelId: parentPanelId,
-                zOrder: z,
-                userZ: (el as any).z ?? 0,
+        if ('panel' in drawResult && 'cells' in drawResult) {
+          // Array element: produces its own panel + cells
+          const { panel: panelInfo, panelOffset, cells: drawCells, nextIdx } = drawResult as unknown as ArrayDrawResult;
+          const panelGridId = panelInfo.id;
+          next.set(panelGridId, {
+            id: panelGridId,
+            data: {
+              objectId: panelGridId,
+              elementInfo: new PanelCell({ id: panelGridId, title: panelInfo.title }),
+              panel: {
+                id: panelGridId,
+                width: panelInfo.width,
+                height: panelInfo.height,
+                title: panelInfo.title,
+                panelStyle: panelInfo.panelStyle,
+                showBorder: panelInfo.showBackground !== false,
               },
-              position: { row: panelRow, col: panelCol },
-              zOrder: z++,
-            });
-
-            for (const cell of drawCells) {
-              next.set(cell.cellId, {
-                id: cell.cellId,
-                data: { ...cell.data, objectId: cell.cellId, panelId: panelGridId, zOrder: z },
-                position: { row: cell.position[0], col: cell.position[1] },
-                zOrder: z++,
-              });
-            }
-            idx = nextIdx;
-          } else if ('cells' in drawResult) {
-            const { cells: drawCells, nextIdx } = drawResult as { cells: Array<{ cellId: string; data: RenderableObjectData }>; nextIdx: number };
-            for (const cell of drawCells) {
-              next.set(cell.cellId, {
-                id: cell.cellId,
-                data: { ...cell.data, objectId: cell.cellId, panelId: parentPanelId, zOrder: z },
-                position: targetPosition,
-                zOrder: z++,
-              });
-            }
-            idx = nextIdx;
-          } else {
-            const elemId = (el as any)._elemId as number | undefined;
-            const clickData: InteractionData | undefined = elemId != null && hasHandler(elemId, 'on_click')
-              ? { elemId, x: el.x, y: el.y }
-              : undefined;
-            const hasDrag = elemId != null && hasHandler(elemId, 'on_drag');
-            const dragData: InteractionData | undefined = hasDrag
-              ? { elemId: elemId!, x: el.x, y: el.y }
-              : undefined;
-            const inputData: InteractionData | undefined = elemId != null && hasHandler(elemId, 'input_changed')
-              ? { elemId, x: el.x, y: el.y }
-              : undefined;
-            next.set(gridId, {
-              id: gridId,
-              data: { ...(drawResult as RenderableObjectData), objectId: gridId, panelId: parentPanelId, zOrder: z, userZ: (el as any).z ?? 0, animate: (el as { animate?: boolean }).animate, clickData, dragData, inputData },
-              position: targetPosition,
+              shapeProps: { width: panelInfo.width, height: panelInfo.height },
+              panelId: parentGridId,
+              zOrder: z,
+              userZ: elAny.z ?? 0,
+            },
+            position: { row: el.y + (panelOffset?.row ?? 0), col: el.x + (panelOffset?.col ?? 0) },
+            zOrder: z++,
+          });
+          // parentAlpha for cells = inherited alpha × this array element's own alpha,
+          // since cells' style.opacity already encodes the array element's alpha.
+          // Wait — cell style.opacity IS the array element alpha, so CSS wrapper should be
+          // parentAlpha only (ancestors' contribution). The array's own alpha is in style.opacity.
+          for (const cell of drawCells) {
+            next.set(cell.cellId, {
+              id: cell.cellId,
+              data: { ...cell.data, objectId: cell.cellId, panelId: panelGridId, zOrder: z, parentAlpha },
+              position: { row: cell.position[0], col: cell.position[1] },
               zOrder: z++,
             });
           }
+          idx = nextIdx;
+        } else if ('cells' in drawResult) {
+          // Multi-cell element (no panel wrapper)
+          const { cells: drawCells, nextIdx } = drawResult as { cells: Array<{ cellId: string; data: RenderableObjectData }>; nextIdx: number };
+          for (const cell of drawCells) {
+            next.set(cell.cellId, {
+              id: cell.cellId,
+              data: { ...cell.data, objectId: cell.cellId, panelId: parentGridId, zOrder: z, parentAlpha },
+              position: { row: el.y, col: el.x },
+              zOrder: z++,
+            });
+          }
+          idx = nextIdx;
+        } else {
+          // Single-object element — attach interaction data
+          const elemId = elAny._elemId as number | undefined;
+          const clickData: InteractionData | undefined = elemId != null && hasHandler(elemId, 'on_click')
+            ? { elemId, x: el.x, y: el.y } : undefined;
+          const dragData: InteractionData | undefined = elemId != null && hasHandler(elemId, 'on_drag')
+            ? { elemId, x: el.x, y: el.y } : undefined;
+          const inputData: InteractionData | undefined = elemId != null && hasHandler(elemId, 'input_changed')
+            ? { elemId, x: el.x, y: el.y } : undefined;
+          next.set(node.gridId, {
+            id: node.gridId,
+            data: {
+              ...(drawResult as RenderableObjectData),
+              objectId: node.gridId,
+              panelId: parentGridId,
+              zOrder: z,
+              userZ: elAny.z ?? 0,
+              animate: (el as { animate?: boolean }).animate,
+              clickData,
+              dragData,
+              inputData,
+              parentAlpha,
+            },
+            position: { row: el.y, col: el.x },
+            zOrder: z++,
+          });
         }
-      }
+      };
+
+      // ── DFS traversal ───────────────────────────────────────────────────
+      // Pre-order: parents emitted before children (required by cells memo).
+      // visible=false prunes the entire subtree.
+      // inheritedAlpha accumulates the product of all ancestor panel alphas.
+
+      const traverse = (node: TreeNodeEntry, parentGridId: string | undefined, inheritedAlpha: number) => {
+        if (node.el.visible === false) return;
+        if (isPanelNode(node)) {
+          emitPanel(node, parentGridId);
+          const childAlpha = inheritedAlpha * ((node.el as { alpha?: number }).alpha ?? 1);
+          for (const child of node.children) traverse(child, node.gridId, childAlpha);
+        } else {
+          emitLeaf(node, parentGridId, inheritedAlpha);
+        }
+      };
+
+      for (const node of rootChildren) traverse(node, undefined, 1);
 
       return next;
     });

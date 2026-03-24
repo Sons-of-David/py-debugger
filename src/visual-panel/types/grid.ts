@@ -84,6 +84,10 @@ export interface RenderableObjectData {
   inputData?: InteractionData;
   // When false, this element always uses jump mode regardless of the global toggle.
   animate?: boolean;
+  // Accumulated alpha from ancestor panels (not including this element's own alpha).
+  // Applied as a CSS opacity wrapper so renderers can still control their own alpha independently.
+  // Final displayed opacity = parentAlpha * elementInfo.alpha.
+  parentAlpha?: number;
 }
 
 export interface OccupantInfo {

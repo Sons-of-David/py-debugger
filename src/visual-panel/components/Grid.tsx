@@ -158,7 +158,7 @@ const GridSingleObject = memo(function GridSingleObject({
         top: obj.row * CELL_SIZE,
         width: CELL_SIZE * widthCells,
         height: CELL_SIZE * heightCells,
-        opacity: elemVisible ? 1 : 0,
+        opacity: elemVisible ? (obj.cellData.parentAlpha ?? 1) : 0,
       }}
       transition={transition}
       style={{ zIndex: 10, pointerEvents: elemVisible ? undefined : 'none' }}

@@ -137,9 +137,9 @@ export class Array1D implements VisualBuilderElementBase {
     }
   }
 
-  draw(idxStart: number = 0, VB_PREFIX: string = 'vb-', elemId?: number): ArrayDrawResult {
+  draw(idxStart: number = 0, elemId?: number): ArrayDrawResult {
     let idx = idxStart;
-    const panelId = elemId != null ? `${VB_PREFIX}array-panel-e${elemId}` : `${VB_PREFIX}array-panel-${idx}`;
+    const panelId = elemId != null ? `array-panel-e${elemId}` : `array-panel-${idx}`;
     idx++;
     const length = Math.max(1, Math.min(50, this.values.length));
 
@@ -168,7 +168,7 @@ export class Array1D implements VisualBuilderElementBase {
       });
 
       cells.push({
-        cellId: elemId != null ? `${VB_PREFIX}array-cell-e${elemId}-${i}` : `${VB_PREFIX}${idx}`,
+        cellId: elemId != null ? `array-cell-e${elemId}-${i}` : `${idx}`,
         data: cell.draw(),
         position: [cellRow, cellCol],
       });
@@ -253,10 +253,10 @@ export class Array2D implements VisualBuilderElementBase {
     }
   }
 
-  draw(idxStart: number = 0, VB_PREFIX: string = 'vb-', elemId?: number): ArrayDrawResult {
+  draw(idxStart: number = 0, elemId?: number): ArrayDrawResult {
     let idx = idxStart;
     const { numRows, numCols, name } = this;
-    const panelId = elemId != null ? `${VB_PREFIX}array2d-panel-e${elemId}` : `${VB_PREFIX}array2d-panel-${idx}`;
+    const panelId = elemId != null ? `array2d-panel-e${elemId}` : `array2d-panel-${idx}`;
     idx++;
     const showIndices = this.showIndex ?? true;
 
@@ -278,7 +278,7 @@ export class Array2D implements VisualBuilderElementBase {
         });
 
         cells.push({
-          cellId: elemId != null ? `${VB_PREFIX}array2d-cell-e${elemId}-${r}-${c}` : `${VB_PREFIX}${idx}`,
+          cellId: elemId != null ? `array2d-cell-e${elemId}-${r}-${c}` : `${idx}`,
           data: cell.draw(),
           position: [r, c],
         });
