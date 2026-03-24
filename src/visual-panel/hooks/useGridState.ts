@@ -54,8 +54,8 @@ export function useGridState() {
           h = child.data.shapeProps?.height ?? 1;
         }
 
-        maxRow = Math.max(maxRow, child.position.row + h);
-        maxCol = Math.max(maxCol, child.position.col + w);
+        maxRow = Math.max(maxRow, child.position.row - panelObj.position.row + h);
+        maxCol = Math.max(maxCol, child.position.col - panelObj.position.col + w);
       }
 
       const declaredW = panelObj.data.panel.width ?? 1;
@@ -89,37 +89,19 @@ export function useGridState() {
       else occMap.set(key, [info]);
     };
 
-    // Resolve panel positions (supports nesting: parent panels resolved before children)
-    const panelPositions = new Map<string, CellPosition>();
+    // Populate occupancy for panels (positions are already absolute)
     for (const obj of sortedObjects) {
       if (!obj.data.panel?.id) continue;
-      let position = { ...obj.position };
-      if (obj.data.panelId) {
-        const parentPos = panelPositions.get(obj.data.panelId);
-        if (parentPos) {
-          position = {
-            row: position.row + parentPos.row,
-            col: position.col + parentPos.col,
-          };
-        }
-      }
-      panelPositions.set(obj.data.panel.id, position);
-    }
-
-    // Populate occupancy for panels
-    for (const obj of sortedObjects) {
-      if (!obj.data.panel?.id) continue;
-      const panelPos = panelPositions.get(obj.data.panel.id);
-      if (!panelPos) continue;
       const autoSize = panelAutoSizes.get(obj.data.panel.id);
       const pw = autoSize?.width ?? 1;
       const ph = autoSize?.height ?? 1;
+      const { row, col } = obj.position;
       for (let r = 0; r < ph; r++) {
         for (let c = 0; c < pw; c++) {
-          addOccupant(panelPos.row + r, panelPos.col + c, {
+          addOccupant(row + r, col + c, {
             cellData: obj.data,
-            originRow: panelPos.row,
-            originCol: panelPos.col,
+            originRow: row,
+            originCol: col,
             isPanel: true,
             zOrder: obj.zOrder,
           });
@@ -137,34 +119,17 @@ export function useGridState() {
       }
     };
 
-    // Unified pass: all non-panel objects
+    // Unified pass: all non-panel objects (positions are already absolute)
     for (const obj of sortedObjects) {
       if (obj.data.panel) continue;
-      let position = { ...obj.position };
-      let invalidReason: string | undefined;
-
-      if (obj.data.panelId) {
-        const panelPos = panelPositions.get(obj.data.panelId);
-        if (panelPos) {
-          position = {
-            row: position.row + panelPos.row,
-            col: position.col + panelPos.col,
-          };
-        } else {
-          invalidReason = `Panel "${obj.data.panelId}" not found`;
-        }
-      }
-      position = {
-        row: Math.max(0, Math.min(49, position.row)),
-        col: Math.max(0, Math.min(49, position.col)),
+      const position = {
+        row: Math.max(0, Math.min(49, obj.position.row)),
+        col: Math.max(0, Math.min(49, obj.position.col)),
       };
 
       const objW = obj.data.shapeProps?.width ?? 1;
       const objH = obj.data.shapeProps?.height ?? 1;
-      const resolvedRenderableObjectData: RenderableObjectData = {
-        ...obj.data,
-        invalidReason,
-      };
+      const resolvedRenderableObjectData: RenderableObjectData = { ...obj.data };
       setOrOverlay(cellKey(position.row, position.col), resolvedRenderableObjectData);
 
       for (let r = 0; r < objH; r++) {
@@ -200,32 +165,13 @@ export function useGridState() {
       invalidReason?: string;
     }> = [];
 
-    // Resolve positions with nesting support
-    const positions = new Map<string, CellPosition>();
     for (const [, obj] of objects) {
       if (!obj.data.panel) continue;
-      let position = { ...obj.position };
-      if (obj.data.panelId) {
-        const parentPos = positions.get(obj.data.panelId);
-        if (parentPos) {
-          position = {
-            row: position.row + parentPos.row,
-            col: position.col + parentPos.col,
-          };
-        }
-      }
-      positions.set(obj.data.panel.id, position);
-    }
-
-    for (const [, obj] of objects) {
-      if (!obj.data.panel) continue;
-      const pos = positions.get(obj.data.panel.id);
-      if (!pos) continue;
       const autoSize = panelAutoSizes.get(obj.data.panel.id);
       result.push({
         id: obj.data.panel.id,
-        row: pos.row,
-        col: pos.col,
+        row: obj.position.row,
+        col: obj.position.col,
         width: autoSize?.width ?? 1,
         height: autoSize?.height ?? 1,
         title: obj.data.panel.title,
@@ -290,7 +236,7 @@ export function useGridState() {
 
       // ── Emit helpers ────────────────────────────────────────────────────
 
-      const emitPanel = (node: PanelTreeNode, parentGridId: string | undefined) => {
+      const emitPanel = (node: PanelTreeNode, parentGridId: string | undefined, absRow: number, absCol: number) => {
         const elAny = node.el as any;
         const { gridId } = node;
         const width = elAny.width ?? 5;
@@ -306,12 +252,12 @@ export function useGridState() {
             zOrder: z,
             ...(parentGridId ? { panelId: parentGridId } : {}),
           },
-          position: { row: node.el.y, col: node.el.x },
+          position: { row: absRow, col: absCol },
           zOrder: z++,
         });
       };
 
-      const emitLeaf = (node: LeafTreeNode, parentGridId: string | undefined, parentAlpha: number) => {
+      const emitLeaf = (node: LeafTreeNode, parentGridId: string | undefined, absRow: number, absCol: number, parentAlpha: number) => {
         const { el } = node;
         const elAny = el as any;
         if (!('draw' in el && typeof elAny.draw === 'function')) return;
@@ -322,6 +268,8 @@ export function useGridState() {
           // Array element: produces its own panel + cells
           const { panel: panelInfo, panelOffset, cells: drawCells, nextIdx } = drawResult as unknown as ArrayDrawResult;
           const panelGridId = panelInfo.id;
+          const panelAbsRow = absRow + (panelOffset?.row ?? 0);
+          const panelAbsCol = absCol + (panelOffset?.col ?? 0);
           next.set(panelGridId, {
             id: panelGridId,
             data: {
@@ -340,18 +288,16 @@ export function useGridState() {
               zOrder: z,
               userZ: elAny.z ?? 0,
             },
-            position: { row: el.y + (panelOffset?.row ?? 0), col: el.x + (panelOffset?.col ?? 0) },
+            position: { row: panelAbsRow, col: panelAbsCol },
             zOrder: z++,
           });
-          // parentAlpha for cells = inherited alpha × this array element's own alpha,
-          // since cells' style.opacity already encodes the array element's alpha.
-          // Wait — cell style.opacity IS the array element alpha, so CSS wrapper should be
-          // parentAlpha only (ancestors' contribution). The array's own alpha is in style.opacity.
+          // cell style.opacity already encodes the array element's own alpha;
+          // parentAlpha here is ancestors only (not multiplied by the array element's alpha).
           for (const cell of drawCells) {
             next.set(cell.cellId, {
               id: cell.cellId,
               data: { ...cell.data, objectId: cell.cellId, panelId: panelGridId, zOrder: z, parentAlpha },
-              position: { row: cell.position[0], col: cell.position[1] },
+              position: { row: panelAbsRow + cell.position[0], col: panelAbsCol + cell.position[1] },
               zOrder: z++,
             });
           }
@@ -363,7 +309,7 @@ export function useGridState() {
             next.set(cell.cellId, {
               id: cell.cellId,
               data: { ...cell.data, objectId: cell.cellId, panelId: parentGridId, zOrder: z, parentAlpha },
-              position: { row: el.y, col: el.x },
+              position: { row: absRow, col: absCol },
               zOrder: z++,
             });
           }
@@ -391,7 +337,7 @@ export function useGridState() {
               inputData,
               parentAlpha,
             },
-            position: { row: el.y, col: el.x },
+            position: { row: absRow, col: absCol },
             zOrder: z++,
           });
         }
@@ -402,18 +348,20 @@ export function useGridState() {
       // visible=false prunes the entire subtree.
       // inheritedAlpha accumulates the product of all ancestor panel alphas.
 
-      const traverse = (node: TreeNodeEntry, parentGridId: string | undefined, inheritedAlpha: number) => {
+      const traverse = (node: TreeNodeEntry, parentGridId: string | undefined, originRow: number, originCol: number, inheritedAlpha: number) => {
         if (node.el.visible === false) return;
+        const absRow = originRow + node.el.y;
+        const absCol = originCol + node.el.x;
         if (isPanelNode(node)) {
-          emitPanel(node, parentGridId);
+          emitPanel(node, parentGridId, absRow, absCol);
           const childAlpha = inheritedAlpha * ((node.el as { alpha?: number }).alpha ?? 1);
-          for (const child of node.children) traverse(child, node.gridId, childAlpha);
+          for (const child of node.children) traverse(child, node.gridId, absRow, absCol, childAlpha);
         } else {
-          emitLeaf(node, parentGridId, inheritedAlpha);
+          emitLeaf(node, parentGridId, absRow, absCol, inheritedAlpha);
         }
       };
 
-      for (const node of rootChildren) traverse(node, undefined, 1);
+      for (const node of rootChildren) traverse(node, undefined, 0, 0, 1);
 
       return next;
     });
