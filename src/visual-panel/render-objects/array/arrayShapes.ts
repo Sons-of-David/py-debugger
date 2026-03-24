@@ -117,6 +117,7 @@ export class Array1D implements VisualBuilderElementBase {
   z: number;
   panelId?: string;
   style?: CellStyle;
+  _elemId?: number;
 
   constructor(el: any) {
     this.x = el.x ?? 0;
@@ -130,11 +131,37 @@ export class Array1D implements VisualBuilderElementBase {
     this.alpha = el.alpha ?? 1;
     this.z = el.z ?? 0;
     this.panelId = el.panelId;
+    this._elemId = el._elem_id ?? el._elemId;
 
     const color = el.color ? rgbToHex(el.color) : undefined;
     if (color || this.alpha !== 1) {
       this.style = { color, opacity: this.alpha };
     }
+  }
+
+  // Expands this array into a flat list: one synthetic panel element followed by
+  // one synthetic leaf element per cell. The panel's _elem_id uses the 'a1-' prefix
+  // so it's unique and stable; cell elements carry _gridId for stable animation keys.
+  expand(): object[] {
+    const { panel: panelInfo, panelOffset, cells: drawCells } = this.draw(0, this._elemId);
+    const panelElemId = `a1-${this._elemId ?? 0}`;
+    return [
+      {
+        type: 'panel' as const, _elem_id: panelElemId,
+        x: this.x + (panelOffset?.col ?? 0), y: this.y + (panelOffset?.row ?? 0),
+        visible: this.visible,
+        alpha: 1,  // array's alpha is in each cell's style.opacity; don't double-apply
+        z: this.z, panelId: this.panelId,
+        width: panelInfo.width, height: panelInfo.height,
+        name: panelInfo.title, show_border: true, panelStyle: panelInfo.panelStyle,
+      },
+      ...drawCells.map(cell => ({
+        type: 'array1dcell' as const, _gridId: cell.cellId,
+        x: cell.position[1], y: cell.position[0],
+        visible: true, alpha: 1, z: 0, panelId: panelElemId,
+        draw: () => cell.data,
+      })),
+    ];
   }
 
   draw(idxStart: number = 0, elemId?: number): ArrayDrawResult {
@@ -227,6 +254,7 @@ export class Array2D implements VisualBuilderElementBase {
   z: number;
   panelId?: string;
   style?: CellStyle;
+  _elemId?: number;
 
   constructor(el: any) {
     this.x = el.x ?? 0;
@@ -246,11 +274,34 @@ export class Array2D implements VisualBuilderElementBase {
     this.alpha = el.alpha ?? 1;
     this.z = el.z ?? 0;
     this.panelId = el.panelId;
+    this._elemId = el._elem_id ?? el._elemId;
 
     const color = el.color ? rgbToHex(el.color) : undefined;
     if (color || this.alpha !== 1) {
       this.style = { color, opacity: this.alpha };
     }
+  }
+
+  expand(): object[] {
+    const { panel: panelInfo, panelOffset, cells: drawCells } = this.draw(0, this._elemId);
+    const panelElemId = `a2-${this._elemId ?? 0}`;
+    return [
+      {
+        type: 'panel' as const, _elem_id: panelElemId,
+        x: this.x + (panelOffset?.col ?? 0), y: this.y + (panelOffset?.row ?? 0),
+        visible: this.visible,
+        alpha: 1,  // array's alpha is in each cell's style.opacity; don't double-apply
+        z: this.z, panelId: this.panelId,
+        width: panelInfo.width, height: panelInfo.height,
+        name: panelInfo.title, show_border: this.rectangular, panelStyle: panelInfo.panelStyle,
+      },
+      ...drawCells.map(cell => ({
+        type: 'array2dcell' as const, _gridId: cell.cellId,
+        x: cell.position[1], y: cell.position[0],
+        visible: true, alpha: 1, z: 0, panelId: panelElemId,
+        draw: () => cell.data,
+      })),
+    ];
   }
 
   draw(idxStart: number = 0, elemId?: number): ArrayDrawResult {
