@@ -1,5 +1,6 @@
-import { useEffect, useCallback, useRef } from 'react';
-import { MousePointerClick } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { MousePointerClick, Play, Pause } from 'lucide-react';
+import { useAnimationDuration } from '../animation/animationContext';
 
 interface TimelineControlsProps {
   currentStep: number;
@@ -37,6 +38,20 @@ export function TimelineControls({
   const canGoNext = hasSteps && currentStep < maxStep && !isInactive && !isPhoto;
   const scrubDisabled = !hasSteps || isInactive || isPhoto;
 
+  const [isPlaying, setIsPlaying] = useState(false);
+  const animDuration = useAnimationDuration();
+
+  // Auto-advance when playing
+  useEffect(() => {
+    if (!isPlaying) return;
+    if (isInactive || isPhoto || !hasSteps) { setIsPlaying(false); return; }
+    if (currentStep >= maxStep) { setIsPlaying(false); return; }
+    const id = setInterval(() => {
+      onGoToStep(currentStep + 1);
+    }, animDuration);
+    return () => clearInterval(id);
+  }, [isPlaying, isInactive, isPhoto, hasSteps, currentStep, maxStep, animDuration, onGoToStep]);
+
   const scrubBarRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
 
@@ -58,8 +73,8 @@ export function TimelineControls({
     };
   }, [scrubTo]);
 
-  const onPrevStep = useCallback(() => onGoToStep(currentStep - 1), [currentStep, onGoToStep]);
-  const onNextStep = useCallback(() => onGoToStep(currentStep + 1), [currentStep, onGoToStep]);
+  const onPrevStep = useCallback(() => { setIsPlaying(false); onGoToStep(currentStep - 1); }, [currentStep, onGoToStep]);
+  const onNextStep = useCallback(() => { setIsPlaying(false); onGoToStep(currentStep + 1); }, [currentStep, onGoToStep]);
 
   const btnBase =
     'px-2 py-1 rounded text-sm font-medium transition-colors border';
@@ -107,6 +122,14 @@ export function TimelineControls({
       {/* Step navigation — always visible, grayed out when idle/interactive or photo */}
       <div className={`flex items-center gap-1 px-3 py-1 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 ${(isInactive || isPhoto) ? 'opacity-40' : ''}`}>
         <button
+          onClick={() => setIsPlaying(p => !p)}
+          disabled={!hasSteps || isInactive || isPhoto}
+          className={hasSteps && !isInactive && !isPhoto ? btnActive : btnDisabled}
+          title={isPlaying ? 'Pause' : 'Play'}
+        >
+          {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+        </button>
+        <button
           onClick={onPrevStep}
           disabled={!canGoPrev}
           className={canGoPrev ? btnActive : btnDisabled}
@@ -120,6 +143,7 @@ export function TimelineControls({
           ref={scrubBarRef}
           onMouseDown={(e) => {
             if (scrubDisabled) return;
+            setIsPlaying(false);
             isDragging.current = true;
             scrubTo(e.clientX);
           }}
