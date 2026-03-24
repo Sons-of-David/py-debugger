@@ -390,7 +390,7 @@ function App() {
       <header className="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-2 grid grid-cols-3 items-center shadow-sm">
         {/* Left: brand + project name + samples */}
         <div className="flex items-center gap-3">
-          <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 tracking-tight select-none">AlgoPlay</span>
+          <a href="https://prove-me-wrong.com" target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-indigo-600 dark:text-indigo-400 tracking-tight select-none hover:text-indigo-800 dark:hover:text-indigo-200 hover:underline transition-colors cursor-pointer">AlgoPlay</a>
           <span className="text-gray-300 dark:text-gray-600 select-none">·</span>
           <input
             type="text"
