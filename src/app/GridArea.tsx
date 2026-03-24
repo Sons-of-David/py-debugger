@@ -3,10 +3,10 @@ import { toCanvas } from 'html-to-image';
 import { Grid, type GridHandle, CELL_SIZE } from '../visual-panel/components/Grid';
 import { useGridState } from '../visual-panel/hooks/useGridState';
 import type { VisualBuilderElementBase } from '../api/visualBuilder';
-import { executeCombinedClickHandler, executeCombinedDragHandler, executeCombinedInputChanged, type TraceStageInfo, type DragType } from '../components/combined-editor/combinedExecutor';
+import { executeClickHandler, executeDragHandler, executeInputChanged, type TraceStageInfo, type DragType } from '../python-engine/executor';
 import { appendError } from '../output-terminal/terminalState';
 import type { TextBox } from '../text-boxes/types';
-import type { VizRange } from '../components/combined-editor/vizBlockParser';
+import type { VizRange } from '../python-engine/viz-block-parser';
 import type { CaptureRegion } from '../visual-panel/components/CaptureRegionLayer';
 
 /* ---------- Shared Tailwind class groups ---------- */
@@ -91,7 +91,7 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
 
     const handleElementClick = useCallback(async (elemId: number, x: number, y: number) => {
       if (combinedVizRanges) {
-        const result = await executeCombinedClickHandler(elemId, y, x);
+        const result = await executeClickHandler(elemId, y, x);
         if (result.error) { appendError(result.error); return; }
         if (result.timeline.length > 0) onCombinedTrace?.(result);
         return;
@@ -100,14 +100,14 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
 
     const handleElementInput = useCallback(async (elemId: number, text: string) => {
       if (!combinedVizRanges) return;
-      const result = await executeCombinedInputChanged(elemId, text);
+      const result = await executeInputChanged(elemId, text);
       if (result.error) { appendError(result.error); return; }
       if (result.timeline.length > 0) onCombinedTrace?.(result);
     }, [combinedVizRanges, onCombinedTrace]);
 
     const handleElementDrag = useCallback(async (elemId: number, x: number, y: number, dragType: DragType) => {
       if (!combinedVizRanges) return;
-      const result = await executeCombinedDragHandler(elemId, y, x, dragType);
+      const result = await executeDragHandler(elemId, y, x, dragType);
       if (result.error) { appendError(result.error); return; }
       if (result.timeline.length > 0) onCombinedTrace?.(result);
     }, [combinedVizRanges, onCombinedTrace]);

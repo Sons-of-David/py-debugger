@@ -1,4 +1,4 @@
-import type { ObjDoc } from '../../../api/visualBuilder';
+import type { ObjDoc } from '../../api/visualBuilder';
 
 export const LIST_HELPERS_SCHEMA: ObjDoc = {
   objName: 'import list_helpers',

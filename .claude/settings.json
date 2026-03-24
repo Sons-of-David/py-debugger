@@ -12,7 +12,8 @@
       "Bash(git add src/code-builder/services/event_handling.py src/code-builder/services/visualBuilder.py)",
       "Bash(git add src/visual-panel/components/Grid.tsx src/app/GridArea.tsx)",
       "Bash(git add src/samples/drag-demo.json)",
-      "Bash(git add src/visual-panel/hooks/useGridState.ts)"
+      "Bash(git add src/visual-panel/hooks/useGridState.ts)",
+      "WebSearch"
     ]
   }
 }

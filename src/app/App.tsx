@@ -3,10 +3,10 @@ import { GIFEncoder, quantize, applyPalette } from 'gifenc';
 import type { CaptureRegion } from '../visual-panel/components/CaptureRegionLayer';
 
 import { Group, Panel, Separator } from 'react-resizable-panels';
-import { CombinedEditor, COMBINED_SAMPLE, type CombinedEditorHandle } from '../components/combined-editor/CombinedEditor';
+import { Editor, DEFAULT_SAMPLE, type EditorHandle } from '../components/editor/Editor';
 import { useTheme } from '../contexts/ThemeContext';
 import { AnimationContext } from '../animation/animationContext';
-import { loadPyodide, isPyodideLoaded, resetPythonState } from '../components/combined-editor/pyodideRuntime';
+import { loadPyodide, isPyodideLoaded, resetPythonState } from '../python-engine/pyodide-runtime';
 import { clearAll as clearTerminal, commitCombinedSegment, appendError, setOutputTimeline } from '../output-terminal/terminalState';
 import { ApiReferencePanel } from '../api/ApiReferencePanel';
 import { TimelineControls } from '../timeline/TimelineControls';
@@ -14,9 +14,9 @@ import { ExtrasMenu } from './ExtrasMenu';
 import { FeedbackModal } from '../components/FeedbackModal';
 import { GridArea, type GridAreaHandle } from './GridArea';
 import { getStateAt, getMaxTime, clearTimeline, hydrateVisualTimelineFromArray } from '../timeline/timelineState';
-import { executeCombinedCode, type TraceStep, type TraceStageInfo } from '../components/combined-editor/combinedExecutor';
+import { executeCode, type TraceStep, type TraceStageInfo } from '../python-engine/executor';
 import { setHandlers, hasAnyClickHandler } from '../visual-panel/handlersState';
-import { getVizRanges } from '../components/combined-editor/vizBlockParser';
+import { getVizRanges } from '../python-engine/viz-block-parser';
 import type { TextBox } from '../text-boxes/types';
 import { migrateTextBox } from '../text-boxes/types';
 
@@ -25,7 +25,7 @@ const AUTO_ANALYZE_ON_LOAD = true; // set to false to disable auto-analyze when 
 
 // TODO: split samples into "public" (shipped in prod) and "dev" (local-only, e.g. rich-text-demo).
 // Dev samples should only appear when import.meta.env.DEV is true.
-const SAMPLE_MODULES = import.meta.glob('../components/combined-editor/samples/*.json', { eager: true }) as Record<
+const SAMPLE_MODULES = import.meta.glob('../samples/*.json', { eager: true }) as Record<
   string,
   { combinedCode?: string; textBoxes?: TextBox[] }
 >;
@@ -56,7 +56,7 @@ function App() {
 
   const gridAreaRef = useRef<GridAreaHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const combinedEditorRef = useRef<CombinedEditorHandle>(null);
+  const combinedEditorRef = useRef<EditorHandle>(null);
   const pendingPostLoadRef = useRef(false);
   const [samplesOpen, setSamplesOpen] = useState(false);
   const [projectName, setProjectName] = useState('untitled');
@@ -73,7 +73,7 @@ function App() {
   const [animationDuration, setAnimationDuration] = useState(500); // ms
 
   // Combined editor state
-  const [combinedCode, setCombinedCode] = useState(COMBINED_SAMPLE);
+  const [combinedCode, setCombinedCode] = useState(DEFAULT_SAMPLE);
   const [timeline, setTimeline] = useState<TraceStep[]>([]);
   const [isCombinedEditable, setIsCombinedEditable] = useState(true);
   const [isAnalyzingCombined, setIsAnalyzingCombined] = useState(false);
@@ -245,7 +245,7 @@ function App() {
     setIsAnalyzingCombined(true);
     clearTerminal();
     try {
-      const result = await executeCombinedCode(combinedCode);
+      const result = await executeCode(combinedCode);
       if (!result.error) {
         setIsCombinedEditable(false);
         startTrace(result);
@@ -498,7 +498,7 @@ function App() {
           {/* Left panel - Code Editor */}
           <Panel defaultSize={50} minSize={20}>
             <div className="h-full border-r border-gray-300 dark:border-gray-600">
-              <CombinedEditor
+              <Editor
                   ref={combinedEditorRef}
                   code={combinedCode}
                   onChange={setCombinedCode}
@@ -510,7 +510,7 @@ function App() {
                       : undefined
                   }
                   onEdit={handleEditCombined}
-                />
+              />
             </div>
           </Panel>
 

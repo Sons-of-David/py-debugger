@@ -1,4 +1,4 @@
-import type { ObjDoc } from '../../../api/visualBuilder';
+import type { ObjDoc } from '../../api/visualBuilder';
 
 export const ARRAY_UTILS_SCHEMA: ObjDoc = {
   objName: 'import array_utils',

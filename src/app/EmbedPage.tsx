@@ -1,20 +1,20 @@
 import { useState, useCallback, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AnimationContext } from '../animation/animationContext';
-import { loadPyodide, isPyodideLoaded } from '../components/combined-editor/pyodideRuntime';
+import { loadPyodide, isPyodideLoaded } from '../python-engine/pyodide-runtime';
 import { TimelineControls } from '../timeline/TimelineControls';
 import { GridArea, type GridAreaHandle } from './GridArea';
 import { getStateAt, getMaxTime, clearTimeline, hydrateVisualTimelineFromArray } from '../timeline/timelineState';
-import { executeCombinedCode, type TraceStep, type TraceStageInfo } from '../components/combined-editor/combinedExecutor';
+import { executeCode, type TraceStep, type TraceStageInfo } from '../python-engine/executor';
 import { setHandlers, hasAnyClickHandler } from '../visual-panel/handlersState';
-import { getVizRanges } from '../components/combined-editor/vizBlockParser';
+import { getVizRanges } from '../python-engine/viz-block-parser';
 import { migrateTextBox, type TextBox } from '../text-boxes/types';
 
 // ---------------------------------------------------------------------------
 // Sample registry (same pattern as App.tsx)
 // ---------------------------------------------------------------------------
 
-const SAMPLE_MODULES = import.meta.glob('../components/combined-editor/samples/*.json', { eager: true }) as Record<
+const SAMPLE_MODULES = import.meta.glob('../samples/*.json', { eager: true }) as Record<
   string,
   { combinedCode?: string; textBoxes?: TextBox[] }
 >;
@@ -132,7 +132,7 @@ export function EmbedPage() {
     setTextBoxes(initialTextBoxes);
 
     try {
-      const result = await executeCombinedCode(code);
+      const result = await executeCode(code);
       if (!result.error) {
         setCombinedTimeline(result.timeline);
         hydrateVisualTimelineFromArray(result.timeline.map((s) => s.visual));
