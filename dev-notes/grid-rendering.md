@@ -2,135 +2,209 @@
 
 [← dev-notes](./dev-notes.md)
 
-How `Grid.tsx` takes the output of `useGridState` and renders it as an interactive, animated canvas.
+How the visual panel goes from Python element objects to an interactive, animated canvas.
 
 ---
 
-## Overview
-
-`Grid` (`src/visual-panel/components/Grid.tsx`) is a `forwardRef` component that receives pre-processed data and turns it into positioned DOM elements. It does **not** know about Python, Pyodide, or element types — that concern belongs to `useGridState`. Grid's job is purely presentational + interaction dispatch.
+## Big Picture: End-to-End Flow
 
 ```
-useGridState
-  → cells Map + overlayCells Map + panels array
-    → Grid.tsx (objectsToRender memo)
-      → GridSingleObject (one per element)
-        → GridCell → shape renderer (RectView, LineView, etc.)
+Python user_api.py
+  └─ Element instances (Rect, Label, Array1D, Panel, …)
+       │  serialized by visualBuilder.py + hydrated in TS
+       ▼
+useGridState.loadVisualBuilderObjects(elements[])
+  └─ Converts every element into a GridObject (id + data + position)
+       │  stored in objects: Map<string, GridObject>
+       ▼
+useGridState (derived memos)
+  ├─ panelAutoSizes   — panel sizes auto-expanded to fit children
+  ├─ cells            — flat Map<"row,col", RenderableObjectData>
+  ├─ overlayCells     — overflow Map for same-cell collisions
+  ├─ occupancyMap     — which cells are occupied (hover/tooltip use)
+  └─ panels           — array of panel metadata (position + size + style)
+       ▼
+Grid.tsx (pure renderer)
+  ├─ objectsToRender  — sorted RenderableObject[] from cells + overlayCells
+  ├─ GridSingleObject — one motion.div per element (position, animation, events)
+  │    └─ GridCell    — delegates to shape renderer (RectView, LabelView, …)
+  ├─ renderedPanelBackgrounds  — colored bordered rects, below objects
+  └─ renderedPanelHandles      — title labels above panel top edge
 ```
 
----
-
-## Input Data
-
-Grid receives three main data structures from `useGridState`:
-
-| Prop | Type | What it is |
-|------|------|------------|
-| `cells` | `Map<string, RenderableObjectData>` | Primary placement. Key = `"row,col"`. One entry per grid cell. |
-| `overlayCells` | `Map<string, RenderableObjectData>` | Overflow placement. Key = `"row,col,n"`. Used when two elements share the same cell. |
-| `panels` | `PanelInfo[]` | Panel background metadata (position, size, style). Rendered separately from elements. |
-
-**Why two maps?** Each cell can only have one entry in `cells`. When a second element lands on the same cell (e.g. a Line at (7,8) and a Rect also at (7,8)), `useGridState` puts the second one in `overlayCells` with a collision-disambiguated key like `"7,8,0"`. Both elements are still rendered at the same pixel position.
+**Separation of concerns:**
+- `useGridState` owns all data transformation. It knows about element types, panels, arrays, handlers, and coordinate resolution. Grid.tsx knows none of this.
+- `Grid.tsx` owns all rendering and interaction dispatch. It receives flat maps and fires callbacks. It does not know what a Panel or Array is.
 
 ---
 
-## The `objectsToRender` Memoization
+## File Map
+
+| File | Role |
+|------|------|
+| `src/visual-panel/hooks/useGridState.ts` | State hook: ingests hydrated elements, produces `cells`/`overlayCells`/`panels` |
+| `src/visual-panel/components/Grid.tsx` | Pure renderer + interaction dispatch |
+| `src/visual-panel/components/GridCell.tsx` | Delegates to shape renderer based on `elementInfo.type` |
+| `src/visual-panel/handlersState.ts` | Module-level registry: Python `_elem_id` → list of handler names |
+| `src/visual-panel/render-objects/` | Element classes (`Rect`, `Label`, `Array1D`, `PanelCell`, …) and their `draw()` methods |
+| `src/visual-panel/types/grid.ts` | `RenderableObjectData`, `InteractionData`, `CellStyle`, `cellKey()` |
+| `src/animation/animationContext.tsx` | `useAnimationEnabled()`, `useAnimationDuration()` |
+
+---
+
+## useGridState
+
+### What it holds
 
 ```typescript
-const objectsToRender = useMemo((): RenderableObject[] => {
-    const objects: RenderableObject[] = [];
-
-    // Primary cells (skip panel entries — panels are rendered separately)
-    for (const [posKey, cellData] of cells) {
-        if (cellData.panel) continue;
-        objects.push({
-            key: cellData.objectId ?? posKey,   // stable element ID preferred
-            row, col, cellData, widthCells, heightCells,
-        });
-    }
-
-    // Overflow cells (second+ element on the same grid cell)
-    for (const [posKey, cellData] of overlayCells) {
-        objects.push({
-            key: cellData.objectId ?? ('overlay-' + posKey),  // stable ID, fallback adds prefix
-            row, col, cellData, widthCells, heightCells,
-        });
-    }
-
-    // Sort: higher userZ first (lower z value = closer = on top)
-    // then by zOrder (insertion order tiebreak)
-    objects.sort((a, b) =>
-        (b.cellData.userZ ?? 0) - (a.cellData.userZ ?? 0) ||
-        (a.cellData.zOrder ?? 0) - (b.cellData.zOrder ?? 0)
-    );
-    return objects;
-}, [cells, overlayCells]);
+const [objects, setObjects] = useState<Map<string, GridObject>>();
 ```
 
-The `key` field is critical for animation. React uses it to decide whether to keep or replace a DOM node. The rule: **always prefer `objectId` over position-based fallbacks**. `objectId` is a stable string like `vb-elem-1` that follows the element regardless of which map it ends up in. If a key changed from `vb-elem-1` to `overlay-vb-elem-1` just because the element moved into an overflow cell, React would unmount and remount it, breaking CSS transitions.
+`objects` is the single source of truth — one entry per element (panels, array panels, array cells, shapes, labels, inputs). Everything else is derived from it.
+
+A `GridObject` is:
+```typescript
+{ id: string; data: RenderableObjectData; position: CellPosition; zOrder: number }
+```
+
+IDs are stable strings: `vb-panel-0`, `vb-elem-3`, or arbitrary `vb-42` for anonymous elements. The `vb-` prefix lets `loadVisualBuilderObjects` wipe only its own entries on reload without touching anything else.
 
 ---
 
-## `GridSingleObject` — One Per Visual Element
+### `loadVisualBuilderObjects` — the big function
 
-Each entry in `objectsToRender` becomes a `GridSingleObject`. This is a `memo`-wrapped component that renders a single absolutely-positioned div at `(col * CELL_SIZE, row * CELL_SIZE)`.
+This runs every time the Python builder re-executes (e.g. on Analyze or timeline step). It replaces all `vb-` entries in the objects map.
+
+The function does **two passes** over the elements array:
+
+#### Pre-pass: panel bookkeeping
+
+Before either main pass, three things are pre-computed:
+
+1. **`serializedPanelIdToGridId`** — maps Python `_elem_id` strings to stable grid IDs like `vb-panel-0`, `vb-panel-1`. The index is based on position in the elements array, not elem_id, so the mapping stays stable across re-runs.
+
+2. **`hiddenPanelElemIds`** — starts with panels that have `visible=False`, then propagates to all descendants (children of hidden panels are also hidden). Uses a fixpoint loop.
+
+3. **Topological sort of panels** — panels are sorted so parents always appear before children. This ensures that when the first pass processes a child panel, its parent is already in `panelIdMap`.
+
+#### First pass: panels
+
+Iterates `sortedPanels` (topological order). For each visible panel:
+- Looks up its parent in `panelIdMap` (already resolved due to topo order).
+- Computes the panel's absolute grid origin (own position + parent origin).
+- Creates a `PanelCell` object and adds a `GridObject` to the map.
+- Records the panel's absolute origin in `panelIdMap` so children can resolve against it.
+
+#### Second pass: non-panel elements
+
+Iterates `elements`, skipping panels and elements whose panel is hidden. For each element:
+- Resolves the parent panel's absolute origin, adds it to the element's `(x, y)` to get an absolute grid position.
+- Calls `el.draw(idx, VB_PREFIX, elemId)` to get the draw result.
+- Routes the draw result to one of three cases:
 
 ```
-<div style={{ left: col*40, top: row*40, width: w*40, height: h*40 }}>
-    <GridCell ... />          ← renders the actual shape SVG
-    {flashing && <flash overlay />}
-</div>
+draw() result shape       → What it is           → Interactivity
+─────────────────────────────────────────────────────────────────
+'panel' + 'cells'         → Array with panel bg  → none (array cells have no handlers)
+'cells' (no 'panel')      → Multi-cell element   → none
+else (single object)      → Shape / Label / etc. → checked via hasHandler()
 ```
 
-### Animation
-
-Two conditions must both be true for CSS transitions to fire:
-1. **Global animation toggle** (`useAnimationEnabled()`) is on
-2. **Per-element flag** `cellData.animate !== false`
-
-When both are true, the outer div gets `transition-all ease-out` with the configured `transitionDuration`. This is what makes position and size changes animate smoothly. Color/opacity transitions are handled inside each shape renderer.
-
-**Fade-in on mount:** `mounted` state starts `false` (opacity 0). A `requestAnimationFrame` callback sets it to `true` after the first paint, producing a fade-in. In jump mode, `mounted` is set to `true` synchronously so there is no fade.
-
-**Invisible elements:** When `elementInfo.visible === false`, opacity is 0 and `pointerEvents` is `none`. The DOM node stays in the tree (preserving React key and CSS transition potential), it just becomes invisible.
-
-### Click Handling
-
-If the element has `clickData` (set by `useGridState` when the Python element has `on_click`):
-- `cursor-pointer` cursor class applied
-- On click: compute which sub-cell was clicked using `offsetX/Y / CELL_SIZE`, add to base position, call `onElementClick(elemId, [row, col])`
-- A white flash overlay is shown for 300ms as visual feedback
-
-### Drag Handling
-
-Drag is split across `GridSingleObject` and the parent `Grid`:
-- **Mouse down** on a draggable element (has `dragData`): `GridSingleObject` calls `onElementDragStart(elemId, pos)`. Grid stores drag state in `dragStateRef`.
-- **Mouse move** on the grid container: Grid's `handleMouseMove` fires `onElementDrag(elemId, pos, 'mid')` for each new cell entered. `dragCallInFlightRef` prevents queuing multiple in-flight calls.
-- **Mouse up** (window-level listener): fires `onElementDrag(elemId, pos, 'end')` and clears drag state. Window-level ensures this fires even if the mouse is released outside the grid.
+Only the `else` branch attaches `clickData`, `dragData`, or `inputData`. Arrays and multi-cell elements never get interaction data — this is the mechanism that makes them non-clickable (see [Click Handling](#click-handling) below).
 
 ---
 
-## Rendering Layers (z-order in the DOM)
+### Derived memos
 
-The grid content div contains four absolutely-positioned layers stacked in order:
+#### `panelAutoSizes`
 
-| Layer | What it renders | `pointer-events` |
-|-------|----------------|-----------------|
-| Background grid | CSS gradient lines (the grid itself) | — |
-| Panel backgrounds | Colored/bordered panel rectangles | `none` |
-| Objects | All visual elements (`renderedObjects`) | per-element (clickable/draggable ones get `auto`) |
-| Panel handles | Panel title labels above panel top edge | `none` |
-| Text boxes | Floating text annotations | conditional |
+Computes the effective size of each panel. A panel declared as `width=5, height=5` but containing a child at position (4, 4) with `width=2` expands to `width=6`. Supports nested panels by recursing. The result is a `Map<panelId, { width, height }>`.
 
-Panel backgrounds are rendered **below** objects so elements appear on top of their panel. Panel handles are rendered **above** objects so titles are never obscured.
+#### `cells`, `overlayCells`, `occupancyMap`
+
+The main layout memo. Runs after `panelAutoSizes` is stable.
+
+1. **Resolve panel positions** — walks all panel objects and builds `panelPositions`, adding parent origin offsets for nested panels.
+2. **Populate panel occupancy** — for each panel, marks every cell it covers in `occMap`.
+3. **Place non-panel objects** — for each non-panel object, resolves its absolute position (clamped to 0–49), calls `setOrOverlay()`:
+   - First object at a cell → `cellMap`
+   - Second+ object → `overlayMap` with key `"row,col,n"`
+
+   Also records occupancy for multi-cell objects.
+
+#### `panels`
+
+Extracts panel metadata (id, row, col, width, height, title, style) for Grid.tsx to render panel backgrounds and handles. Runs after `panelAutoSizes`.
 
 ---
 
-## Zoom
+### `handlersState.ts`
 
-The entire grid content div is CSS-scaled with `transform: scale(zoom)` from the top-left origin. Mouse event coordinates are adjusted by `/ zoom` in `getCellFromMouseEvent`. `CELL_SIZE` (40px) is always the logical cell size — zoom only affects visual size.
+A module-level singleton (not React state) that maps Python `_elem_id → string[]` of handler names:
 
-`alignGrid()` (exposed via `ref`) snaps the scroll position to the nearest cell boundary to prevent blurry grid lines.
+```typescript
+// Set once per Python execution, before loadVisualBuilderObjects runs
+setHandlers({ "3": ["on_click"], "7": ["on_drag", "on_click"] });
+
+// Queried per element inside loadVisualBuilderObjects
+hasHandler(3, 'on_click') // → true
+```
+
+The Python executor calls `setHandlers` before calling `loadVisualBuilderObjects`, so by the time interaction data is being assigned, the registry is current.
+
+---
+
+## Grid.tsx
+
+Grid is a `forwardRef` component. It receives `cells`, `overlayCells`, and `panels` from `useGridState` and renders them. It has no knowledge of element types or Python.
+
+### `objectsToRender`
+
+Merges `cells` and `overlayCells` into a single sorted array. Panel entries (which exist in `cells` but are rendered via the `panels` prop separately) are skipped with `if (cellData.panel) continue`.
+
+Sorting: higher `userZ` renders first (closer to viewer), then `zOrder` (insertion order) as a tiebreak.
+
+**Key stability matters for animation.** Every entry gets `key: cellData.objectId ?? posKey`. `objectId` is the stable `vb-elem-N` string that follows the element regardless of whether it's in `cells` or `overlayCells`. If the key changed when an element moved between the two maps, React would remount the node and break CSS transitions.
+
+### `GridSingleObject`
+
+One `memo`-wrapped `motion.div` per element. Handles:
+
+**Positioning and animation:**
+- Absolutely positioned at `(col * CELL_SIZE, row * CELL_SIZE)`.
+- Framer Motion animates `left`, `top`, `width`, `height`, `opacity`.
+- Animation fires only when both the global toggle (`useAnimationEnabled()`) and the per-element `cellData.animate !== false` flag are true.
+- Fade-in on mount: starts at `opacity: 0`, steps to `1` via `initial` / `animate`.
+- Invisible elements (`elementInfo.visible === false`): opacity 0, `pointerEvents: none`. DOM node stays alive (preserves key for transition continuity).
+
+**Click handling:** <a name="click-handling"></a>
+- If `mouseEnabled && clickData && onElementClick`: applies `cursor-pointer`, adds click handler.
+- Click handler computes which sub-cell was clicked (`offsetX / CELL_SIZE`), adds to base position, calls `onElementClick(elemId, x, y)`.
+- Shows a white flash overlay for 300ms.
+- If no `clickData` but `inputData`: click activates an inline `<input>` instead.
+
+**Drag handling:**
+- `mouseDown` on a draggable element (has `dragData`): calls `onElementDragStart`, which sets `dragStateRef` in the parent `Grid`.
+- `mouseMove` on the `Grid` container (not the element): `Grid.handleMouseMove` fires `onElementDrag(elemId, col, row, 'mid')` for each new cell entered. `dragCallInFlightRef` prevents queuing concurrent calls.
+- `mouseUp` on `window` (not grid): fires `onElementDrag(…, 'end')` and clears state. Window-level ensures drag end fires even if the mouse leaves the grid.
+
+### Rendering layers (DOM order)
+
+```
+gridContent div (scaled with zoom)
+├── Background grid   — CSS gradient lines
+├── Panel backgrounds — colored/bordered rects, pointer-events: none
+├── Objects           — motion.divs, pointer-events per element
+├── Panel handles     — title labels above top edge, pointer-events: none
+├── Text boxes        — floating annotations, pointer-events conditional
+└── Capture region    — screenshot region draw layer
+```
+
+### Zoom
+
+The `gridContent` div is CSS-scaled via `transform: scale(zoom)` from the top-left origin. `CELL_SIZE` (40px) is always the logical unit — zoom only scales visually. Mouse coordinates in `getCellFromMouseEvent` are divided by `zoom` to convert back to logical cells.
+
+`alignGrid()` (exposed via `ref`) snaps the scroll position to the nearest `CELL_SIZE * zoom` boundary, preventing blurry sub-pixel grid lines.
 
 ---
 
@@ -138,8 +212,10 @@ The entire grid content div is CSS-scaled with `transform: scale(zoom)` from the
 
 | File | Role |
 |------|------|
-| `src/visual-panel/components/Grid.tsx` | This file: rendering + interaction dispatch |
+| `src/visual-panel/components/Grid.tsx` | Rendering + interaction dispatch |
 | `src/visual-panel/components/GridCell.tsx` | Delegates to shape renderer based on `elementInfo.type` |
 | `src/visual-panel/hooks/useGridState.ts` | Builds `cells`, `overlayCells`, `panels` from hydrated element instances |
+| `src/visual-panel/handlersState.ts` | Module-level `_elem_id → handlers[]` registry |
+| `src/visual-panel/render-objects/` | Element classes and their `draw()` methods |
 | `src/visual-panel/types/grid.ts` | `RenderableObjectData`, `InteractionData`, `CellStyle`, `cellKey()` |
 | `src/animation/animationContext.tsx` | `useAnimationEnabled()`, `useAnimationDuration()` |
