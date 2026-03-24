@@ -1,20 +1,20 @@
 import { useRef, useEffect, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
-import Editor, { type Monaco } from '@monaco-editor/react';
+import MonacoEditor, { type Monaco } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import type * as MonacoTypes from 'monaco-editor';
 import { VISUAL_ELEM_SCHEMA } from '../../api/visualBuilder';
 import { OutputTerminal } from '../../output-terminal/OutputTerminal';
 import { useTheme } from '../../contexts/ThemeContext';
-import { getVizRanges, getVizBadRanges } from './vizBlockParser';
+import { getVizRanges, getVizBadRanges } from '../../python-engine/viz-block-parser';
 import sampleCode from './sample.py?raw';
 
-export const COMBINED_SAMPLE = sampleCode;
+export const DEFAULT_SAMPLE = sampleCode;
 
-export interface CombinedEditorHandle {
+export interface EditorHandle {
   foldVizBlocks: () => void;
 }
 
-interface CombinedEditorProps {
+interface EditorProps {
   code: string;
   onChange: (code: string) => void;
   isEditable: boolean;
@@ -23,14 +23,14 @@ interface CombinedEditorProps {
   onEdit: () => void;
 }
 
-export const CombinedEditor = forwardRef<CombinedEditorHandle, CombinedEditorProps>(function CombinedEditor({
+export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
   code,
   onChange,
   isEditable,
   currentStep,
   currentLine,
   onEdit,
-}: CombinedEditorProps, ref) {
+}: EditorProps, ref) {
   const { darkMode } = useTheme();
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
@@ -299,7 +299,7 @@ export const CombinedEditor = forwardRef<CombinedEditorHandle, CombinedEditorPro
 
       {/* Editor */}
       <div className="flex-1 overflow-hidden">
-        <Editor
+        <MonacoEditor
           height="100%"
           defaultLanguage="python"
           theme={monacoTheme}
