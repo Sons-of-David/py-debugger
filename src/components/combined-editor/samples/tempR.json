@@ -1,0 +1,4 @@
+{
+  "combinedCode": "class Foo:\n    def __init__(self):\n        self.arr = [1,2,3]\n\nfoo = Foo()\n\n# @viz\narr = Array(cells = V('foo.arr'), x=2, y=2)\n# @end\n\nfoo.arr.append(4)\nfoo.arr.append(5)\n\nfoo.arr = [7,8,9]\n",
+  "textBoxes": []
+}
