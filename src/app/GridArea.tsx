@@ -27,6 +27,8 @@ export interface GridAreaHandle {
   loadVisualBuilderObjects: (elements: VisualBuilderElementBase[]) => void;
   captureFrameData: (region: CaptureRegion | null) => Promise<string | null>;
   captureFrameCanvas: (region: CaptureRegion | null) => Promise<HTMLCanvasElement | null>;
+  scrollViewport: (x: number, y: number) => void;
+  clipViewport: (w: number, h: number) => void;
 }
 
 interface GridAreaProps {
@@ -34,6 +36,7 @@ interface GridAreaProps {
   mouseEnabled: boolean;
   textBoxes: TextBox[];
   onTextBoxesChange: (boxes: TextBox[]) => void;
+  hideToolbar?: boolean;
   /** Visual elements to display; updated reactively when currentStep changes. */
   elements?: VisualBuilderElementBase[];
   /** Combined-editor: viz block ranges for the current code, used for auto-tracing clicks. */
@@ -47,7 +50,7 @@ interface GridAreaProps {
 }
 
 export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
-  function GridArea({ darkMode, mouseEnabled, textBoxes, onTextBoxesChange, elements, combinedVizRanges, onCombinedTrace, appMode = 'idle', onCreateGif, isCreatingGif = false, allowGif = false }, ref) {
+  function GridArea({ darkMode, mouseEnabled, textBoxes, onTextBoxesChange, hideToolbar = false, elements, combinedVizRanges, onCombinedTrace, appMode = 'idle', onCreateGif, isCreatingGif = false, allowGif = false }, ref) {
     const {
       cells,
       overlayCells,
@@ -165,7 +168,13 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
       return canvas ? canvas.toDataURL('image/png') : null;
     }, [captureFrameCanvas]);
 
-    useImperativeHandle(ref, () => ({ loadVisualBuilderObjects, captureFrameData, captureFrameCanvas }), [loadVisualBuilderObjects, captureFrameData, captureFrameCanvas]);
+    useImperativeHandle(ref, () => ({
+      loadVisualBuilderObjects,
+      captureFrameData,
+      captureFrameCanvas,
+      scrollViewport: (x: number, y: number) => gridRef.current?.scrollTo(x, y),
+      clipViewport: (w: number, h: number) => gridRef.current?.clipTo(w, h),
+    }), [loadVisualBuilderObjects, captureFrameData, captureFrameCanvas]);
 
     const downloadDataUrl = (dataUrl: string, filename: string) => {
       const link = document.createElement('a');
@@ -223,52 +232,54 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
 
     return (
       <div className="h-full flex flex-col">
-        <div className={panelHeader}>
-          {/* Visual controls */}
-          <div className="flex items-center gap-2">
-            <button onClick={zoomOut} className={buttonNeutral}>
-              -
-            </button>
-            <span className="text-sm text-gray-600 dark:text-gray-300 min-w-[60px] text-center">
-              {Math.round(zoom * 100)}%
-            </span>
-            <button onClick={zoomIn} className={buttonNeutral}>
-              +
-            </button>
-            <button
-              onClick={handleAlignGrid}
-              className={buttonNeutral}
-              title="Align grid to viewport"
-            >
-              ⊞
-            </button>
-            <button
-              onClick={handleScreenshotClick}
-              disabled={isCapturing}
-              className={`${buttonDisabled}${capturingRegionMode && !pendingGifRef.current ? ' ring-2 ring-inset ring-orange-500' : ''}`}
-              title="Screenshot: click then draw a region on the grid"
-            >
-              {isCapturing ? '⏳' : '📷'}
-            </button>
-            {appMode === 'trace' && allowGif && (
-              <button
-                onClick={handleGifClick}
-                disabled={isCreatingGif}
-                className={`${buttonDisabled}${capturingRegionMode && pendingGifRef.current ? ' ring-2 ring-inset ring-orange-500' : ''}`}
-                title="Export full trace as GIF"
-              >
-                {isCreatingGif ? '⏳' : '🎬'}
+        {!hideToolbar && (
+          <div className={panelHeader}>
+            {/* Visual controls */}
+            <div className="flex items-center gap-2">
+              <button onClick={zoomOut} className={buttonNeutral}>
+                -
               </button>
-            )}
-            <button
-              onClick={() => setAddingTextBox((v) => !v)}
-              className={`${buttonNeutral}${addingTextBox ? ' ring-2 ring-inset ring-indigo-500' : ''}`}
-              title="Add text annotation (click-drag on grid)"
-            >
-              T+
-            </button>
+              <span className="text-sm text-gray-600 dark:text-gray-300 min-w-[60px] text-center">
+                {Math.round(zoom * 100)}%
+              </span>
+              <button onClick={zoomIn} className={buttonNeutral}>
+                +
+              </button>
+              <button
+                onClick={handleAlignGrid}
+                className={buttonNeutral}
+                title="Align grid to viewport"
+              >
+                ⊞
+              </button>
+              <button
+                onClick={handleScreenshotClick}
+                disabled={isCapturing}
+                className={`${buttonDisabled}${capturingRegionMode && !pendingGifRef.current ? ' ring-2 ring-inset ring-orange-500' : ''}`}
+                title="Screenshot: click then draw a region on the grid"
+              >
+                {isCapturing ? '⏳' : '📷'}
+              </button>
+              {appMode === 'trace' && allowGif && (
+                <button
+                  onClick={handleGifClick}
+                  disabled={isCreatingGif}
+                  className={`${buttonDisabled}${capturingRegionMode && pendingGifRef.current ? ' ring-2 ring-inset ring-orange-500' : ''}`}
+                  title="Export full trace as GIF"
+                >
+                  {isCreatingGif ? '⏳' : '🎬'}
+                </button>
+              )}
+              <button
+                onClick={() => setAddingTextBox((v) => !v)}
+                className={`${buttonNeutral}${addingTextBox ? ' ring-2 ring-inset ring-indigo-500' : ''}`}
+                title="Add text annotation (click-drag on grid)"
+              >
+                T+
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="flex-1 overflow-hidden">
           <Grid

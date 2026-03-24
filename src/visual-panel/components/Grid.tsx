@@ -45,6 +45,8 @@ interface GridProps {
 export interface GridHandle {
   alignGrid: () => void;
   captureElement: () => HTMLDivElement | null;
+  scrollTo: (x: number, y: number) => void;
+  clipTo: (w: number, h: number) => void;
 }
 
 export interface PanelInfo {
@@ -217,6 +219,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
   const containerRef = useRef<HTMLDivElement>(null);
   const gridContentRef = useRef<HTMLDivElement>(null);
   const animationDuration = useAnimationDuration();
+  const [clipDims, setClipDims] = useState<{ w: number; h: number } | null>(null);
 
   // ── Drag state ──────────────────────────────────────────────────────────
   const dragStateRef = useRef<{ elemId: number; lastRow: number; lastCol: number } | null>(null);
@@ -286,6 +289,13 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
       });
     },
     captureElement: () => containerRef.current,
+    scrollTo: (x: number, y: number) => {
+      const container = containerRef.current;
+      if (!container) return;
+      container.scrollLeft = x * CELL_SIZE * zoom;
+      container.scrollTop = y * CELL_SIZE * zoom;
+    },
+    clipTo: (w: number, h: number) => setClipDims({ w, h }),
   }), [zoom]);
 
   const handleWheel = useCallback(
@@ -399,7 +409,13 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
   return (
     <div
       ref={containerRef}
-      className="w-full h-full overflow-auto bg-gray-100 dark:bg-gray-900"
+      className={`bg-gray-100 dark:bg-gray-900 ${clipDims ? '' : 'w-full h-full overflow-auto'}`}
+      style={clipDims ? {
+        width: clipDims.w * CELL_SIZE * zoom,
+        height: clipDims.h * CELL_SIZE * zoom,
+        overflow: 'hidden',
+        flexShrink: 0,
+      } : undefined}
       onWheel={handleWheel}
       onMouseDown={() => { if (selectedTextBoxId) onSelectTextBox?.(null); }}
       onMouseMove={handleMouseMove}

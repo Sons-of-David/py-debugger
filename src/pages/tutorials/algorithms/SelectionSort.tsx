@@ -2,18 +2,37 @@ import { Link } from 'react-router-dom';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { t } from '../theme';
 import { CodeBlock } from '../CodeBlock';
+import { EMBED_CHROME_HEIGHT } from '../../../app/EmbedPage';
+import { CELL_SIZE } from '../../../visual-panel/components/Grid';
 
 // ---------------------------------------------------------------------------
 // Embedded preview
 // ---------------------------------------------------------------------------
 
-function EmbedPreview({ sample }: { sample: string }) {
+interface EmbedPreviewProps {
+  sample: string;
+  vx?: number;
+  vy?: number;
+  vw?: number;
+  vh?: number;
+}
+
+function EmbedPreview({ sample, vx, vy, vw, vh }: EmbedPreviewProps) {
   const { darkMode } = useTheme();
-  const src = `/embed?sample=${encodeURIComponent(sample)}&dark=${darkMode ? '1' : '0'}`;
+  let src = `/embed?sample=${encodeURIComponent(sample)}&dark=${darkMode ? '1' : '0'}`;
+  if (vx !== undefined) src += `&vx=${vx}`;
+  if (vy !== undefined) src += `&vy=${vy}`;
+  if (vw !== undefined) src += `&vw=${vw}`;
+  if (vh !== undefined) src += `&vh=${vh}`;
+
+  const hasViewport = vw !== undefined && vh !== undefined;
+  const iframeWidth = hasViewport ? vw! * CELL_SIZE : undefined;
+  const iframeHeight = hasViewport ? vh! * CELL_SIZE + EMBED_CHROME_HEIGHT : 440;
+
   return (
     <div
-      className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm"
-      style={{ height: 440 }}
+      className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm mx-auto"
+      style={{ width: iframeWidth, height: iframeHeight }}
     >
       <iframe
         src={src}
@@ -170,7 +189,7 @@ export function SelectionSort() {
       </div>
 
       {/* Embedded preview */}
-      <EmbedPreview sample="1-selection-sort" />
+      <EmbedPreview sample="1-selection-sort" vx={0} vy={0} vw={10} vh={4} />
 
       {/* CTA */}
       <div className={t.ctaBanner}>

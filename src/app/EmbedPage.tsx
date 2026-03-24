@@ -25,6 +25,15 @@ const SAMPLES = Object.entries(SAMPLE_MODULES).map(([path, data]) => {
 });
 
 // ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+export const EMBED_HEADER_HEIGHT = 48;
+export const EMBED_FOOTER_HEIGHT = 52;
+/** Total pixel height of the embed chrome (header + footer). Used by EmbedPreview to size the iframe. */
+export const EMBED_CHROME_HEIGHT = EMBED_HEADER_HEIGHT + EMBED_FOOTER_HEIGHT;
+
+// ---------------------------------------------------------------------------
 // EmbedPage
 // ---------------------------------------------------------------------------
 
@@ -34,6 +43,14 @@ export function EmbedPage() {
   const [searchParams] = useSearchParams();
   const sampleParam = searchParams.get('sample') ?? '';
   const darkParam = searchParams.get('dark');
+
+  // Viewport params (in grid cells)
+  const vx = Number(searchParams.get('vx') ?? '0');
+  const vy = Number(searchParams.get('vy') ?? '0');
+  const vwParam = searchParams.get('vw');
+  const vhParam = searchParams.get('vh');
+  const vw = vwParam !== null ? Number(vwParam) : null;
+  const vh = vhParam !== null ? Number(vhParam) : null;
 
   // Resolve dark mode: ?dark=1 → dark, ?dark=0 → light, absent → system
   const prefersDark = useMemo(() => {
@@ -126,6 +143,8 @@ export function EmbedPage() {
         setStepCount(getMaxTime() + 1);
         setCurrentStep(0);
         gridAreaRef.current?.loadVisualBuilderObjects(getStateAt(0) ?? []);
+        gridAreaRef.current?.scrollViewport(vx, vy);
+        if (vw !== null && vh !== null) gridAreaRef.current?.clipViewport(vw, vh);
         if (isOneFrame && hasInteractive) {
           setAppMode('interactive');
         } else {
@@ -139,7 +158,7 @@ export function EmbedPage() {
     } finally {
       setIsAnalyzing(false);
     }
-  }, []);
+  }, [vx, vy, vw, vh]);
 
   // Auto-analyze when Pyodide is ready
   useEffect(() => {
@@ -229,6 +248,7 @@ export function EmbedPage() {
             ref={gridAreaRef}
             darkMode={prefersDark}
             mouseEnabled={mouseEnabled}
+            hideToolbar
             textBoxes={textBoxes}
             onTextBoxesChange={setTextBoxes}
             combinedVizRanges={combinedVizRanges}
@@ -238,7 +258,7 @@ export function EmbedPage() {
       </div>
 
       {/* Footer: timeline controls */}
-      <div className="flex-shrink-0 px-4 py-2 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex items-center justify-center">
+      <div className="flex-shrink-0 px-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex items-center justify-center" style={{ height: EMBED_FOOTER_HEIGHT }}>
         <TimelineControls
           currentStep={currentStep}
           stepCount={stepCount}
@@ -269,7 +289,7 @@ function EmbedShell({
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       {/* Header */}
-      <header className="flex-shrink-0 px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+      <header className="flex-shrink-0 px-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between" style={{ height: EMBED_HEADER_HEIGHT }}>
         <div className="flex items-center gap-2 min-w-0">
           <a
             href="/"
