@@ -4,7 +4,7 @@
 
 Quick reference for writing `combinedCode` in sample JSON files. Check this before writing any sample. Update it when you discover new patterns or verify uncertain behavior.
 
-**Source of truth:** `src/components/combined-editor/user_api.py` and `src/api/functionsSchema.ts`
+**Source of truth:** `src/python-engine/user_api.py` and `src/api/functionsSchema.ts`
 
 ---
 
@@ -20,6 +20,7 @@ All shapes share: `x` (col), `y` (row), `width`, `height`, `visible`, `alpha`, `
 | `Label(label='', x, y, width=1, height=1, font_size=14, color=None, ...)` | empty text | **Not clickable/draggable** |
 | `Panel(name='', x, y, width=1, height=1, show_border=False, ...)` | transparent container | Children use relative coords. See below. |
 | `Input(x, y, width=3, height=1, color=(99,102,241), value='', placeholder='', ...)` | text input | Has `input_changed(text)` and `get_input()` |
+| `Line(start=(0,0), end=(1,1), color=(239,68,68), stroke_weight=2, start_cap='none', end_cap='arrow', start_offset=(0.5,0.5), end_offset=(0.5,0.5), z=0)` | directed line | `start`/`end` are `(row, col)` tuples. `start_cap`/`end_cap`: `'none'` or `'arrow'`. `*_offset`: `(x,y)` 0–1 anchor within the target cell. **Not clickable/draggable** |
 
 ### `delete()`
 All shapes: `elem.delete()` removes from canvas and parent panel.
