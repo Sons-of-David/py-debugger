@@ -8,7 +8,7 @@ import type {
 } from '../types/grid';
 import type { VisualBuilderElementBase } from '../../api/visualBuilder';
 import { cellKey } from '../types/grid';
-import { type ArrayDrawResult, PanelCell } from '../render-objects';
+import { PanelCell } from '../render-objects';
 import { hasHandler } from '../handlersState';
 
 const MIN_ZOOM = 0.5;
@@ -218,7 +218,7 @@ export function useGridState() {
       const panelNodeMap = new Map<string, PanelTreeNode>();
       const allNodes: TreeNodeEntry[] = [];
 
-      for (const el of elements) {
+      const addNode = (el: VisualBuilderElementBase, presetGridId?: string) => {
         if (el.type === 'panel') {
           const gridId = `panel-e${(el as any)._elem_id}`;
           const node: PanelTreeNode = { el, gridId, children: [] };
@@ -226,8 +226,20 @@ export function useGridState() {
           allNodes.push(node);
         } else {
           const rawElemId = (el as { _elemId?: number })._elemId;
-          const gridId = rawElemId != null ? `elem-${rawElemId}` : `${idx++}`;
+          const gridId = presetGridId ?? (rawElemId != null ? `elem-${rawElemId}` : `${idx++}`);
           allNodes.push({ el, gridId });
+        }
+      };
+
+      type ExpandableElement = VisualBuilderElementBase & { expand: () => Array<{ _gridId?: string } & VisualBuilderElementBase> };
+      const isExpandable = (e: VisualBuilderElementBase): e is ExpandableElement =>
+        'expand' in e && typeof (e as ExpandableElement).expand === 'function';
+
+      for (const el of elements) {
+        if (isExpandable(el)) {
+          for (const sub of el.expand()) addNode(sub, sub._gridId);
+        } else {
+          addNode(el);
         }
       }
 
@@ -251,9 +263,10 @@ export function useGridState() {
           data: {
             objectId: gridId,
             elementInfo: panelCell as any,
-            panel: { id: gridId, width, height, title: elAny.name, showBorder: elAny.show_border ?? false },
+            panel: { id: gridId, width, height, title: elAny.name, panelStyle: elAny.panelStyle, showBorder: elAny.show_border ?? false },
             shapeProps: { width, height },
             zOrder: z,
+            userZ: elAny.z ?? 0,
             ...(parentGridId ? { panelId: parentGridId } : {}),
           },
           position: { row: absRow, col: absCol },
@@ -264,75 +277,32 @@ export function useGridState() {
       const emitLeaf = (node: LeafTreeNode, parentGridId: string | undefined, absRow: number, absCol: number, parentAlpha: number) => {
         const { el } = node;
         const elAny = el as any;
-        if (!('draw' in el && typeof elAny.draw === 'function')) return;
-
-        const drawResult = (elAny.draw as (i: number, elemId?: number) => Record<string, unknown>)(idx, elAny._elemId);
-
-        if ('panel' in drawResult && 'cells' in drawResult) {
-          // Array element: produces its own panel + cells
-          const { panel: panelInfo, panelOffset, cells: drawCells, nextIdx } = drawResult as unknown as ArrayDrawResult;
-          const panelGridId = panelInfo.id;
-          const panelAbsRow = absRow + (panelOffset?.row ?? 0);
-          const panelAbsCol = absCol + (panelOffset?.col ?? 0);
-          next.set(panelGridId, {
-            id: panelGridId,
-            data: {
-              objectId: panelGridId,
-              elementInfo: new PanelCell({ id: panelGridId, title: panelInfo.title }),
-              panel: {
-                id: panelGridId,
-                width: panelInfo.width,
-                height: panelInfo.height,
-                title: panelInfo.title,
-                panelStyle: panelInfo.panelStyle,
-                showBorder: panelInfo.showBackground !== false,
-              },
-              shapeProps: { width: panelInfo.width, height: panelInfo.height },
-              panelId: parentGridId,
-              zOrder: z,
-              userZ: elAny.z ?? 0,
-            },
-            position: { row: panelAbsRow, col: panelAbsCol },
-            zOrder: z++,
-          });
-          // cell style.opacity already encodes the array element's own alpha;
-          // parentAlpha here is ancestors only (not multiplied by the array element's alpha).
-          for (const cell of drawCells) {
-            next.set(cell.cellId, {
-              id: cell.cellId,
-              data: { ...cell.data, objectId: cell.cellId, panelId: panelGridId, zOrder: z, parentAlpha },
-              position: { row: panelAbsRow + cell.position[0], col: panelAbsCol + cell.position[1] },
-              zOrder: z++,
-            });
-          }
-          idx = nextIdx;
-        } else {
-          // Single-object element — attach interaction data
-          const elemId = elAny._elemId as number | undefined;
-          const clickData: InteractionData | undefined = elemId != null && hasHandler(elemId, 'on_click')
-            ? { elemId, x: el.x, y: el.y } : undefined;
-          const dragData: InteractionData | undefined = elemId != null && hasHandler(elemId, 'on_drag')
-            ? { elemId, x: el.x, y: el.y } : undefined;
-          const inputData: InteractionData | undefined = elemId != null && hasHandler(elemId, 'input_changed')
-            ? { elemId, x: el.x, y: el.y } : undefined;
-          next.set(node.gridId, {
-            id: node.gridId,
-            data: {
-              ...(drawResult as RenderableObjectData),
-              objectId: node.gridId,
-              panelId: parentGridId,
-              zOrder: z,
-              userZ: elAny.z ?? 0,
-              animate: (el as { animate?: boolean }).animate,
-              clickData,
-              dragData,
-              inputData,
-              parentAlpha,
-            },
-            position: { row: absRow, col: absCol },
-            zOrder: z++,
-          });
-        }
+        if (!('draw' in el && typeof (el as { draw?: unknown }).draw === 'function')) return;
+        const drawResult = (el as { draw: () => Record<string, unknown> }).draw();
+        const elemId = elAny._elemId as number | undefined;
+        const clickData: InteractionData | undefined = elemId != null && hasHandler(elemId, 'on_click')
+          ? { elemId, x: el.x, y: el.y } : undefined;
+        const dragData: InteractionData | undefined = elemId != null && hasHandler(elemId, 'on_drag')
+          ? { elemId, x: el.x, y: el.y } : undefined;
+        const inputData: InteractionData | undefined = elemId != null && hasHandler(elemId, 'input_changed')
+          ? { elemId, x: el.x, y: el.y } : undefined;
+        next.set(node.gridId, {
+          id: node.gridId,
+          data: {
+            ...(drawResult as RenderableObjectData),
+            objectId: node.gridId,
+            panelId: parentGridId,
+            zOrder: z,
+            userZ: elAny.z ?? 0,
+            animate: (el as { animate?: boolean }).animate,
+            clickData,
+            dragData,
+            inputData,
+            parentAlpha,
+          },
+          position: { row: absRow, col: absCol },
+          zOrder: z++,
+        });
       };
 
       // ── DFS traversal ───────────────────────────────────────────────────
