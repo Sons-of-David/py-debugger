@@ -174,12 +174,12 @@ export function SelectionSort() {
           Getting Started
         </p>
         <h1 className={`${t.heading1} mb-3`}>Learn AlgoPlay with Selection Sort</h1>
-        <p className={`${t.body} leading-relaxed max-w-xl`}>
+        <p className={`${t.body} leading-relaxed`}>
           Selection sort finds the minimum element in the unsorted region and swaps it into
           place — one element per pass. As a first example, we will use it to learn the
           interesting features that AlgoPlay has — the algorithm itself is just a vehicle.
         </p>
-        <p className={`${t.body} leading-relaxed max-w-xl mt-3`}>
+        <p className={`${t.body} leading-relaxed mt-3`}>
           This page builds the visualization in three steps: first with raw{' '}
           <code className={t.inlineCode}># @viz</code> blocks, then with a{' '}
           <code className={t.inlineCode}>Panel</code> to group elements, and finally with{' '}
