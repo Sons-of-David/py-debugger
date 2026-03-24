@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { MousePointerClick } from 'lucide-react';
 
 interface TimelineControlsProps {
@@ -28,15 +28,6 @@ export function TimelineControls({
   hasInteractiveElements,
   isStaticSnapshot,
 }: TimelineControlsProps) {
-  const [inputValue, setInputValue] = useState(String(currentStep));
-
-  useEffect(() => {
-    setInputValue(String(currentStep));
-  }, [currentStep]);
-
-  const onPrevStep = useCallback(() => onGoToStep(currentStep - 1), [currentStep, onGoToStep]);
-  const onNextStep = useCallback(() => onGoToStep(currentStep + 1), [currentStep, onGoToStep]);
-
   const hasSteps = stepCount > 0;
   const maxStep = hasSteps ? stepCount - 1 : 0;
   const isInactive = appMode === 'idle' || appMode === 'interactive';
@@ -44,6 +35,31 @@ export function TimelineControls({
   const canEnterInteractive = hasInteractiveElements !== false;
   const canGoPrev = hasSteps && currentStep > 0 && !isInactive && !isPhoto;
   const canGoNext = hasSteps && currentStep < maxStep && !isInactive && !isPhoto;
+  const scrubDisabled = !hasSteps || isInactive || isPhoto;
+
+  const scrubBarRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
+
+  const scrubTo = useCallback((clientX: number) => {
+    if (!scrubBarRef.current || scrubDisabled) return;
+    const rect = scrubBarRef.current.getBoundingClientRect();
+    const ratio = (clientX - rect.left) / rect.width;
+    onGoToStep(Math.max(0, Math.min(maxStep, Math.round(ratio * maxStep))));
+  }, [scrubDisabled, maxStep, onGoToStep]);
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => { if (isDragging.current) scrubTo(e.clientX); };
+    const onMouseUp = () => { isDragging.current = false; };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [scrubTo]);
+
+  const onPrevStep = useCallback(() => onGoToStep(currentStep - 1), [currentStep, onGoToStep]);
+  const onNextStep = useCallback(() => onGoToStep(currentStep + 1), [currentStep, onGoToStep]);
 
   const btnBase =
     'px-2 py-1 rounded text-sm font-medium transition-colors border';
@@ -52,15 +68,7 @@ export function TimelineControls({
   const btnDisabled =
     `${btnBase} bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 border-gray-200 dark:border-gray-600 cursor-not-allowed`;
 
-  const commitInput = () => {
-    if (!hasSteps || isInactive) return;
-    const val = parseInt(inputValue, 10);
-    if (!isNaN(val) && val >= 0 && val <= maxStep) {
-      onGoToStep(val);
-    } else {
-      setInputValue(String(currentStep));
-    }
-  };
+  const fillPct = hasSteps ? (currentStep / maxStep) * 100 : 0;
 
   return (
     <div className="flex items-center gap-1.5">
@@ -99,14 +107,6 @@ export function TimelineControls({
       {/* Step navigation — always visible, grayed out when idle/interactive or photo */}
       <div className={`flex items-center gap-1 px-3 py-1 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 ${(isInactive || isPhoto) ? 'opacity-40' : ''}`}>
         <button
-          onClick={() => onGoToStep(0)}
-          disabled={!canGoPrev}
-          className={canGoPrev ? btnActive : btnDisabled}
-          title="First step"
-        >
-          {'<<'}
-        </button>
-        <button
           onClick={onPrevStep}
           disabled={!canGoPrev}
           className={canGoPrev ? btnActive : btnDisabled}
@@ -115,19 +115,25 @@ export function TimelineControls({
           ←
         </button>
 
-        <input
-          type={hasSteps ? 'number' : 'text'}
-          min={0}
-          max={maxStep}
-          value={hasSteps ? inputValue : '--'}
-          readOnly={!hasSteps || isInactive}
-          onChange={(e) => { if (hasSteps && !isInactive) setInputValue(e.target.value); }}
-          onBlur={commitInput}
-          onKeyDown={(e) => { if (e.key === 'Enter') commitInput(); }}
-          className="w-14 text-center text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-500 rounded px-1 py-0.5 text-gray-700 dark:text-gray-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-          title={hasSteps ? `Step (0 – ${maxStep})` : 'No steps yet'}
-        />
-        <span className="text-xs text-gray-500 dark:text-gray-400">/ {hasSteps ? maxStep : '--'}</span>
+        {/* Scrubber bar */}
+        <div
+          ref={scrubBarRef}
+          onMouseDown={(e) => {
+            if (scrubDisabled) return;
+            isDragging.current = true;
+            scrubTo(e.clientX);
+          }}
+          className={`relative w-40 h-6 rounded bg-gray-200 dark:bg-gray-600 overflow-hidden ${scrubDisabled ? 'cursor-default' : 'cursor-pointer'}`}
+          title={hasSteps ? `Step ${currentStep} of ${maxStep}` : 'No steps yet'}
+        >
+          <div
+            className="absolute left-0 top-0 h-full bg-indigo-500 dark:bg-indigo-400 rounded transition-none"
+            style={{ width: `${fillPct}%` }}
+          />
+          <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-white mix-blend-difference select-none z-10">
+            {hasSteps ? `${currentStep} / ${maxStep}` : '-- / --'}
+          </span>
+        </div>
 
         <button
           onClick={onNextStep}
@@ -136,14 +142,6 @@ export function TimelineControls({
           title="Next step"
         >
           →
-        </button>
-        <button
-          onClick={() => onGoToStep(maxStep)}
-          disabled={!canGoNext}
-          className={canGoNext ? btnActive : btnDisabled}
-          title="Last step"
-        >
-          {'>>'}
         </button>
 
         {appMode === 'trace' && onEnterInteractive && (
