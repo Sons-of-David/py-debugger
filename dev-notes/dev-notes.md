@@ -47,8 +47,8 @@ The core differentiator is **interactive mode**: users click visual elements, tr
 **Named components:**
 | Name | What it is |
 |------|-----------|
-| **Code Panel** | Left side — the combined code editor |
-| **Combined Code editor** | Single Monaco editor; viz blocks highlighted in blue; active line highlighted in yellow during trace; autocomplete for visual API |
+| **Code Panel** | Left side — the code editor |
+| **Code editor** | Single Monaco editor (`src/components/editor/Editor.tsx`); viz blocks highlighted in blue; active line highlighted in yellow during trace; autocomplete for visual API |
 | **Output Terminal** | Print output at the bottom of the Code Panel |
 | **Visual Panel** | Right side — the grid canvas with text box overlay and controls |
 | **API Reference** | Floating overlay showing builder function signatures; toggled from the Visual Panel |
@@ -76,28 +76,26 @@ The app has four modes. The normal progression is:
                 ┌────────────────┐
                 │     trace      │
                 └───────┬────────┘
-                        │ Finish & Interact
+                        │ Analyze
                         ▼
-     ┌───────────────────────────────────────┐
-┌───►│           interactive                 │
-│    └───────────────┬───────────────────────┘
-│                    │ click → mini-timeline to step through
-│                    ▼
-│    ┌────────────────────────┐
-│    │       debug_in_event   │
-│    └────────────────────────┘
-│                    │ Back to Interactive
-└────────────────────┘
+                ┌────────────────┐
+                │     trace      │◄──────────────────┐
+                └───────┬────────┘   click produces  │
+                        │            mini-timeline   │
+                        │ Finish & Interact          │
+                        ▼                            │
+                ┌────────────────┐                   │
+                │  interactive   │───────────────────┘
+                └────────────────┘
 
 (Edit returns to idle from trace or interactive)
 ```
 
-| Mode | Timeline | Mouse | Editor | Variable panel |
-|------|----------|-------|--------|----------------|
-| `idle` | hidden | off | unlocked | hidden |
-| `trace` | visible | off | locked | visible |
-| `interactive` | hidden | on | locked | hidden |
-| `debug_in_event` | visible | off | locked | visible |
+| Mode | Timeline | Mouse | Editor |
+|------|----------|-------|--------|
+| `idle` | hidden | off | unlocked |
+| `trace` | visible | off | locked |
+| `interactive` | hidden | on | locked |
 
 ### Trace Mode
 
@@ -112,11 +110,11 @@ After Analyze, the app enters trace mode. The timeline is pre-built and stored i
 In interactive mode, visual elements that have Python `on_click` handlers are clickable (pointer cursor, timeline hidden).
 
 When an element is clicked:
-1. `executeCombinedClickHandler(elemId, row, col, vizRanges)` is called
+1. `executeClickHandler(elemId, row, col)` is called (in `src/python-engine/executor.ts`)
 2. Python runs the handler with viz-aware tracing (algorithm code inside the handler is traced; viz-block helper functions are skipped)
-3. Returns `CombinedClickResult: { interactiveTimeline, finalSnapshot }`
-4. The mini-timeline is appended and the app enters `debug_in_event` mode for stepping
-5. **Back to Interactive** returns to interactive mode with the accumulated state
+3. Returns `TraceStageInfo: { timeline, handlers }`
+4. The mini-timeline loads and the app re-enters `trace` mode for stepping
+5. **Finish & Interact** returns to interactive mode with the accumulated state
 
 The Python namespace (`_combined_ns`) persists across all clicks and sub-runs — handlers can read and mutate the algorithm's state over multiple interactions.
 
@@ -146,19 +144,25 @@ src/
 │   └── ExtrasMenu.tsx              # Header extras dropdown (dark mode, etc.)
 │
 ├── components/
-│   └── combined-editor/            # Combined editor: all Python engine files + TS bridge
-│       ├── CombinedEditor.tsx      # Monaco editor with viz block decorations, line highlight, autocomplete
-│       ├── combinedExecutor.ts     # TypeScript ↔ Pyodide bridge (all Pyodide calls)
-│       ├── vizBlockParser.ts       # Parse & validate # @viz / # @end blocks
-│       ├── _vb_engine.py           # VFS module: VisualElem, V, R, TrackedDict, PopupException
-│       ├── user_api.py             # VFS module: user-facing API (Panel, shapes, Input, no_debug)
-│       ├── vb_serializer.py        # Engine: execution, snapshot recording, interactive dispatch
-│       ├── sample.py               # Default sample shown on first load
-│       └── samples/                # Bundled sample JSON files (*.json)
+│   └── editor/                     # Code editor UI
+│       ├── Editor.tsx              # Monaco editor: viz block decorations, line highlight, autocomplete
+│       └── sample.py               # Default sample shown on first load
 │
-├── python-engine/                  # Legacy location — vestigial; combined-editor supersedes it
-│   └── code-builder/services/
-│       └── pythonExecutor.ts       # Pyodide init + loadPyodide() (still used for initialization)
+├── python-engine/                  # Active execution services + Python files
+│   ├── executor.ts                 # TypeScript ↔ Pyodide bridge (all Pyodide calls)
+│   ├── pyodide-runtime.ts          # Pyodide singleton: loadPyodide(), isPyodideLoaded(), resetPythonState()
+│   ├── viz-block-parser.ts         # Parse & validate # @viz / # @end blocks
+│   ├── _vb_engine.py               # VFS module: VisualElem, V, R, TrackedDict, PopupException
+│   ├── user_api.py                 # VFS module: user-facing API (Panel, shapes, Input, no_debug)
+│   ├── vb_serializer.py            # Engine: execution, snapshot recording, interactive dispatch
+│   └── imports/                    # Optional Python modules importable from user code
+│       ├── array_utils.py / .schema.ts
+│       ├── graphs.py / .schema.ts
+│       └── list_helpers.py / .schema.ts
+│
+├── samples/                        # Bundled sample JSON files (*.json)
+│
+├── old-code/                       # Archived legacy code — excluded from TypeScript; pending deletion
 │
 ├── timeline/
 │   ├── TimelineControls.tsx        # Prev/next navigation (rendered in header)
@@ -205,7 +209,7 @@ src/
 See diagram in Part 1. Derived values:
 - `mouseEnabled = appMode === 'interactive'`
 - `readOnly = appMode !== 'idle'`
-- `showTimeline = appMode === 'trace' || appMode === 'debug_in_event'`
+- `showTimeline = appMode === 'trace'`
 
 ---
 
@@ -213,9 +217,9 @@ See diagram in Part 1. Derived values:
 
 | Variable | Type | Purpose |
 |----------|------|---------|
-| `appMode` | `'idle'\|'trace'\|'interactive'\|'debug_in_event'` | Drives all UI mode logic |
-| `combinedCode` | `string` | Combined Code editor content |
-| `combinedTimeline` | `CombinedStep[]` | Timeline from last Analyze |
+| `appMode` | `'idle'\|'trace'\|'interactive'` | Drives all UI mode logic |
+| `combinedCode` | `string` | Code editor content |
+| `timeline` | `TraceStep[]` | Timeline from last Analyze |
 | `isCombinedEditable` | `boolean` | Whether editor is unlocked |
 | `isAnalyzingCombined` | `boolean` | Disables Analyze button while Python runs |
 | `analyzeStatus` | `'idle'\|'success'\|'error'` | Controls Analyze/Edit button appearance |
@@ -232,12 +236,12 @@ See diagram in Part 1. Derived values:
 
 #### Initial Trace (Analyze)
 
-1. `handleAnalyzeCombined()` calls `executeCombinedCode(combinedCode)`
-2. `combinedExecutor.ts`:
+1. `handleAnalyzeCombined()` calls `executeCode(combinedCode)`
+2. `python-engine/executor.ts`:
    - Preprocesses code: `# @viz` → `__viz_begin__()`, `# @end` → `__viz_end__(dict(locals()))`
-   - Loads Pyodide (once per session)
+   - Loads Pyodide (once per session via `pyodide-runtime.ts`)
    - Calls `py.runPythonAsync(_exec_combined_code(preprocessedCode))`
-   - Returns `CombinedResult: { timeline: CombinedStep[], handlers, error? }`
+   - Returns `TraceStageInfo: { timeline: TraceStep[], handlers, error? }`
 3. `setHandlers()`, `hydrateTimelineFromArray()` populate stores
 4. `loadVisualBuilderObjects(timeline[0])` renders first snapshot
 5. `appMode = 'trace'`
@@ -250,18 +254,17 @@ See diagram in Part 1. Derived values:
 
 #### Click Handler
 
-1. Grid fires `onCombinedTrace(elemId, row, col)`
-2. `executeCombinedClickHandler(elemId, row, col, vizRanges)` in `combinedExecutor.ts`:
+1. Grid fires `onCombinedTrace(result)` after handler completes
+2. `executeClickHandler(elemId, row, col)` in `python-engine/executor.ts`:
    - Calls `_exec_combined_click_traced(elemId, row, col)` in Python
-   - Returns `CombinedClickResult: { interactiveTimeline, finalSnapshot }`
-3. Mini-timeline appended to stores; `appMode = 'debug_in_event'`
-4. User steps through mini-timeline; Back to Interactive returns to `interactive`
+   - Returns `TraceStageInfo: { timeline, handlers }`
+3. Mini-timeline loaded; `appMode = 'trace'`
+4. User steps through mini-timeline; "Finish & Interact" returns to `interactive`
 
 #### Input Changed
 
-1. User types in an `Input` element → `onCombinedInputChanged(elemId, text)`
-2. `executeCombinedInputChanged(elemId, text, vizRanges)` → same `CombinedClickResult` shape
-3. Same mini-timeline flow as click
+1. User types in an `Input` element → `executeInputChanged(elemId, text)`
+2. Returns same `TraceStageInfo` shape; same mini-timeline flow as click
 
 #### Edit
 
@@ -277,9 +280,9 @@ See diagram in Part 1. Derived values:
 
 | File | How loaded | Purpose |
 |------|------------|---------|
-| `src/components/combined-editor/_vb_engine.py` | VFS import | Hidden engine types: `VisualElem`, `V`, `R`, `TrackedDict`, `PopupException` |
-| `src/components/combined-editor/user_api.py` | VFS import | User-facing API: `Panel`, all shapes, `Input`, `no_debug` |
-| `src/components/combined-editor/vb_serializer.py` | exec'd | Execution, snapshot recording, interactive dispatch |
+| `src/python-engine/_vb_engine.py` | VFS import | Hidden engine types: `VisualElem`, `V`, `R`, `TrackedDict`, `PopupException` |
+| `src/python-engine/user_api.py` | VFS import | User-facing API: `Panel`, all shapes, `Input`, `no_debug` |
+| `src/python-engine/vb_serializer.py` | exec'd | Execution, snapshot recording, interactive dispatch |
 
 See [Python Engine](./python-engine.md) for the full architecture.
 
@@ -298,8 +301,8 @@ App.tsx
   ├─ ApiReferencePanel.tsx  (floating overlay)
   │   props: open, onClose
   │
-  ├─ CombinedEditor.tsx     (Code Panel)
-  │   props: code, onChange, isEditable, currentStep, currentLine, appMode
+  ├─ Editor.tsx             (Code Panel)
+  │   props: code, onChange, isEditable, currentStep, currentLine, onEdit
   │   handle: foldVizBlocks()
   │   └─ OutputTerminal   (bottom of editor)
   │

@@ -164,7 +164,7 @@ Projects are saved as JSON files. Loading a project restores the combined code e
 
 ### Local Save Mode
 
-`IS_LOCAL = hostname === 'localhost' || '127.0.0.1'`. When running locally, Save POSTs to `/api/save-sample` (served by a Vite dev plugin) to write directly into `src/components/combined-editor/samples/`. A separate **Save to Samples** button (only visible locally) saves with the current project name as the filename. In non-local mode, Save downloads a `.json` file as usual.
+`IS_LOCAL = hostname === 'localhost' || '127.0.0.1'`. When running locally, Save POSTs to `/api/save-sample` (served by a Vite dev plugin) to write directly into `src/samples/`. A separate **Save to Samples** button (only visible locally) saves with the current project name as the filename. In non-local mode, Save downloads a `.json` file as usual.
 
 The app header always shows a project name input (`projectName` state in `App.tsx`). On load, the name is set from the loaded filename.
 
@@ -176,10 +176,10 @@ The app header always shows a project name input (`projectName` state in `App.ts
 
 ### Samples
 
-Bundled sample projects live in `src/components/combined-editor/samples/*.json`. They are loaded at build time via Vite's `import.meta.glob`:
+Bundled sample projects live in `src/samples/*.json`. They are loaded at build time via Vite's `import.meta.glob`:
 
 ```typescript
-const modules = import.meta.glob('../components/combined-editor/samples/*.json', { eager: true });
+const modules = import.meta.glob('../samples/*.json', { eager: true });
 ```
 
 The filename (without `.json`) becomes the sample name. Files prefixed with `feature-` appear in the *Features* category in the dropdown; others appear in *Algorithms*.
@@ -190,7 +190,7 @@ The filename (without `.json`) becomes the sample name. Files prefixed with `fea
 |------|---------|
 | `src/app/App.tsx` | `handleSave`, `handleLoad` — JSON serialization/deserialization |
 | `src/text-boxes/types.ts` | `TextBox` interface + `migrateTextBox()` |
-| `src/components/combined-editor/samples/*.json` | Bundled sample projects |
+| `src/samples/*.json` | Bundled sample projects |
 
 ---
 
@@ -206,7 +206,7 @@ In the combined editor, output is captured incrementally. Each timeline step car
 
 **File:** `src/output-terminal/terminalState.ts`
 
-Stores the captured output. `combinedExecutor.ts` writes to it after each Analyze run via `setCombinedEditorSteps`.
+Stores the captured output. `python-engine/executor.ts` writes to it after each Analyze run.
 
 ### Components
 

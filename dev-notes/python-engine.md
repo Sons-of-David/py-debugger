@@ -21,7 +21,7 @@ The two kinds of code share one namespace (`_combined_ns`). Variables declared i
 
 ### Three-Layer Architecture
 
-The Python side is split into three layers, each in a separate file — all under `src/components/combined-editor/`:
+The Python side is split into three layers, each in a separate file — all under `src/python-engine/`:
 
 | Layer | File | What lives here |
 |-------|------|-----------------|
@@ -40,7 +40,7 @@ The Python side is split into three layers, each in a separate file — all unde
 
 ### Python ↔ TypeScript Bridge
 
-All TypeScript-to-Python calls go through `src/components/combined-editor/combinedExecutor.ts`. It manages Pyodide initialization, code preprocessing, and JSON parsing of results.
+All TypeScript-to-Python calls go through `src/python-engine/executor.ts`. It manages Pyodide initialization (via `pyodide-runtime.ts`), code preprocessing, and JSON parsing of results.
 
 ---
 
@@ -50,8 +50,8 @@ All TypeScript-to-Python calls go through `src/components/combined-editor/combin
 
 | File | Purpose |
 |------|---------|
-| `src/components/combined-editor/_vb_engine.py` | Hidden engine types: `VisualElem`, `V`, `R`, `TrackedDict`, `PopupException` |
-| `src/components/combined-editor/user_api.py` | User-facing API: `Panel`, all shapes, `Input`, `no_debug` |
+| `src/python-engine/_vb_engine.py` | Hidden engine types: `VisualElem`, `V`, `R`, `TrackedDict`, `PopupException` |
+| `src/python-engine/user_api.py` | User-facing API: `Panel`, all shapes, `Input`, `no_debug` |
 
 ### `VisualElem` — Base Class
 
@@ -130,7 +130,7 @@ Marks a function so the viz-aware interactive tracer skips local tracing for it.
 
 | File | Purpose |
 |------|---------|
-| `src/components/combined-editor/vb_serializer.py` | Combined execution, V() tracer, snapshot recording, interactive dispatch |
+| `src/python-engine/vb_serializer.py` | Combined execution, V() tracer, snapshot recording, interactive dispatch |
 
 ### `_exec_combined_code(code)` — Main Entry Point
 
@@ -207,15 +207,16 @@ Input changes use `_exec_combined_input_changed(elem_id, text)` — same pattern
 
 ## Part 4: Python ↔ TypeScript Bridge
 
-All calls go through `src/components/combined-editor/combinedExecutor.ts`.
+All calls go through `src/python-engine/executor.ts`.
 
 | TypeScript function | Python call | Returns |
 |--------------------|-------------|---------|
-| `executeCombinedCode(code)` | `_exec_combined_code(preprocessedCode, vizRangesJson)` | `CombinedResult: { timeline, handlers, error? }` |
-| `executeCombinedClickHandler(elemId, row, col)` | `_exec_combined_click_traced(...)` | `CombinedClickResult: { interactiveTimeline, finalSnapshot }` |
-| `executeCombinedInputChanged(elemId, text)` | `_exec_combined_input_changed(...)` | `CombinedClickResult: { interactiveTimeline, finalSnapshot }` |
+| `executeCode(code)` | `_exec_combined_code(preprocessedCode)` | `TraceStageInfo: { timeline, handlers, error? }` |
+| `executeClickHandler(elemId, row, col)` | `_exec_combined_click_traced(...)` | `TraceStageInfo` |
+| `executeDragHandler(elemId, row, col, dragType)` | `_exec_combined_drag_traced(...)` | `TraceStageInfo` |
+| `executeInputChanged(elemId, text)` | `_exec_combined_input_changed(...)` | `TraceStageInfo` |
 
-Pyodide initialization (`loadPyodide()`) still lives in `src/python-engine/code-builder/services/pythonExecutor.ts` — loaded once per session. `combinedExecutor.ts` calls it before any Python execution.
+Pyodide initialization (`loadPyodide()`) lives in `src/python-engine/pyodide-runtime.ts` — singleton, loaded once per session. `executor.ts` calls it before any Python execution.
 
 ### Output Capture
 
@@ -223,7 +224,7 @@ Python `print()` output is captured by redirecting `sys.stdout` before execution
 
 ### Import Files
 
-Builder and debugger import files (in `src/python-engine/builder-imports/*.py` and `debugger-imports/*.py`) are still bundled at build time and written to the Pyodide VFS during `loadPyodide()`. They are importable from combined editor code with standard `import`.
+Optional import files live in `src/python-engine/imports/` (`array_utils.py`, `graphs.py`, `list_helpers.py`). They are bundled at build time and written to the Pyodide VFS during `loadPyodide()`. They are importable from user code with standard `import`.
 
 **Tracer behavior:** The V() tracer only records steps for frames where `co_filename == '<combined_code>'`. Functions from import files have a real filepath and are silently skipped — they execute normally but produce no trace steps.
 
@@ -231,9 +232,9 @@ Builder and debugger import files (in `src/python-engine/builder-imports/*.py` a
 
 | File | Type | Purpose |
 |------|------|---------|
-| `src/components/combined-editor/_vb_engine.py` | VFS module | Hidden engine types: VisualElem, V, R, TrackedDict, PopupException |
-| `src/components/combined-editor/user_api.py` | VFS module | User-facing API: Panel, shapes, Input, no_debug |
-| `src/components/combined-editor/vb_serializer.py` | exec'd | Execution, snapshot recording, interactive dispatch |
-| `src/components/combined-editor/combinedExecutor.ts` | TypeScript | All TypeScript↔Pyodide calls; code preprocessing |
-| `src/components/combined-editor/vizBlockParser.ts` | TypeScript | Parse & validate # @viz / # @end blocks |
-| `src/python-engine/code-builder/services/pythonExecutor.ts` | TypeScript | Pyodide init (`loadPyodide()`); VFS file writes |
+| `src/python-engine/_vb_engine.py` | VFS module | Hidden engine types: VisualElem, V, R, TrackedDict, PopupException |
+| `src/python-engine/user_api.py` | VFS module | User-facing API: Panel, shapes, Input, no_debug |
+| `src/python-engine/vb_serializer.py` | exec'd | Execution, snapshot recording, interactive dispatch |
+| `src/python-engine/executor.ts` | TypeScript | All TypeScript↔Pyodide calls; code preprocessing |
+| `src/python-engine/viz-block-parser.ts` | TypeScript | Parse & validate # @viz / # @end blocks |
+| `src/python-engine/pyodide-runtime.ts` | TypeScript | Pyodide singleton: `loadPyodide()`, `isPyodideLoaded()`, `resetPythonState()` |
