@@ -1,10 +1,10 @@
-import { loadPyodide } from './pyodideRuntime';
+import { loadPyodide } from './pyodide-runtime';
 
-import type { VisualBuilderElementBase } from '../../api/visualBuilder';
+import type { VisualBuilderElementBase } from '../api/visualBuilder';
 import VB_ENGINE_PYTHON from './_vb_engine.py?raw';
 import USER_API_PYTHON from './user_api.py?raw';
 import VISUAL_BUILDER_PYTHON from './vb_serializer.py?raw';
-import { validateVizBlocks, getVizRanges } from './vizBlockParser';
+import { validateVizBlocks, getVizRanges } from './viz-block-parser';
 
 export interface TraceVariable {
   type: string;
@@ -127,10 +127,10 @@ type RawResult = {
 };
 
 /**
- * Execute combined Python code (with # @viz / # @end blocks) and return
+ * Execute Python code (with # @viz / # @end blocks) and return
  * a timeline of snapshots, one per # @end marker.
  */
-export async function executeCombinedCode(code: string): Promise<TraceStageInfo> {
+export async function executeCode(code: string): Promise<TraceStageInfo> {
   try {
     const py = await initializePythonEngine(code);
     const preprocessed = preprocess(code);
@@ -145,9 +145,9 @@ export async function executeCombinedCode(code: string): Promise<TraceStageInfo>
 }
 
 /**
- * Dispatch an input_changed event to a combined-editor Input element with viz-aware tracing.
+ * Dispatch an input_changed event to an Input element with viz-aware tracing.
  */
-export async function executeCombinedInputChanged(
+export async function executeInputChanged(
   elemId: number,
   text: string,
 ): Promise<TraceStageInfo> {
@@ -167,9 +167,9 @@ export async function executeCombinedInputChanged(
 export type DragType = 'start' | 'mid' | 'end';
 
 /**
- * Dispatch an on_drag event to a combined-editor element with viz-aware tracing.
+ * Dispatch an on_drag event to an element with viz-aware tracing.
  */
-export async function executeCombinedDragHandler(
+export async function executeDragHandler(
   elemId: number,
   row: number,
   col: number,
@@ -188,13 +188,13 @@ export async function executeCombinedDragHandler(
 }
 
 /**
- * Dispatch an on_click event to a combined-editor element with viz-aware tracing.
+ * Dispatch an on_click event to an element with viz-aware tracing.
  *
  * Algorithm functions called from the handler (defined outside viz blocks) are
  * automatically traced and returned as timeline steps.
  * Use no_debug(fn)(...) in the handler to suppress tracing for specific calls.
  */
-export async function executeCombinedClickHandler(
+export async function executeClickHandler(
   elemId: number,
   row: number,
   col: number,
