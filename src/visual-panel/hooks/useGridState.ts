@@ -24,8 +24,24 @@ interface GridObject {
 
 
 export function useGridState() {
-  const [objects, setObjects] = useState<Map<string, GridObject>>(new Map());
+  // ── Zoom Level ─────────────────────────────────────────────────────
   const [zoom, setZoomLevel] = useState(1);
+
+  const zoomIn = useCallback(() => {
+    setZoomLevel((prev) => Math.min(prev + ZOOM_STEP, MAX_ZOOM));
+  }, []);
+
+  const zoomOut = useCallback(() => {
+    setZoomLevel((prev) => Math.max(prev - ZOOM_STEP, MIN_ZOOM));
+  }, []);
+
+  const setZoom = useCallback((value: number) => {
+    setZoomLevel(Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value)));
+  }, []);
+
+  // ── objects ─────────────────────────────────────────────────────
+
+  const [objects, setObjects] = useState<Map<string, GridObject>>(new Map());
 
   const zOrderCounter = useRef(0);
 
@@ -183,18 +199,6 @@ export function useGridState() {
     return result;
   }, [objects, panelAutoSizes]);
 
-  const zoomIn = useCallback(() => {
-    setZoomLevel((prev) => Math.min(prev + ZOOM_STEP, MAX_ZOOM));
-  }, []);
-
-  const zoomOut = useCallback(() => {
-    setZoomLevel((prev) => Math.max(prev - ZOOM_STEP, MIN_ZOOM));
-  }, []);
-
-  const setZoom = useCallback((value: number) => {
-    setZoomLevel(Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value)));
-  }, []);
-
   const loadVisualBuilderObjects = useCallback((elements: VisualBuilderElementBase[]) => {
     // ── Tree node types ─────────────────────────────────────────────────────
     interface PanelTreeNode { el: VisualBuilderElementBase; gridId: string; children: TreeNodeEntry[]; }
@@ -298,18 +302,6 @@ export function useGridState() {
               id: cell.cellId,
               data: { ...cell.data, objectId: cell.cellId, panelId: panelGridId, zOrder: z, parentAlpha },
               position: { row: panelAbsRow + cell.position[0], col: panelAbsCol + cell.position[1] },
-              zOrder: z++,
-            });
-          }
-          idx = nextIdx;
-        } else if ('cells' in drawResult) {
-          // Multi-cell element (no panel wrapper)
-          const { cells: drawCells, nextIdx } = drawResult as { cells: Array<{ cellId: string; data: RenderableObjectData }>; nextIdx: number };
-          for (const cell of drawCells) {
-            next.set(cell.cellId, {
-              id: cell.cellId,
-              data: { ...cell.data, objectId: cell.cellId, panelId: parentGridId, zOrder: z, parentAlpha },
-              position: { row: absRow, col: absCol },
               zOrder: z++,
             });
           }
