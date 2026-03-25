@@ -44,7 +44,7 @@ Panel subclasses **can** have `on_click` — set it as an instance attribute or 
 - `x` = col, `y` = row
 - If element is **inside a Panel**: `(x, y)` is **relative to the panel's top-left**
 - If element is **top-level**: `(x, y)` is **absolute grid coordinates**
-- Return `None` (stay in interactive mode)
+- Return `None`
 
 ### `on_drag(self, x, y, drag_type)`
 - Called when user drags the element
@@ -60,7 +60,15 @@ class DragRect(Rect):
         self.y = y
 ```
 
-> **Note:** `RunCall` and `DebugCall` exist in `user_api.py` but are considered legacy. Do not use them in new samples.
+### `no_debug(fn)`
+- Wraps a function so it runs without tracing (no timeline steps produced)
+- Use for event handlers that should modify state silently
+
+```python
+class Btn(Rect):
+    def on_click(self, x, y):
+        no_debug(sort)(arr)   # sort runs silently, no new timeline
+```
 
 ### Interaction limits
 - Only `Rect`, `Circle`, `Arrow` subclasses **and Panel subclasses** support `on_click` / `on_drag`
