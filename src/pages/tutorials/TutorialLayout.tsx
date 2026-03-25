@@ -24,6 +24,7 @@ const NAV = [
     items: [
       { label: 'Selection Sort', to: '/tutorials/algorithms/selection-sort' },
       { label: 'Bubble Sort', to: '/tutorials/algorithms/bubble-sort' },
+      { label: 'Trapping Rain', to: '/tutorials/algorithms/trapping-rain' },
     ],
   },
 ];

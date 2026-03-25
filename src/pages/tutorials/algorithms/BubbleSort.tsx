@@ -176,9 +176,7 @@ export function BubbleSort() {
       {/* Bottom nav */}
       <div className={`pt-4 border-t ${t.divider} flex justify-between items-center`}>
         <Link to="/tutorials/algorithms/selection-sort" className={t.linkMuted}>← Selection Sort</Link>
-        <Link to="/?sample=bubble-sort" className={t.btnPrimary}>
-          Open Bubble Sort in Editor →
-        </Link>
+        <Link to="/tutorials/algorithms/trapping-rain" className={t.linkMuted}>Trapping Rain →</Link>
       </div>
     </div>
   );
