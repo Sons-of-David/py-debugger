@@ -78,19 +78,7 @@ const codeOnClick = `class VizCell(Rect):
     def on_click(self, x: int, y: int):
         bfs(y, x)`;
 
-const codeClearBtn = `def empty_cells():
-    global board, clear_board
-    board = [
-        [BLOCK if board[i][j] == BLOCK else EMPTY
-         for j in range(BOARD_W)]
-        for i in range(BOARD_H)
-    ]
-    clear_board = True
-    # @viz
-    update_viz_board()
-    # @end
-
-clear_btn = Rect(width=2, color=(100, 180, 130), y=BOARD_H+1, x=6)
+const codeClearBtn = `clear_btn = Rect(width=2, color=(100, 180, 130), y=BOARD_H+1, x=6)
 clear_btn.on_click = lambda x, y: empty_cells()
 
 panel.add(
@@ -164,15 +152,15 @@ export function BFSMaze() {
         <h1 className={`${t.heading1} mb-3`}>BFS and Interactivity: Maze Explorer</h1>
         <p className={`${t.body} leading-relaxed`}>
           Breadth-first search is one of the most widely used graph algorithms — it
-          underpins shortest-path routing, flood fill, reachability checks, and more. This
-          example uses it as a vehicle to show the full interactivity toolkit: triggering
+          underpins shortest-path routing, flood fill, reachability checks, and more. We
+          use it as a vehicle to show another example of the full interactivity toolkit: triggering
           an algorithm by clicking the canvas, dragging existing objects to new positions,
           and spawning entirely new objects through drag.
         </p>
       </div>
 
       {/* Embedded preview */}
-      <EmbedPreview sample="interactive-bfs-maze" />
+      <EmbedPreview sample="interactive-bfs-maze" vx={0} vy={0} vw={12} vh={11}/>
 
       {/* CTA */}
       <div className={t.ctaBanner}>
@@ -235,7 +223,7 @@ export function BFSMaze() {
 
         <CodeBlock code={codeBoard} />
 
-        <div className="space-y-3">
+        <div className="space-y-3 mt-2">
           <div className={`${t.card} p-4`}>
             <h3 className={`${t.heading3} mb-1`}>Board values</h3>
             <p className={t.bodySmall}>
@@ -265,7 +253,7 @@ export function BFSMaze() {
 
         <CodeBlock code={codeBFS} />
 
-        <div className="space-y-3">
+        <div className="space-y-3 mt-2">
           <div className={`${t.card} p-4`}>
             <h3 className={`${t.heading3} mb-1`}>Standard BFS</h3>
             <p className={t.bodySmall}>
@@ -306,7 +294,7 @@ export function BFSMaze() {
 
         <CodeBlock code={codePanelArray} />
 
-        <div className="space-y-3">
+        <div className="space-y-3 mt-2">
           <div className={`${t.card} p-4`}>
             <h3 className={`${t.heading3} mb-1`}>Why no <code className="font-mono text-sm">V()</code> bindings</h3>
             <p className={t.bodySmall}>
@@ -329,7 +317,7 @@ export function BFSMaze() {
 
         <CodeBlock code={codeVizCell} />
 
-        <div className="space-y-3">
+        <div className="space-y-3 mt-2">
           <div className={`${t.card} p-4`}>
             <h3 className={`${t.heading3} mb-1`}>The alpha trick</h3>
             <p className={t.bodySmall}>
@@ -375,7 +363,7 @@ export function BFSMaze() {
 
         <CodeBlock code={codeOnClick} />
 
-        <div className="space-y-3">
+        <div className="space-y-3 mt-2">
           <div className={`${t.card} p-4`}>
             <h3 className={`${t.heading3} mb-1`}>Coordinate convention</h3>
             <p className={t.bodySmall}>
@@ -395,7 +383,7 @@ export function BFSMaze() {
 
         <CodeBlock code={codeClearBtn} />
 
-        <div className="space-y-3">
+        <div className="space-y-3 mt-2">
           <div className={`${t.card} p-4`}>
             <h3 className={`${t.heading3} mb-1`}>Instance-level handler</h3>
             <p className={t.bodySmall}>
@@ -453,7 +441,7 @@ export function BFSMaze() {
 
         <CodeBlock code={codeWallDrag} />
 
-        <div className="space-y-3">
+        <div className="space-y-3 mt-2">
           <div className={`${t.card} p-4`}>
             <h3 className={`${t.heading3} mb-1`}>The ghost wall</h3>
             <p className={t.bodySmall}>
@@ -486,7 +474,7 @@ export function BFSMaze() {
 
         <CodeBlock code={codeVizCellDrag} />
 
-        <div className="space-y-3">
+        <div className="space-y-3 mt-2">
           <div className={`${t.card} p-4`}>
             <h3 className={`${t.heading3} mb-1`}>Only walls are draggable</h3>
             <p className={t.bodySmall}>

@@ -288,7 +288,7 @@ export function SelectionSort() {
 
         <CodeBlock code={codePanels} />
 
-        <div className="space-y-3">
+        <div className="space-y-3  mt-2">
           <div className={`${t.card} p-4`}>
             <h3 className={`${t.heading3} mb-1`}>No more offset arithmetic</h3>
             <p className={t.bodySmall}>
@@ -333,7 +333,7 @@ export function SelectionSort() {
 
         <CodeBlock code={codeV} />
 
-        <div className="space-y-3">
+        <div className="space-y-3  mt-2">
           <div className={`${t.card} p-4`}>
             <h3 className={`${t.heading3} mb-1`}>One setup block, no update blocks</h3>
             <p className={t.bodySmall}>
