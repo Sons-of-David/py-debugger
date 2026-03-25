@@ -15,6 +15,7 @@ import { InteractiveMode } from './pages/tutorials/features/InteractiveMode.tsx'
 import { SelectionSort } from './pages/tutorials/algorithms/SelectionSort.tsx'
 import { BubbleSort } from './pages/tutorials/algorithms/BubbleSort.tsx'
 import { TrappingRain } from './pages/tutorials/algorithms/TrappingRain.tsx'
+import { BFSMaze } from './pages/tutorials/algorithms/BFSMaze.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -33,6 +34,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="algorithms/selection-sort" element={<SelectionSort />} />
             <Route path="algorithms/bubble-sort" element={<BubbleSort />} />
             <Route path="algorithms/trapping-rain" element={<TrappingRain />} />
+            <Route path="algorithms/bfs-maze" element={<BFSMaze />} />
           </Route>
         </Routes>
       </BrowserRouter>

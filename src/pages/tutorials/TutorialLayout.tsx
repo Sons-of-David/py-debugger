@@ -25,6 +25,7 @@ const NAV = [
       { label: 'Selection Sort', to: '/tutorials/algorithms/selection-sort' },
       { label: 'Bubble Sort', to: '/tutorials/algorithms/bubble-sort' },
       { label: 'Trapping Rain', to: '/tutorials/algorithms/trapping-rain' },
+      { label: 'BFS Maze', to: '/tutorials/algorithms/bfs-maze' },
     ],
   },
 ];
