@@ -2,7 +2,7 @@ import { useRef, useCallback, useMemo, memo, forwardRef, useImperativeHandle, us
 import { motion } from 'framer-motion';
 import { useAnimationEnabled, useAnimationDuration } from '../../animation/animationContext';
 import { GridCell } from './GridCell';
-import type { RenderableObjectData, PanelStyle } from '../types/grid';
+import type { RenderableObjectData, PanelStyle, InteractionData } from '../types/grid';
 import { PANEL_STYLE_DEFAULT } from '../types/grid';
 import type { TextBox } from '../../text-boxes/types';
 import { TextBoxesLayer } from '../../text-boxes/TextBoxesLayer';
@@ -70,6 +70,20 @@ interface RenderableObject {
   heightCells: number;
 }
 
+// ── Coordinate helpers ─────────────────────────────────────────────────────
+
+/**
+ * Panel-relative [col, row] for a mousedown/click event fired on an element div.
+ * `data.x/y` are the element's own panel-local origin; offsetX/Y are pixel offsets
+ * within the element div, so dividing by CELL_SIZE gives the in-element cell offset.
+ */
+function coordsFromElementEvent(e: React.MouseEvent, data: InteractionData): [number, number] {
+  return [
+    data.x + Math.floor(e.nativeEvent.offsetX / CELL_SIZE),
+    data.y + Math.floor(e.nativeEvent.offsetY / CELL_SIZE),
+  ];
+}
+
 // ── Sub-components ─────────────────────────────────────────────────────────
 
 const GridSingleObject = memo(function GridSingleObject({
@@ -82,7 +96,7 @@ const GridSingleObject = memo(function GridSingleObject({
   obj: RenderableObject;
   mouseEnabled: boolean;
   onElementClick?: (elemId: number, x: number, y: number) => void;
-  onElementDragStart?: (elemId: number, x: number, y: number) => void; // internal: Grid handles drag type
+  onElementDragStart?: (elemId: number, x: number, y: number, panelOriginCol: number, panelOriginRow: number) => void;
   onElementInput?: (elemId: number, text: string) => void;
 }) {
   const { widthCells, heightCells } = obj;
@@ -112,9 +126,8 @@ const GridSingleObject = memo(function GridSingleObject({
 
   const handleClick = isClickable
     ? (e: React.MouseEvent<HTMLDivElement>) => {
-        const colOffset = Math.floor(e.nativeEvent.offsetX / CELL_SIZE);
-        const rowOffset = Math.floor(e.nativeEvent.offsetY / CELL_SIZE);
-        onElementClick!(clickData!.elemId, clickData!.x + colOffset, clickData!.y + rowOffset);
+        const [x, y] = coordsFromElementEvent(e, clickData!);
+        onElementClick!(clickData!.elemId, x, y);
         setFlashing(true);
         setTimeout(() => setFlashing(false), 300);
       }
@@ -128,9 +141,8 @@ const GridSingleObject = memo(function GridSingleObject({
   const handleMouseDown = isDraggable
     ? (e: React.MouseEvent<HTMLDivElement>) => {
         e.preventDefault();
-        const colOffset = Math.floor(e.nativeEvent.offsetX / CELL_SIZE);
-        const rowOffset = Math.floor(e.nativeEvent.offsetY / CELL_SIZE);
-        onElementDragStart!(dragData!.elemId, dragData!.x + colOffset, dragData!.y + rowOffset);
+        const [x, y] = coordsFromElementEvent(e, dragData!);
+        onElementDragStart!(dragData!.elemId, x, y, obj.col - dragData!.x, obj.row - dragData!.y);
       }
     : undefined;
 
@@ -222,7 +234,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
   const [clipDims, setClipDims] = useState<{ w: number; h: number } | null>(null);
 
   // ── Drag state ──────────────────────────────────────────────────────────
-  const dragStateRef = useRef<{ elemId: number; lastRow: number; lastCol: number } | null>(null);
+  const dragStateRef = useRef<{ elemId: number; lastRow: number; lastCol: number; panelOriginCol: number; panelOriginRow: number } | null>(null);
   const dragCallInFlightRef = useRef(false);
 
   // Stable ref to avoid stale closures in window-level event listeners
@@ -253,16 +265,18 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
     return [Math.max(0, Math.floor(y)), Math.max(0, Math.floor(x))];
   }, [zoom]);
 
-  const handleDragStart = useCallback((elemId: number, x: number, y: number) => {
-    dragStateRef.current = { elemId, lastRow: y, lastCol: x };
+  const handleDragStart = useCallback((elemId: number, x: number, y: number, panelOriginCol: number, panelOriginRow: number) => {
+    dragStateRef.current = { elemId, lastRow: y, lastCol: x, panelOriginCol, panelOriginRow };
     Promise.resolve(onElementDragRef.current?.(elemId, x, y, 'start'))
       .finally(() => { dragCallInFlightRef.current = false; });
   }, []);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!dragStateRef.current || dragCallInFlightRef.current) return;
-    const [row, col] = getCellFromMouseEvent(e);
-    const { elemId, lastRow, lastCol } = dragStateRef.current;
+    const [absRow, absCol] = getCellFromMouseEvent(e);
+    const { elemId, lastRow, lastCol, panelOriginCol, panelOriginRow } = dragStateRef.current;
+    const col = absCol - panelOriginCol;
+    const row = absRow - panelOriginRow;
     if (row === lastRow && col === lastCol) return;
     dragStateRef.current.lastRow = row;
     dragStateRef.current.lastCol = col;
