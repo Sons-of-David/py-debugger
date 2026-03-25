@@ -266,7 +266,6 @@ export function EmbedPage() {
           appMode={appMode}
           onEnterInteractive={handleEnterInteractive}
           hasInteractiveElements={hasInteractiveElements}
-          isStaticSnapshot={stepCount === 1 && !hasInteractiveElements && appMode !== 'idle'}
         />
       </div>
     </EmbedShell>

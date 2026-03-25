@@ -20,7 +20,6 @@ interface EditorProps {
   isEditable: boolean;
   currentStep?: number;
   currentLine?: number;
-  onEdit: () => void;
 }
 
 export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
@@ -29,7 +28,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
   isEditable,
   currentStep,
   currentLine,
-  onEdit,
 }: EditorProps, ref) {
   const { darkMode } = useTheme();
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -286,15 +284,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
             </span>
           )}
         </div>
-        {!isEditable && (
-          <button
-            type="button"
-            onClick={onEdit}
-            className="px-4 py-1 text-sm font-medium bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors"
-          >
-            Edit Code
-          </button>
-        )}
       </div>
 
       {/* Editor */}
