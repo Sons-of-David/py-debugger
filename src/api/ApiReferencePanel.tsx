@@ -1,6 +1,5 @@
 import { useRef, useState, useCallback } from "react";
 import { VISUAL_ELEM_SCHEMA, FUNCTIONS_SCHEMA } from "../api/visualBuilder";
-import { DEBUGGER_SCHEMA } from "../api/functionsSchema";
 import type { ObjDoc } from "../api/visualBuilder";
 
 interface ApiReferencePanelProps {
@@ -67,7 +66,7 @@ function SchemaList({ schema }: { schema: ObjDoc[] }) {
 export function ApiReferencePanel({ onClose }: ApiReferencePanelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(288);
-  const [tab, setTab] = useState<'objects' | 'functions' | 'debugger'>('objects');
+  const [tab, setTab] = useState<'objects' | 'functions'>('objects');
   const isResizingRef = useRef(false);
 
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
@@ -121,7 +120,7 @@ export function ApiReferencePanel({ onClose }: ApiReferencePanelProps) {
             </button>
           </div>
           <div className="flex text-xs">
-            {(['objects', 'functions', 'debugger'] as const).map((t) => (
+            {(['objects', 'functions'] as const).map((t) => (
               <button
                 key={t}
                 type="button"
@@ -138,7 +137,7 @@ export function ApiReferencePanel({ onClose }: ApiReferencePanelProps) {
           </div>
         </div>
 
-        <SchemaList schema={tab === 'objects' ? VISUAL_ELEM_SCHEMA : tab === 'functions' ? FUNCTIONS_SCHEMA : DEBUGGER_SCHEMA} />
+        <SchemaList schema={tab === 'objects' ? VISUAL_ELEM_SCHEMA : FUNCTIONS_SCHEMA} />
       </div>
     </div>
   );
