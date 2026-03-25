@@ -4,7 +4,7 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import type { Plugin } from 'vite'
-import { submitFeedback } from './api/feedback-shared'
+import { submitFeedback } from './api/feedback'
 
 /** Dev-only: mirrors `api/feedback` so `npm run dev` can create GitHub issues (set vars in `.env.local`). */
 function localFeedbackPlugin(): Plugin {
