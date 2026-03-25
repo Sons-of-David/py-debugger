@@ -109,9 +109,19 @@ The **interactive mode** (`on_click`, click-traced sub-runs) is the core differe
 
 - **gif taking:** still slow.
 
+- **Show API \ Setting:** Make sure that at most one of them is open at any given time.
+
 - **auto add # @end:** 
 
 - **update shape from visual panel:** In edit mode, we can choose a block, and then a shape, and automatically update it
+
+- **emphasize end trace:** When in trace mode and the user try to click some object in the grid that should start another trace, do some effect on the end trace button.
+
+- **add more tabs to the python code**
+
+- **collapsible blocks in python**
+
+- **keep visual:** When pressing edit, don't erase the visuals.
 
 - ~~**setDebugCallSuffix location:** Check if `setDebugCallSuffix` can be handled at `CodeEditorArea` level instead of `App.tsx` (see [sharp-edges.md → debugCallSuffix](./sharp-edges.md)).~~
   **Removed:** `debugCallSuffix` mechanism eliminated with the old two-editor architecture.
