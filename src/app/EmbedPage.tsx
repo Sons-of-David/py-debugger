@@ -9,20 +9,7 @@ import { executeCode, type TraceStep, type TraceStageInfo } from '../python-engi
 import { setHandlers, hasAnyClickHandler } from '../visual-panel/handlersState';
 import { getVizRanges } from '../python-engine/viz-block-parser';
 import { migrateTextBox, type TextBox } from '../text-boxes/types';
-
-// ---------------------------------------------------------------------------
-// Sample registry (same pattern as App.tsx)
-// ---------------------------------------------------------------------------
-
-const SAMPLE_MODULES = import.meta.glob('../samples/*.json', { eager: true }) as Record<
-  string,
-  { userCode?: string; textBoxes?: TextBox[] }
->;
-const SAMPLES = Object.entries(SAMPLE_MODULES).map(([path, data]) => {
-  const filename = path.split('/').pop() ?? path;
-  const rawName = filename.replace(/\.json$/, '');
-  return { rawName, data };
-});
+import { SAMPLES } from './sampleRegistry';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -83,9 +70,11 @@ export function EmbedPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [stepCount, setStepCount] = useState(0);
   const [hasInteractiveElements, setHasInteractiveElements] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_timeline, setTimeline] = useState<TraceStep[]>([]);
+  const [timeline, setTimeline] = useState<TraceStep[]>([]);
   const [textBoxes, setTextBoxes] = useState<TextBox[]>([]);
+
+  // Derive elements from currentStep — re-evaluates whenever step or timeline changes
+  const currentElements = useMemo(() => getStateAt(currentStep) ?? [], [currentStep, timeline]);
 
   const mouseEnabled = appMode === 'interactive';
 
@@ -118,6 +107,39 @@ export function EmbedPage() {
   }, []);
 
   // ---------------------------------------------------------------------------
+  // Timeline navigation
+  // ---------------------------------------------------------------------------
+
+  const goToStep = useCallback((step: number) => {
+    setCurrentStep(Math.max(0, Math.min(getMaxTime(), step)));
+  }, []);
+
+  // Whenever appMode becomes 'interactive', jump to the last step
+  useEffect(() => {
+    if (appMode === 'interactive') goToStep(getMaxTime());
+  }, [appMode, goToStep]);
+
+  // ---------------------------------------------------------------------------
+  // startTrace — shared post-analysis state transition
+  // ---------------------------------------------------------------------------
+
+  const startTrace = useCallback((result: TraceStageInfo) => {
+    setTimeline(result.timeline);
+    setVisualTimeline(result.timeline.map((s) => s.visual));
+    setStepCount(getMaxTime() + 1);
+    goToStep(0);
+    setHandlers(result.handlers ?? {});
+    const hasInteractive = hasAnyClickHandler();
+    setHasInteractiveElements(hasInteractive);
+    const isOneFrame = getMaxTime() === 0;
+    if (isOneFrame && hasInteractive) {
+      setAppMode('interactive');
+    } else {
+      setAppMode('trace');
+    }
+  }, [goToStep]);
+
+  // ---------------------------------------------------------------------------
   // Analysis
   // ---------------------------------------------------------------------------
 
@@ -125,31 +147,18 @@ export function EmbedPage() {
     setIsAnalyzing(true);
     setAnalysisError(null);
     clearTimeline();
+    setTimeline([]);
     setHandlers({});
     setCurrentStep(0);
     setStepCount(0);
-    gridAreaRef.current?.loadVisualBuilderObjects([]);
     setTextBoxes(initialTextBoxes);
 
     try {
       const result = await executeCode(code);
       if (!result.error) {
-        setTimeline(result.timeline);
-        setVisualTimeline(result.timeline.map((s) => s.visual));
-        setHandlers(result.handlers ?? {});
-        const hasInteractive = hasAnyClickHandler();
-        setHasInteractiveElements(hasInteractive);
-        const isOneFrame = getMaxTime() === 0;
-        setStepCount(getMaxTime() + 1);
-        setCurrentStep(0);
-        gridAreaRef.current?.loadVisualBuilderObjects(getStateAt(0) ?? []);
+        startTrace(result);
         gridAreaRef.current?.scrollViewport(vx, vy);
         if (vw !== null && vh !== null) gridAreaRef.current?.clipViewport(vw, vh);
-        if (isOneFrame && hasInteractive) {
-          setAppMode('interactive');
-        } else {
-          setAppMode('trace');
-        }
       } else {
         setAnalysisError(result.error ?? 'Analysis failed.');
       }
@@ -158,7 +167,7 @@ export function EmbedPage() {
     } finally {
       setIsAnalyzing(false);
     }
-  }, [vx, vy, vw, vh]);
+  }, [startTrace, vx, vy, vw, vh]);
 
   // Auto-analyze when Pyodide is ready
   useEffect(() => {
@@ -172,31 +181,12 @@ export function EmbedPage() {
   }, [pyodideReady]);
 
   // ---------------------------------------------------------------------------
-  // Timeline navigation
-  // ---------------------------------------------------------------------------
-
-  const goToStep = useCallback((step: number) => {
-    const clamped = Math.max(0, Math.min(getMaxTime(), step));
-    const state = getStateAt(clamped);
-    if (state) gridAreaRef.current?.loadVisualBuilderObjects(state);
-    setCurrentStep(clamped);
-  }, []);
-
-  // ---------------------------------------------------------------------------
   // Mode transitions
   // ---------------------------------------------------------------------------
 
   const handleEnterInteractive = useCallback(() => {
-    goToStep(getMaxTime());
     setAppMode('interactive');
-  }, [goToStep]);
-
-  const handleTrace = useCallback((result: TraceStageInfo) => {
-    setVisualTimeline(result.timeline.map((s) => s.visual));
-    setStepCount(result.timeline.length);
-    goToStep(0);
-    setAppMode('trace');
-  }, [goToStep]);
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Loading / error state
@@ -251,8 +241,9 @@ export function EmbedPage() {
             hideToolbar
             textBoxes={textBoxes}
             onTextBoxesChange={setTextBoxes}
+            elements={currentElements}
             vizRanges={vizRanges}
-            onTrace={handleTrace}
+            onTrace={startTrace}
           />
         </AnimationContext.Provider>
       </div>

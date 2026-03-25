@@ -26,21 +26,7 @@ const AUTO_ANALYZE_ON_LOAD = true; // set to false to disable auto-analyze when 
 
 // TODO: split samples into "public" (shipped in prod) and "dev" (local-only, e.g. rich-text-demo).
 // Dev samples should only appear when import.meta.env.DEV is true.
-const SAMPLE_MODULES = import.meta.glob('../samples/*.json', { eager: true }) as Record<
-  string,
-  { userCode?: string; textBoxes?: TextBox[] }
->;
-const SAMPLES = Object.entries(SAMPLE_MODULES).map(([path, data]) => {
-  const filename = path.split('/').pop() ?? path;
-  const rawName = filename.replace(/\.json$/, '');
-  const isFeature = rawName.startsWith('feature-');
-  return {
-    displayName: isFeature ? rawName.slice('feature-'.length) : rawName,
-    rawName,
-    data,
-    category: isFeature ? ('feature' as const) : ('algorithm' as const),
-  };
-});
+import { SAMPLES } from './sampleRegistry';
 
 /* ---------- Shared Tailwind class groups ---------- */
 
