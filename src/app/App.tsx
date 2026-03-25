@@ -205,17 +205,16 @@ function App() {
 
   const handleEdit = useCallback(() => {
     setIsEditable(true);
-    setTimeline([]);
-    clearTimeline();
     setHandlers({});
     setHasInteractiveElements(false);
-    setCurrentStep(0);
-    setStepCount(0);
     setAppMode('idle');
+    // setTimeline([]);
+    // clearTimeline();
+    // setCurrentStep(0);
+    // setStepCount(0);
   }, []);
 
   const startTrace = useCallback((result: TraceStageInfo) => {
-    console.log('timeline result:', result.timeline);
     setTimeline(result.timeline);
     hydrateVisualTimelineFromArray(result.timeline.map(s => s.visual));
     setOutputTimeline(result.timeline.map(s => ({ text: s.output ?? '', isViz: s.isViz ?? false })));
@@ -235,10 +234,6 @@ function App() {
       setAppMode('trace');
     }
   }, [goToStep]);
-
-  const handleTrace = useCallback((result: TraceStageInfo) => {
-    startTrace(result);
-  }, [startTrace]);
 
   const handleAnalyze = useCallback(async () => {
     if (!userCode.trim()) return;
@@ -522,7 +517,7 @@ function App() {
                 onTextBoxesChange={setTextBoxes}
                 elements={currentElements}
                 vizRanges={vizRanges}
-                onTrace={handleTrace}
+                onTrace={startTrace}
                 appMode={appMode}
                 onCreateGif={handleCreateGif}
                 isCreatingGif={isCreatingGif}
