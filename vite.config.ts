@@ -1,9 +1,44 @@
 import { writeFileSync } from 'fs'
 import { resolve } from 'path'
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import type { Plugin } from 'vite'
+import { submitFeedback } from './api/feedback-shared'
+
+/** Dev-only: mirrors `api/feedback` so `npm run dev` can create GitHub issues (set vars in `.env.local`). */
+function localFeedbackPlugin(): Plugin {
+  return {
+    name: 'local-feedback',
+    configureServer(server) {
+      server.middlewares.use('/api/feedback', (req, res, next) => {
+        if (req.method !== 'POST') return next()
+        let raw = ''
+        req.on('data', (chunk: Buffer) => {
+          raw += chunk
+        })
+        req.on('end', () => {
+          void (async () => {
+            try {
+              const parsed = JSON.parse(raw || '{}') as unknown
+              const env = loadEnv(server.config.mode, process.cwd(), '')
+              const result = await submitFeedback(parsed, {
+                GITHUB_TOKEN: env.GITHUB_TOKEN,
+                GITHUB_REPO_OWNER: env.GITHUB_REPO_OWNER,
+                GITHUB_REPO_NAME: env.GITHUB_REPO_NAME,
+              })
+              res.writeHead(result.status, { 'Content-Type': 'application/json' })
+              res.end(JSON.stringify(result.body))
+            } catch (e) {
+              res.writeHead(500, { 'Content-Type': 'application/json' })
+              res.end(JSON.stringify({ error: String(e) }))
+            }
+          })()
+        })
+      })
+    },
+  }
+}
 
 function localSavePlugin(): Plugin {
   return {
@@ -32,7 +67,7 @@ function localSavePlugin(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss(), localSavePlugin()],
+  plugins: [react(), tailwindcss(), localFeedbackPlugin(), localSavePlugin()],
   server: {
     host: true,          // bind to 0.0.0.0 so the container's network interface is reachable
     allowedHosts: true,  // allow any Host header (needed for Codespaces / VS Code tunnels)
