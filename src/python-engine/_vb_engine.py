@@ -384,10 +384,8 @@ class _ShapeBase(VisualElem):
             param = p.get('param', p['name'])  # constructor kwarg name (may differ from attr name)
             val = kwargs.get(param, _copy.deepcopy(p['default']))
             object.__setattr__(self, p['name'], val)
-        # TODO: VisualElem base properties 'alpha' and 'animate' are not in any shape schema,
-        # so passing them as constructor kwargs is silently ignored (e.g. Rect(alpha=0.4) has
-        # no effect). Fix: after the schema loop above, apply any remaining kwargs that match
-        # VisualElem base attributes (alpha, animate) via object.__setattr__.
+        # kwargs not in the schema (e.g. alpha, animate) are passed through to VisualElem.__init__
+        # via the first line of this method, so Rect(alpha=0.4) works correctly.
         _post_init = type(self).__dict__.get('_post_init')
         if _post_init is not None:
             _post_init(self)

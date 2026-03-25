@@ -289,43 +289,6 @@ Array2D._post_init = _array2d_post_init
 V = _engine.V   # bind element properties to expressions: rect.color = V("i * 10")
 
 
-# ── Builder Hooks (override to react to trace steps) ─────────────────────────
-
-def update(params, scope):
-    pass
-
-def function_call(function_name: str, **kwargs) -> None:
-    """Called when the debugger code enters a function. Override in builder code.
-
-    function_name -- the function's __name__ (e.g. '__init__', 'my_func')
-    kwargs        -- the function's arguments (excluding 'self')
-    """
-    pass
-
-def function_exit(function_name: str, value) -> None:
-    """Called when a function in the debugger code returns. Override in builder code.
-
-    function_name -- the function's __name__
-    value         -- for __init__: the constructed 'self' object;
-                     for other functions: the return value
-    """
-    pass
-
-
-# ── Event Return Values ──────────────────────────────────────────────────────
-
-class DebugCall:
-    """Return this from an event handler to trigger a debugged sub-run of expression."""
-    def __init__(self, expression: str):
-        self.expression = expression
-
-
-class RunCall:
-    """Return this from an event handler to execute expression silently and refresh visuals."""
-    def __init__(self, expression: str):
-        self.expression = expression
-
-
 # ── Element Event Handlers (override per element) ────────────────────────────
 
 def on_click(self, x: int, y: int):
