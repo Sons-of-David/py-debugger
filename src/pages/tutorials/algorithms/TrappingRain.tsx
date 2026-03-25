@@ -109,7 +109,9 @@ for i, h in enumerate(heights):
     Bar(idx=i)
 # @end`;
 
-const codeOnDrag = `    def on_drag(self, x: int, y: int, drag_type: str):
+const codeOnDrag = `class Bar(Rect):
+    # ... 
+    def on_drag(self, x: int, y: int, drag_type: str):
         clear_water()
         if drag_type == 'start':
             self.color = (40,80,160)   # blue while dragging starts
@@ -125,7 +127,7 @@ def retrap_rain(x: int, y: int):
     clear_water()
     trap_rain()
 
-btn.on_click = retrap_rain
+btn.on_click = retrap_rain    # Assigning on_click for a single object
 
 main_panel.add(
     btn, Label(label='trap rain', x=6, y=2, width=2))`;
@@ -150,7 +152,7 @@ export function TrappingRain() {
           tallest bar it can "see" on both sides.
         </p>
         <p className={`${t.body} leading-relaxed mt-3`}>
-          You could change the <code className={t.inlineCode}>heights</code> array in the code
+          You could run the algorithm, then change the <code className={t.inlineCode}>heights</code> array in the code
           and re-run to try different inputs — but it's far more intuitive to drag the bars
           directly on the canvas. This page shows how to wire up drag and click handlers to
           make that possible.
@@ -158,7 +160,7 @@ export function TrappingRain() {
       </div>
 
       {/* Embedded preview */}
-      <EmbedPreview sample="trapping-rain" />
+      <EmbedPreview sample="trapping-rain" vx={0} vy={0} vw={16} vh={11} />
 
       {/* CTA */}
       <div className={t.ctaBanner}>
@@ -180,15 +182,11 @@ export function TrappingRain() {
           {[
             {
               heading: 'Algorithm',
-              body: 'The algorithm finds the tallest bar first, which splits the array into two halves. Each half is scanned independently: maintain a running max, and wherever the current bar is shorter than that max, water accumulates in the gap.',
+              body: 'The algorithm finds the tallest bar first, which splits the array into two halves - before and after the peak. Each half is scanned independently: maintain a running max, and wherever the current bar is shorter than that max, water accumulates in the gap.',
             },
             {
               heading: 'Initial trace',
-              body: 'Click Analyze, then use the timeline controls to step through the algorithm frame by frame and watch water rectangles appear one by one.',
-            },
-            {
-              heading: 'Interactive mode',
-              body: 'Once the trace is done, press the Interactive Mode button to make the visualization live. Drag the bars up and down to change their heights, then click the "trap rain" button to see how the water changes.',
+              body: 'See the algorithm in action using the timeline controls.',
             },
           ].map(({ heading, body }) => (
             <div key={heading} className={`${t.card} p-4`}>
@@ -196,14 +194,18 @@ export function TrappingRain() {
               <p className={t.bodySmall}>{body}</p>
             </div>
           ))}
+          <div className={`${t.card} p-4`}>
+            <h3 className={`${t.heading3} mb-1`}>Interactive mode</h3>
+            <p className={t.bodySmall}>
+              Once you are done, press the Interactive Mode button (
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-gray-100 dark:bg-gray-700 align-middle mx-0.5">
+                <MousePointerClick size={12} className="text-gray-700 dark:text-gray-300" />
+              </span>
+              ) to make the visualization live. Drag the bars up and down to change their
+              heights, then click the "trap rain" button to see how the water changes.
+            </p>
+          </div>
         </div>
-        <p className={`${t.muted} mt-3`}>
-          The Interactive Mode button looks like this:{' '}
-          <span className="inline-flex items-center gap-1 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-xs font-mono text-gray-800 dark:text-gray-200">
-            <MousePointerClick size={12} />
-          </span>
-          {' '}— it appears in the header after the trace finishes.
-        </p>
       </section>
 
       {/* ------------------------------------------------------------------ */}
@@ -224,7 +226,7 @@ export function TrappingRain() {
 
         <CodeBlock code={codeAlgorithm} />
 
-        <div className="space-y-3">
+        <div className="space-y-3 mt-2">
           <div className={`${t.card} p-4`}>
             <h3 className={`${t.heading3} mb-1`}>Finding the peak</h3>
             <p className={t.bodySmall}>
@@ -269,7 +271,7 @@ export function TrappingRain() {
 
         <CodeBlock code={codeVisuals} />
 
-        <div className="space-y-3">
+        <div className="space-y-3 mt-2">
           <div className={`${t.card} p-4`}>
             <h3 className={`${t.heading3} mb-1`}>Bars above the baseline</h3>
             <p className={t.bodySmall}>
@@ -282,15 +284,6 @@ export function TrappingRain() {
             </p>
           </div>
           <div className={`${t.card} p-4`}>
-            <h3 className={`${t.heading3} mb-1`}>Relative coordinates</h3>
-            <p className={t.bodySmall}>
-              All children of <code className={t.inlineCode}>main_panel</code> use
-              coordinates relative to the panel's top-left. Moving the panel in one place
-              moves the entire visualization — bars, arrows, water rectangles, and the
-              button all follow.
-            </p>
-          </div>
-          <div className={`${t.card} p-4`}>
             <h3 className={`${t.heading3} mb-1`}>
               <code className="font-mono text-sm">V()</code> bindings
             </h3>
@@ -298,7 +291,7 @@ export function TrappingRain() {
               Each bar binds its <code className={t.inlineCode}>y</code> and{' '}
               <code className={t.inlineCode}>height</code> to the corresponding entry in{' '}
               <code className={t.inlineCode}>heights</code> via{' '}
-              <code className={t.inlineCode}>V()</code>. When a drag event updates the array,
+              <code className={t.inlineCode}>V()</code>. Soon, when a drag event updates the array,
               the bar visually snaps to the new height immediately — no manual update code
               needed.
             </p>
@@ -325,26 +318,25 @@ export function TrappingRain() {
           <ul className={`${t.muted} mt-2 ml-4 space-y-1 list-disc`}>
             <li>
               <code className={t.inlineCode}>x</code>,{' '}
-              <code className={t.inlineCode}>y</code> — always{' '}
-              <strong className={t.strong}>absolute</strong> grid coordinates, regardless of
-              whether the element is inside a Panel
+              <code className={t.inlineCode}>y</code> — coordinates relative to the
+              containing panel
             </li>
             <li>
               <code className={t.inlineCode}>drag_type</code> —{' '}
               <code className={t.inlineCode}>'start'</code> on mouse-down,{' '}
-              <code className={t.inlineCode}>'mid'</code> on each new cell entered,{' '}
+              <code className={t.inlineCode}>'mid'</code> while dragging,{' '}
               <code className={t.inlineCode}>'end'</code> on mouse-up
             </li>
           </ul>
           <p className={`${t.muted} mt-2`}>
             Setting <code className={t.inlineCode}>animate=False</code> on the element
-            makes it snap to the cursor position instead of sliding.
+            makes it snap when changing, instead of sliding.
           </p>
         </div>
 
         <CodeBlock code={codeOnDrag} />
 
-        <div className="space-y-3">
+        <div className="space-y-3 mt-2">
           <div className={`${t.card} p-4`}>
             <h3 className={`${t.heading3} mb-1`}>Color feedback</h3>
             <p className={t.bodySmall}>
@@ -356,15 +348,12 @@ export function TrappingRain() {
           <div className={`${t.card} p-4`}>
             <h3 className={`${t.heading3} mb-1`}>Updating the data</h3>
             <p className={t.bodySmall}>
-              <code className={t.inlineCode}>heights[self.idx] = max(-y, 0)</code> — because{' '}
-              <code className={t.inlineCode}>y</code> is an absolute grid row and the panel
-              is at <code className={t.inlineCode}>y=8</code>, dragging to row 5 gives{' '}
-              <code className={t.inlineCode}>y=5</code> and a height of{' '}
-              <code className={t.inlineCode}>-5</code>… but we want the bar to be 3 units
-              tall (8 − 5). The simpler way to think about it: bars hang{' '}
-              <em>above</em> the baseline, so height is <code className={t.inlineCode}>-y</code>{' '}
-              relative to the panel row. We clamp to 0 to prevent negative heights.
-              The <code className={t.inlineCode}>V()</code> binding picks up the change and
+              <code className={t.inlineCode}>heights[self.idx] = max(-y, 0)</code> — bars
+              hang <em>above</em> the panel baseline, so their y-position is negative. When
+              you drag to panel row <code className={t.inlineCode}>-3</code>, the bar should
+              be 3 units tall, which is <code className={t.inlineCode}>-y</code>. We clamp
+              to 0 to prevent negative heights. The{' '}
+              <code className={t.inlineCode}>V()</code> binding picks up the change and
               redraws the bar instantly.
             </p>
           </div>
@@ -373,8 +362,8 @@ export function TrappingRain() {
         <p className={t.muted}>
           The full <code className={t.inlineCode}>on_drag</code> signature and all its
           edge cases are listed in the API panel (top-right of the editor). The{' '}
-          <code className={t.inlineCode}>feature-7-dragging</code> sample also demonstrates
-          more advanced dragging patterns.
+          <Link to="/?sample=feature-7-dragging" className={t.linkAccent}>feature-7-dragging</Link>{' '}
+          sample also demonstrates more advanced dragging patterns.
         </p>
       </section>
 
@@ -392,18 +381,19 @@ export function TrappingRain() {
           <p className={t.muted}>
             <code className={t.inlineCode}>on_click</code> has a similar signature —{' '}
             <code className={t.inlineCode}>(x, y)</code> where the coordinates are relative
-            to the element's panel if it's inside one, or absolute if it's top-level. Unlike{' '}
-            <code className={t.inlineCode}>on_drag</code>, you don't need to define it on the
-            class — you can assign a plain function directly to any individual object:
+            to the element's panel if it's inside one, or absolute if it's top-level. 
           </p>
-          <pre className={`${t.inlineCode} block mt-2 px-3 py-2 text-xs`}>
-            {'btn.on_click = some_function'}
-          </pre>
+          <CodeBlock code={"def on_click(self, x: int, y: int):\n    pass"} />
+          <p className={`${t.muted} mt-2`}>
+            Just like{' '}<code className={t.inlineCode}>on_drag</code> you can define it as a
+            class method, or you can define it for only a given object by assigning a plain 
+            function directly to any individual object. We use it to create a "trap rain" button:
+          </p>
         </div>
 
         <CodeBlock code={codeButton} />
 
-        <div className="space-y-3">
+        <div className="space-y-3  mt-2">
           <div className={`${t.card} p-4`}>
             <h3 className={`${t.heading3} mb-1`}>Instance-level handler</h3>
             <p className={t.bodySmall}>
@@ -428,8 +418,9 @@ export function TrappingRain() {
         </div>
 
         <p className={t.muted}>
-          The <code className={t.inlineCode}>feature-6-interactive</code> sample covers
-          more click patterns including combining class-level and instance-level handlers.
+          The{' '}
+          <Link to="/?sample=feature-6-interactive" className={t.linkAccent}>feature-6-interactive</Link>{' '}
+          sample covers more click patterns including combining class-level and instance-level handlers.
         </p>
       </section>
 
