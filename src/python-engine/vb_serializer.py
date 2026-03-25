@@ -107,12 +107,13 @@ def _make_tracer(viz_ranges, on_snap):
             return None if in_viz(frame.f_code.co_firstlineno) else _trace
         if event == 'line' and not in_viz(frame.f_lineno):
             last_line[0] = frame.f_lineno
-            _engine.V.params = _build_scope(frame)
-            current = _collect_v_values()
-            if current and current != last_v:
-                last_v.clear()
-                last_v.update(current)
-                on_snap(frame, frame.f_lineno, is_viz=False)
+            if _engine.V._count > 0:
+                _engine.V.params = _build_scope(frame)
+                current = _collect_v_values()
+                if current != last_v:
+                    last_v.clear()
+                    last_v.update(current)
+                    on_snap(frame, frame.f_lineno, is_viz=False)
         return _trace
 
     return _trace, last_line
@@ -155,7 +156,7 @@ def _exec_traced(execute_fn):
     last_visual_snap = [_serialize_visual_builder()]  # track visual state at last snap
     steps = []
 
-    def snap(frame, line, is_viz=False):
+    def snap(_, line, is_viz=False):
         all_out = _sys.stdout.getvalue()
         delta = all_out[last_stdout_pos[0]:]
         last_stdout_pos[0] = len(all_out)
@@ -165,7 +166,7 @@ def _exec_traced(execute_fn):
         last_visual_snap[0] = visual_json
         steps.append({
             'visual': _json.loads(visual_json),
-            'variables': _collect_variables(frame),
+            'variables': {},  # TODO: separate user-algorithm variables from viz-block variables before re-enabling _collect_variables
             'line': line,
             'output': delta,
             'is_viz': is_viz,

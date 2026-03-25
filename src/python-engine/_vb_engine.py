@@ -56,6 +56,7 @@ class VisualElem:
     def _clear_registry():
         VisualElem._registry.clear()
         VisualElem._vis_elem_id = 0
+        V._count = 0
 
     def __init__(self, x=0, y=0, visible=True, alpha=1.0, z=0, animate=True):
         self.x = x
@@ -179,6 +180,7 @@ def _extract_names(expr: str) -> set:
 class V:
     params = {}
     scope = []
+    _count = 0  # number of V() instances created since last registry reset
 
     SAFE_GLOBALS = {
         "len": len,
@@ -191,6 +193,7 @@ class V:
     }
 
     def __init__(self, expr: str, default: Any = None, names=None):
+        V._count += 1
         self.expr = expr
         self.default = default
         if names is not None:
