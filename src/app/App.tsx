@@ -13,7 +13,7 @@ import { TimelineControls } from '../timeline/TimelineControls';
 import { ExtrasMenu } from './ExtrasMenu';
 import { FeedbackModal } from '../components/FeedbackModal';
 import { GridArea, type GridAreaHandle } from './GridArea';
-import { getStateAt, getMaxTime, clearTimeline, hydrateVisualTimelineFromArray } from '../timeline/timelineState';
+import { getStateAt, getMaxTime, clearTimeline, setVisualTimeline } from '../timeline/timelineState';
 import { executeCode, type TraceStep, type TraceStageInfo } from '../python-engine/executor';
 import { setHandlers, hasAnyClickHandler } from '../visual-panel/handlersState';
 import { getVizRanges } from '../python-engine/viz-block-parser';
@@ -74,7 +74,6 @@ function App() {
 
   // editor state
   const [userCode, setUserCode] = useState(DEFAULT_SAMPLE);
-  const [timeline, setTimeline] = useState<TraceStep[]>([]);
   const [isEditable, setIsEditable] = useState(true);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
@@ -84,8 +83,10 @@ function App() {
 
   // Timeline state
   const [currentStep, setCurrentStep] = useState(0);
-  const [isCreatingGif, setIsCreatingGif] = useState(false);
   const [stepCount, setStepCount] = useState(0);
+  const [timeline, setTimeline] = useState<TraceStep[]>([]);
+  
+  const [isCreatingGif, setIsCreatingGif] = useState(false);
   const [hasInteractiveElements, setHasInteractiveElements] = useState(false);
   // Preload Pyodide on mount
   useEffect(() => {
@@ -119,69 +120,13 @@ function App() {
     setCurrentStep(Math.max(0, Math.min(getMaxTime(), step)));
   }, []);
 
-  const handleCreateGif = useCallback(async (region: CaptureRegion | null) => {
-    if (isCreatingGif) return;
-    const maxStep = getMaxTime();
-    if (maxStep < 1) return;
-
-    setIsCreatingGif(true);
-    setAnimationsEnabled(false);
-
-    const savedStep = currentStep;
-    try {
-      type GifFrame = { indexed: Uint8Array; width: number; height: number };
-      const frames: GifFrame[] = [];
-      let sharedPalette: number[][] | null = null;
-
-      for (let i = 0; i <= maxStep; i++) {
-        const state = getStateAt(i);
-        if (state) gridAreaRef.current?.loadVisualBuilderObjects(state);
-        // Two rAF cycles so React flushes + browser paints before we capture
-        await new Promise<void>((res) => requestAnimationFrame(() => requestAnimationFrame(() => res())));
-
-        // captureFrameCanvas avoids the PNG encode/decode round-trip of captureFrameData
-        const canvas = await gridAreaRef.current?.captureFrameCanvas(region);
-        if (!canvas) continue;
-
-        const { data } = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height);
-        // Compute palette once from the first frame and reuse — much faster than per-frame quantization
-        if (!sharedPalette) sharedPalette = quantize(data, 256);
-        frames.push({ indexed: applyPalette(data, sharedPalette), width: canvas.width, height: canvas.height });
-      }
-
-      if (frames.length === 0 || !sharedPalette) return;
-
-      // GIFEncoder auto mode writes the GIF header on the first writeFrame — do NOT call writeHeader() manually
-      const encoder = GIFEncoder();
-      for (const frame of frames) {
-        encoder.writeFrame(frame.indexed, frame.width, frame.height, {
-          palette: sharedPalette,
-          delay: 100, // ms — gifenc divides by 10 → 10 centiseconds = 100ms/frame
-          repeat: 0,  // loop forever (only written on the first frame by gifenc auto mode)
-        });
-      }
-      encoder.finish();
-
-      const bytes = encoder.bytes(); // correctly-sized Uint8Array copy — pass directly to Blob
-      const blob = new Blob([bytes.buffer as ArrayBuffer], { type: 'image/gif' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-      link.download = `trace-${timestamp}.gif`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('GIF export failed:', err);
-    } finally {
-      setAnimationsEnabled(true);
-      setIsCreatingGif(false);
-      // Restore the step the user was on
-      goToStep(savedStep);
-    }
-  }, [isCreatingGif, currentStep, goToStep]);
+  const setFullTimeline = useCallback((newTimeline: TraceStep[]) => {
+    setTimeline(newTimeline);
+    setVisualTimeline(newTimeline.map(s => s.visual));
+    setOutputTimeline(newTimeline.map(s => ({ text: s.output ?? '', isViz: s.isViz ?? false })));
+    setStepCount(getMaxTime() + 1);
+    goToStep(0);
+  }, [goToStep]);
 
   // ---------------------------------------------------------------------------
   // Main Flow
@@ -193,10 +138,10 @@ function App() {
     clearTimeline();
     setCurrentStep(0);
     setStepCount(0);
+    setTimeline([]);
     setProjectName('untitled');
     setTextBoxes([]);
     setUserCode('');
-    setTimeline([]);
     setIsEditable(true);
     setHandlers({});
     setHasInteractiveElements(false);
@@ -215,12 +160,7 @@ function App() {
   }, []);
 
   const startTrace = useCallback((result: TraceStageInfo) => {
-    setTimeline(result.timeline);
-    hydrateVisualTimelineFromArray(result.timeline.map(s => s.visual));
-    setOutputTimeline(result.timeline.map(s => ({ text: s.output ?? '', isViz: s.isViz ?? false })));
-
-    setStepCount(getMaxTime() + 1);
-    goToStep(0);
+    setFullTimeline(result.timeline);
 
     setHandlers(result.handlers ?? {});
     const interactive = hasAnyClickHandler();
@@ -233,7 +173,7 @@ function App() {
     } else {
       setAppMode('trace');
     }
-  }, [goToStep]);
+  }, [setFullTimeline]);
 
   const handleAnalyze = useCallback(async () => {
     if (!userCode.trim()) return;
@@ -347,6 +287,72 @@ function App() {
     reader.readAsText(file);
     e.target.value = '';
   }, [handleLoad]);
+
+
+
+  const handleCreateGif = useCallback(async (region: CaptureRegion | null) => {
+    if (isCreatingGif) return;
+    const maxStep = getMaxTime();
+    if (maxStep < 1) return;
+
+    setIsCreatingGif(true);
+    setAnimationsEnabled(false);
+
+    const savedStep = currentStep;
+    try {
+      type GifFrame = { indexed: Uint8Array; width: number; height: number };
+      const frames: GifFrame[] = [];
+      let sharedPalette: number[][] | null = null;
+
+      for (let i = 0; i <= maxStep; i++) {
+        const state = getStateAt(i);
+        if (state) gridAreaRef.current?.loadVisualBuilderObjects(state);
+        // Two rAF cycles so React flushes + browser paints before we capture
+        await new Promise<void>((res) => requestAnimationFrame(() => requestAnimationFrame(() => res())));
+
+        // captureFrameCanvas avoids the PNG encode/decode round-trip of captureFrameData
+        const canvas = await gridAreaRef.current?.captureFrameCanvas(region);
+        if (!canvas) continue;
+
+        const { data } = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height);
+        // Compute palette once from the first frame and reuse — much faster than per-frame quantization
+        if (!sharedPalette) sharedPalette = quantize(data, 256);
+        frames.push({ indexed: applyPalette(data, sharedPalette), width: canvas.width, height: canvas.height });
+      }
+
+      if (frames.length === 0 || !sharedPalette) return;
+
+      // GIFEncoder auto mode writes the GIF header on the first writeFrame — do NOT call writeHeader() manually
+      const encoder = GIFEncoder();
+      for (const frame of frames) {
+        encoder.writeFrame(frame.indexed, frame.width, frame.height, {
+          palette: sharedPalette,
+          delay: 100, // ms — gifenc divides by 10 → 10 centiseconds = 100ms/frame
+          repeat: 0,  // loop forever (only written on the first frame by gifenc auto mode)
+        });
+      }
+      encoder.finish();
+
+      const bytes = encoder.bytes(); // correctly-sized Uint8Array copy — pass directly to Blob
+      const blob = new Blob([bytes.buffer as ArrayBuffer], { type: 'image/gif' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      link.download = `trace-${timestamp}.gif`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('GIF export failed:', err);
+    } finally {
+      setAnimationsEnabled(true);
+      setIsCreatingGif(false);
+      // Restore the step the user was on
+      goToStep(savedStep);
+    }
+  }, [isCreatingGif, currentStep, goToStep]);
 
   // ---------------------------------------------------------------------------
   // Keyboard shortcuts

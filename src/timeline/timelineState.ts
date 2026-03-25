@@ -20,7 +20,7 @@ export function hydrateTimelineFromJson(timelineJson: string): VisualBuilderElem
   return timeline[0] ?? [];
 }
 
-export function hydrateVisualTimelineFromArray(
+export function setVisualTimeline(
   rawTimeline: VisualBuilderElementBase[][],
 ): VisualBuilderElementBase[] {
   timeline = rawTimeline.map((snapshot) =>
