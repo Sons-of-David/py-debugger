@@ -65,10 +65,10 @@ function cleanPythonError(rawError: string): string {
 
   // If the traceback contains a user code frame, strip internal engine frames
   // so the error appears to originate from user code.
-  if (clean.includes('File "<combined_code>"')) {
+  if (clean.includes('File "<user_code>"')) {
     const lines = clean.split('\n');
     const firstLine = lines[0]; // "Traceback (most recent call last):"
-    const userFrameIndex = lines.findIndex(l => l.includes('File "<combined_code>"'));
+    const userFrameIndex = lines.findIndex(l => l.includes('File "<user_code>"'));
     clean = [firstLine, ...lines.slice(userFrameIndex)].join('\n');
   }
   return clean;
@@ -110,7 +110,7 @@ for _m in ('user_api', '_vb_engine'):
     // Reset element registry, then init namespace + timeline state with viz ranges
     const vizRangesJson = JSON.stringify(getVizRanges(code));
     await py.runPythonAsync('_engine.VisualElem._clear_registry()');
-    await py.runPythonAsync(`_init_combined_namespace('${escapeTripleQuote(vizRangesJson)}')`);
+    await py.runPythonAsync(`_init_namespace('${escapeTripleQuote(vizRangesJson)}')`);
 
     return py;
 }
@@ -135,7 +135,7 @@ export async function executeCode(code: string): Promise<TraceStageInfo> {
     const py = await initializePythonEngine(code);
     const preprocessed = preprocess(code);
     const resultJson: string = await py.runPythonAsync(
-      `_exec_combined_code('''${escapeTripleQuote(preprocessed)}''')`
+      `_exec_code('''${escapeTripleQuote(preprocessed)}''')`
     );
     const result = JSON.parse(resultJson) as RawResult;
     return { timeline: parseRawTimeline(result.timeline), handlers: result.handlers };
@@ -155,7 +155,7 @@ export async function executeInputChanged(
     const py = await loadPyodide();
     await py.runPythonAsync(`_input_text = ${JSON.stringify(text)}`);
     const resultJson: string = await py.runPythonAsync(
-      `_exec_combined_input_changed(${elemId}, _input_text)`
+      `_exec_input_changed(${elemId}, _input_text)`
     );
     const result = JSON.parse(resultJson) as RawResult;
     return { timeline: parseRawTimeline(result.timeline), handlers: result.handlers };
@@ -178,7 +178,7 @@ export async function executeDragHandler(
   try {
     const py = await loadPyodide();
     const resultJson: string = await py.runPythonAsync(
-      `_exec_combined_drag_traced(${elemId}, ${row}, ${col}, '${dragType}')`
+      `_exec_drag_traced(${elemId}, ${row}, ${col}, '${dragType}')`
     );
     const result = JSON.parse(resultJson) as RawResult;
     return { timeline: parseRawTimeline(result.timeline), handlers: result.handlers };
@@ -202,7 +202,7 @@ export async function executeClickHandler(
   try {
     const py = await loadPyodide();
     const resultJson: string = await py.runPythonAsync(
-      `_exec_combined_click_traced(${elemId}, ${row}, ${col})`
+      `_exec_click_traced(${elemId}, ${row}, ${col})`
     );
     const result = JSON.parse(resultJson) as RawResult;
     return { timeline: parseRawTimeline(result.timeline), handlers: result.handlers };

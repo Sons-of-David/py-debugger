@@ -25,7 +25,7 @@ def _build_scope(frame):
     chain = []
     f = frame
     while f is not None:
-        if f.f_code.co_filename == '<combined_code>':
+        if f.f_code.co_filename == '<user_code>':
             chain.append(f)
         f = f.f_back
     chain.reverse()  # outermost first so inner scope wins
@@ -101,7 +101,7 @@ def _make_tracer(viz_ranges, on_snap):
                 last_v.update(current)
                 on_snap(caller, caller.f_lineno, is_viz=True)
             return None
-        if frame.f_code.co_filename != '<combined_code>':
+        if frame.f_code.co_filename != '<user_code>':
             return None
         if event == 'call':
             return None if in_viz(frame.f_code.co_firstlineno) else _trace
@@ -123,14 +123,14 @@ def _make_tracer(viz_ranges, on_snap):
 
 
 _combined_ns: dict = {}
-_viz_ranges: list = []  # set by _init_combined_namespace, read by exec/click/input handlers
+_viz_ranges: list = []  # set by _init_namespace, read by exec/click/input handlers
 
 
-def _init_combined_namespace(viz_ranges_json: str):
+def _init_namespace(viz_ranges_json: str):
     """Initialize namespace and viz ranges for a new combined-code run.
 
     Parses viz block ranges and seeds the execution namespace from user_api.
-    Must be called before _exec_combined_code.
+    Must be called before _exec_code.
     """
     global _combined_ns, _viz_ranges
     _viz_ranges = [(r['startLine'], r['endLine']) for r in _json.loads(viz_ranges_json)]
@@ -198,13 +198,13 @@ def _exec_traced(execute_fn):
     return steps
 
 
-def _exec_combined_code(code: str) -> str:
+def _exec_code(code: str) -> str:
     """Execute combined user code with V() change detection and viz-block snapshot hooks.
 
-    Requires _init_combined_namespace to have been called first.
+    Requires _init_namespace to have been called first.
     Returns timeline + handlers as a JSON string.
     """
-    steps = _exec_traced(lambda: exec(compile(code, '<combined_code>', 'exec'), _combined_ns))
+    steps = _exec_traced(lambda: exec(compile(code, '<user_code>', 'exec'), _combined_ns))
     return _handler_result(steps)
 
 
@@ -280,7 +280,7 @@ def _handler_result(steps):
     })
 
 
-def _exec_combined_click_traced(elem_id: int, row: int, col: int) -> str:
+def _exec_click_traced(elem_id: int, row: int, col: int) -> str:
     """Call on_click on element with viz-aware tracing; return timeline + handlers."""
     target = _find_element(elem_id)
     if target is None:
@@ -291,7 +291,7 @@ def _exec_combined_click_traced(elem_id: int, row: int, col: int) -> str:
     return _handler_result(_exec_traced(lambda: handler(col, row)))
 
 
-def _exec_combined_drag_traced(elem_id: int, row: int, col: int, drag_type: str) -> str:
+def _exec_drag_traced(elem_id: int, row: int, col: int, drag_type: str) -> str:
     """Call on_drag on element with viz-aware tracing; return timeline + handlers."""
     target = _find_element(elem_id)
     if target is None:
@@ -302,7 +302,7 @@ def _exec_combined_drag_traced(elem_id: int, row: int, col: int, drag_type: str)
     return _handler_result(_exec_traced(lambda: handler(col, row, drag_type)))
 
 
-def _exec_combined_input_changed(elem_id: int, text: str) -> str:
+def _exec_input_changed(elem_id: int, text: str) -> str:
     """Call input_changed(text) on element with viz-aware tracing; return timeline + handlers."""
     target = _find_element(elem_id)
     if target is None:
