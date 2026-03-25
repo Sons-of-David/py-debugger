@@ -122,22 +122,22 @@ def _make_tracer(viz_ranges, on_snap):
 # ── Persistent namespace ──────────────────────────────────────────────────────
 
 
-_combined_ns: dict = {}
+_namespace: dict = {}
 _viz_ranges: list = []  # set by _init_namespace, read by exec/click/input handlers
 
 
 def _init_namespace(viz_ranges_json: str):
-    """Initialize namespace and viz ranges for a new combined-code run.
+    """Initialize namespace and viz ranges for a new user-code run.
 
     Parses viz block ranges and seeds the execution namespace from user_api.
     Must be called before _exec_code.
     """
-    global _combined_ns, _viz_ranges
+    global _namespace, _viz_ranges
     _viz_ranges = [(r['startLine'], r['endLine']) for r in _json.loads(viz_ranges_json)]
-    _combined_ns = {k: v for k, v in vars(_user_api).items() if not k.startswith('_')}
-    _combined_ns['__builtins__'] = __builtins__
-    _combined_ns['__viz_begin__'] = lambda: None  # no-op: tracer uses in_viz() to skip viz block lines
-    _combined_ns['__viz_end__'] = __viz_end__  # tracer intercepts its call event
+    _namespace = {k: v for k, v in vars(_user_api).items() if not k.startswith('_')}
+    _namespace['__builtins__'] = __builtins__
+    _namespace['__viz_begin__'] = lambda: None  # no-op: tracer uses in_viz() to skip viz block lines
+    _namespace['__viz_end__'] = __viz_end__  # tracer intercepts its call event
 
 
 # ── Timeline execution ────────────────────────────────────────────────────────
@@ -146,7 +146,7 @@ def _init_namespace(viz_ranges_json: str):
 def _exec_traced(execute_fn):
     """Core traced execution with V()-change detection, viz-block snapshots, and post-exec flush.
 
-    Runs execute_fn under the combined tracer, then checks whether the last line produced
+    Runs execute_fn under the tracer, then checks whether the last line produced
     any V() changes or stdout output the tracer couldn't see, and appends a final snapshot
     if so. Returns steps (list of snapshot dicts).
     """
@@ -186,7 +186,7 @@ def _exec_traced(execute_fn):
         # so it's never observed by the tracer. Take one final snapshot if the visual
         # state changed (covers V() bindings, plain attribute mutations, drag handlers, etc.)
         # or there is remaining stdout output.
-        final_scope = {k: v for k, v in _combined_ns.items() if not k.startswith('_')}
+        final_scope = {k: v for k, v in _namespace.items() if not k.startswith('_')}
         _engine.V.params = final_scope
         final_visual = _serialize_visual_builder()
         if capture.getvalue()[last_stdout_pos[0]:] or final_visual != last_visual_snap[0]:
@@ -199,12 +199,12 @@ def _exec_traced(execute_fn):
 
 
 def _exec_code(code: str) -> str:
-    """Execute combined user code with V() change detection and viz-block snapshot hooks.
+    """Execute user code with V() change detection and viz-block snapshot hooks.
 
     Requires _init_namespace to have been called first.
     Returns timeline + handlers as a JSON string.
     """
-    steps = _exec_traced(lambda: exec(compile(code, '<user_code>', 'exec'), _combined_ns))
+    steps = _exec_traced(lambda: exec(compile(code, '<user_code>', 'exec'), _namespace))
     return _handler_result(steps)
 
 
@@ -251,7 +251,7 @@ def _has_valid_event_handler(elem, ref_fn) -> bool:
 _EVENT_HANDLER_REFS = [_user_api.on_click, _user_api.on_drag]
 
 
-def _serialize_combined_handlers() -> str:
+def _serialize_handlers() -> str:
     """Return JSON dict of {elem_id: [handler_names]} for elements with event handlers set."""
     handlers = {}
     for elem in _engine.VisualElem._registry:
@@ -276,7 +276,7 @@ def _handler_result(steps):
     """Assemble the JSON result returned by click/input handler dispatchers."""
     return _json.dumps({
         'timeline': steps,
-        'handlers': _json.loads(_serialize_combined_handlers()),
+        'handlers': _json.loads(_serialize_handlers()),
     })
 
 

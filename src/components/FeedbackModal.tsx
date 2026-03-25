@@ -11,12 +11,12 @@ const TYPES: { value: FeedbackType; label: string }[] = [
 ];
 
 interface FeedbackModalProps {
-  combinedCode: string;
+  userCode: string;
   textBoxes: TextBox[];
   onClose: () => void;
 }
 
-export function FeedbackModal({ combinedCode, textBoxes, onClose }: FeedbackModalProps) {
+export function FeedbackModal({ userCode, textBoxes, onClose }: FeedbackModalProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [type, setType] = useState<FeedbackType>('suggestion');
@@ -30,7 +30,7 @@ export function FeedbackModal({ combinedCode, textBoxes, onClose }: FeedbackModa
 
     setStatus('submitting');
     try {
-      const json = JSON.stringify({ combinedCode, textBoxes }, null, 2);
+      const json = JSON.stringify({ userCode, textBoxes }, null, 2);
       const res = await fetch('/api/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

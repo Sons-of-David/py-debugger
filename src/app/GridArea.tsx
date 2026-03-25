@@ -39,10 +39,10 @@ interface GridAreaProps {
   hideToolbar?: boolean;
   /** Visual elements to display; updated reactively when currentStep changes. */
   elements?: VisualBuilderElementBase[];
-  /** Combined-editor: viz block ranges for the current code, used for auto-tracing clicks. */
-  combinedVizRanges?: VizRange[];
-  /** Combined-editor: called when a click produces a traced mini-timeline. */
-  onCombinedTrace?: (result: TraceStageInfo) => void;
+  /** editor: viz block ranges for the current code, used for auto-tracing clicks. */
+  vizRanges?: VizRange[];
+  /** editor: called when a click produces a traced mini-timeline. */
+  onTrace?: (result: TraceStageInfo) => void;
   appMode?: 'idle' | 'trace' | 'interactive';
   onCreateGif?: (region: CaptureRegion | null) => void;
   isCreatingGif?: boolean;
@@ -50,7 +50,7 @@ interface GridAreaProps {
 }
 
 export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
-  function GridArea({ darkMode, mouseEnabled, textBoxes, onTextBoxesChange, hideToolbar = false, elements, combinedVizRanges, onCombinedTrace, appMode = 'idle', onCreateGif, isCreatingGif = false, allowGif = false }, ref) {
+  function GridArea({ darkMode, mouseEnabled, textBoxes, onTextBoxesChange, hideToolbar = false, elements, vizRanges: vizRanges, onTrace: onTrace, appMode = 'idle', onCreateGif, isCreatingGif = false, allowGif = false }, ref) {
     const {
       cells,
       overlayCells,
@@ -90,27 +90,27 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
     }, []);
 
     const handleElementClick = useCallback(async (elemId: number, x: number, y: number) => {
-      if (combinedVizRanges) {
+      if (vizRanges) {
         const result = await executeClickHandler(elemId, y, x);
         if (result.error) { appendError(result.error); return; }
-        if (result.timeline.length > 0) onCombinedTrace?.(result);
+        if (result.timeline.length > 0) onTrace?.(result);
         return;
       }
-    }, [combinedVizRanges, onCombinedTrace]);
+    }, [vizRanges, onTrace]);
 
     const handleElementInput = useCallback(async (elemId: number, text: string) => {
-      if (!combinedVizRanges) return;
+      if (!vizRanges) return;
       const result = await executeInputChanged(elemId, text);
       if (result.error) { appendError(result.error); return; }
-      if (result.timeline.length > 0) onCombinedTrace?.(result);
-    }, [combinedVizRanges, onCombinedTrace]);
+      if (result.timeline.length > 0) onTrace?.(result);
+    }, [vizRanges, onTrace]);
 
     const handleElementDrag = useCallback(async (elemId: number, x: number, y: number, dragType: DragType) => {
-      if (!combinedVizRanges) return;
+      if (!vizRanges) return;
       const result = await executeDragHandler(elemId, y, x, dragType);
       if (result.error) { appendError(result.error); return; }
-      if (result.timeline.length > 0) onCombinedTrace?.(result);
-    }, [combinedVizRanges, onCombinedTrace]);
+      if (result.timeline.length > 0) onTrace?.(result);
+    }, [vizRanges, onTrace]);
 
     const handleTextBoxAdded = useCallback((box: TextBox) => {
       onTextBoxesChange([...textBoxes, box]);

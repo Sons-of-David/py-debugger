@@ -28,7 +28,7 @@ export function setOutputTimeline(steps: Array<{ text: string; isViz: boolean }>
  * Seal the current trace segment into committed lines, then optionally append
  * a marker. Called when transitioning trace → interactive.
  */
-export function commitCombinedSegment(marker?: string): void {
+export function commitSegment(marker?: string): void {
   const before = _committedLines.length;
   for (const { text, isViz } of _currentSteps) {
     if (text) _committedLines.push(...toLines(text, isViz ? 'viz' : 'debugger'));
@@ -52,7 +52,7 @@ export function appendError(text: string): void {
 // ── Getter ────────────────────────────────────────────────────────────────────
 
 /** Committed lines from past segments + current segment up to currentStep. */
-export function getCombinedEditorOutput(currentStep: number): TerminalLine[] {
+export function getEditorOutput(currentStep: number): TerminalLine[] {
   const lines = [..._committedLines];
   const end = Math.min(currentStep + 1, _currentSteps.length);
   for (let i = 0; i < end; i++) {

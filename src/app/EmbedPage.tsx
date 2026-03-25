@@ -16,7 +16,7 @@ import { migrateTextBox, type TextBox } from '../text-boxes/types';
 
 const SAMPLE_MODULES = import.meta.glob('../samples/*.json', { eager: true }) as Record<
   string,
-  { combinedCode?: string; textBoxes?: TextBox[] }
+  { userCode?: string; textBoxes?: TextBox[] }
 >;
 const SAMPLES = Object.entries(SAMPLE_MODULES).map(([path, data]) => {
   const filename = path.split('/').pop() ?? path;
@@ -84,14 +84,14 @@ export function EmbedPage() {
   const [stepCount, setStepCount] = useState(0);
   const [hasInteractiveElements, setHasInteractiveElements] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_combinedTimeline, setCombinedTimeline] = useState<TraceStep[]>([]);
+  const [_timeline, setTimeline] = useState<TraceStep[]>([]);
   const [textBoxes, setTextBoxes] = useState<TextBox[]>([]);
 
   const mouseEnabled = appMode === 'interactive';
 
   // Viz ranges for click handler dispatch
-  const combinedVizRanges = useMemo(
-    () => (sample?.data.combinedCode ? getVizRanges(sample.data.combinedCode) : []),
+  const vizRanges = useMemo(
+    () => (sample?.data.userCode ? getVizRanges(sample.data.userCode) : []),
     [sample]
   );
 
@@ -134,7 +134,7 @@ export function EmbedPage() {
     try {
       const result = await executeCode(code);
       if (!result.error) {
-        setCombinedTimeline(result.timeline);
+        setTimeline(result.timeline);
         hydrateVisualTimelineFromArray(result.timeline.map((s) => s.visual));
         setHandlers(result.handlers ?? {});
         const hasInteractive = hasAnyClickHandler();
@@ -163,7 +163,7 @@ export function EmbedPage() {
   // Auto-analyze when Pyodide is ready
   useEffect(() => {
     if (!pyodideReady || !sample) return;
-    const code = sample.data.combinedCode;
+    const code = sample.data.userCode;
     if (!code) return;
     const boxes = (sample.data.textBoxes ?? []).map((raw) => migrateTextBox(raw as unknown as Record<string, unknown>));
     runAnalysis(code, boxes);
@@ -191,7 +191,7 @@ export function EmbedPage() {
     setAppMode('interactive');
   }, [goToStep]);
 
-  const handleCombinedTrace = useCallback((result: TraceStageInfo) => {
+  const handleTrace = useCallback((result: TraceStageInfo) => {
     hydrateVisualTimelineFromArray(result.timeline.map((s) => s.visual));
     setStepCount(result.timeline.length);
     goToStep(0);
@@ -251,8 +251,8 @@ export function EmbedPage() {
             hideToolbar
             textBoxes={textBoxes}
             onTextBoxesChange={setTextBoxes}
-            combinedVizRanges={combinedVizRanges}
-            onCombinedTrace={handleCombinedTrace}
+            vizRanges={vizRanges}
+            onTrace={handleTrace}
           />
         </AnimationContext.Provider>
       </div>

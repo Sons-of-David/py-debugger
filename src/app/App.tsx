@@ -7,7 +7,7 @@ import { Editor, DEFAULT_SAMPLE, type EditorHandle } from '../components/editor/
 import { useTheme } from '../contexts/ThemeContext';
 import { AnimationContext } from '../animation/animationContext';
 import { loadPyodide, isPyodideLoaded, resetPythonState } from '../python-engine/pyodide-runtime';
-import { clearAll as clearTerminal, commitCombinedSegment, appendError, setOutputTimeline } from '../output-terminal/terminalState';
+import { clearAll as clearTerminal, commitSegment as commitSegment, appendError, setOutputTimeline } from '../output-terminal/terminalState';
 import { ApiReferencePanel } from '../api/ApiReferencePanel';
 import { TimelineControls } from '../timeline/TimelineControls';
 import { ExtrasMenu } from './ExtrasMenu';
@@ -27,7 +27,7 @@ const AUTO_ANALYZE_ON_LOAD = true; // set to false to disable auto-analyze when 
 // Dev samples should only appear when import.meta.env.DEV is true.
 const SAMPLE_MODULES = import.meta.glob('../samples/*.json', { eager: true }) as Record<
   string,
-  { combinedCode?: string; textBoxes?: TextBox[] }
+  { userCode?: string; textBoxes?: TextBox[] }
 >;
 const SAMPLES = Object.entries(SAMPLE_MODULES).map(([path, data]) => {
   const filename = path.split('/').pop() ?? path;
@@ -56,7 +56,7 @@ function App() {
 
   const gridAreaRef = useRef<GridAreaHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const combinedEditorRef = useRef<EditorHandle>(null);
+  const editorRef = useRef<EditorHandle>(null);
   const pendingPostLoadRef = useRef(false);
   const [samplesOpen, setSamplesOpen] = useState(false);
   const [projectName, setProjectName] = useState('untitled');
@@ -72,11 +72,11 @@ function App() {
   const [animationsEnabled, setAnimationsEnabled] = useState(true);
   const [animationDuration, setAnimationDuration] = useState(500); // ms
 
-  // Combined editor state
-  const [combinedCode, setCombinedCode] = useState(DEFAULT_SAMPLE);
+  // editor state
+  const [userCode, setUserCode] = useState(DEFAULT_SAMPLE);
   const [timeline, setTimeline] = useState<TraceStep[]>([]);
-  const [isCombinedEditable, setIsCombinedEditable] = useState(true);
-  const [isAnalyzingCombined, setIsAnalyzingCombined] = useState(false);
+  const [isEditable, setIsEditable] = useState(true);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   type AppMode = 'idle' | 'trace' | 'interactive';
   const [appMode, setAppMode] = useState<AppMode>('idle');
@@ -188,16 +188,16 @@ function App() {
   // ---------------------------------------------------------------------------
 
   const handleReset = useCallback(() => {
-    // TODO: DAMMIT. Stop duplicate code! combine with handleEditCombined
+    // TODO: DAMMIT. Stop duplicate code! combine with handleEdit
     resetPythonState();
     clearTimeline();
     setCurrentStep(0);
     setStepCount(0);
     setProjectName('untitled');
     setTextBoxes([]);
-    setCombinedCode('');
+    setUserCode('');
     setTimeline([]);
-    setIsCombinedEditable(true);
+    setIsEditable(true);
     setHandlers({});
     setHasInteractiveElements(false);
     setAppMode('idle');
@@ -209,13 +209,13 @@ function App() {
   }, [appMode, goToStep]);
 
   const handleEnterInteractive = useCallback(() => {
-    commitCombinedSegment('----- end trace -----');
+    commitSegment('----- end trace -----');
     setAppMode('interactive');
   }, []);
 
 
   // ---------------------------------------------------------------------------
-  // Combined editor handlers
+  // editor handlers
   // ---------------------------------------------------------------------------
 
   const startTrace = useCallback((result: TraceStageInfo) => {
@@ -233,21 +233,21 @@ function App() {
     const isOneFrame = (getMaxTime() === 0);
 
     if (isOneFrame && interactive) {
-      commitCombinedSegment('----- end trace -----');
+      commitSegment('----- end trace -----');
       setAppMode('interactive');
     } else {
       setAppMode('trace');
     }
   }, [goToStep]);
 
-  const handleAnalyzeCombined = useCallback(async () => {
-    if (!combinedCode.trim()) return;
-    setIsAnalyzingCombined(true);
+  const handleAnalyze = useCallback(async () => {
+    if (!userCode.trim()) return;
+    setIsAnalyzing(true);
     clearTerminal();
     try {
-      const result = await executeCode(combinedCode);
+      const result = await executeCode(userCode);
       if (!result.error) {
-        setIsCombinedEditable(false);
+        setIsEditable(false);
         startTrace(result);
       } else {
         appendError(result.error ?? 'Unknown error');
@@ -255,12 +255,12 @@ function App() {
     } catch (err) {
       appendError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
-      setIsAnalyzingCombined(false);
+      setIsAnalyzing(false);
     }
-  }, [combinedCode, startTrace]);
+  }, [userCode, startTrace]);
 
-  const handleEditCombined = useCallback(() => {
-    setIsCombinedEditable(true);
+  const handleEdit = useCallback(() => {
+    setIsEditable(true);
     setTimeline([]);
     clearTimeline();
     setHandlers({});
@@ -270,12 +270,12 @@ function App() {
     setAppMode('idle');
   }, []);
 
-  const handleCombinedTrace = useCallback((result: TraceStageInfo) => {
+  const handleTrace = useCallback((result: TraceStageInfo) => {
     startTrace(result);
   }, [startTrace]);
 
-  // viz block ranges for the current combined code; stable until code changes
-  const combinedVizRanges = useMemo(() => getVizRanges(combinedCode), [combinedCode]);
+  // viz block ranges for the current code; stable until code changes
+  const vizRanges = useMemo(() => getVizRanges(userCode), [userCode]);
 
   // ---------------------------------------------------------------------------
   // Load \ Save
@@ -283,7 +283,7 @@ function App() {
 
   const handleSave = useCallback(() => {
     const name = projectName.trim() || 'untitled';
-    const data = { combinedCode, textBoxes };
+    const data = { userCode: userCode, textBoxes };
     const content = JSON.stringify(data, null, 2);
     const blob = new Blob([content], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -294,11 +294,11 @@ function App() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [combinedCode, textBoxes, projectName]);
+  }, [userCode, textBoxes, projectName]);
 
   const handleSaveToSamples = useCallback(async () => {
     const name = projectName.trim() || 'untitled';
-    const data = { combinedCode, textBoxes };
+    const data = { userCode: userCode, textBoxes };
     const content = JSON.stringify(data, null, 2);
     setSaveSampleStatus('saving');
     try {
@@ -312,27 +312,27 @@ function App() {
       setSaveSampleStatus('error');
     }
     setTimeout(() => setSaveSampleStatus('idle'), 2000);
-  }, [combinedCode, textBoxes, projectName]);
+  }, [userCode, textBoxes, projectName]);
 
-  const handleLoad = useCallback((data: { combinedCode?: string; textBoxes?: TextBox[] }, name: string) => {
-    if (!data.combinedCode) {
-      appendError('Invalid file: missing combinedCode field');
+  const handleLoad = useCallback((data: { userCode?: string; textBoxes?: TextBox[] }, name: string) => {
+    if (!data.userCode) {
+      appendError('Invalid file: missing userCode field');
       return;
     }
     handleReset();
     setProjectName(name);
-    setCombinedCode(data.combinedCode);
+    setUserCode(data.userCode);
     setTextBoxes((data.textBoxes ?? [] as unknown[]).map((raw) => migrateTextBox(raw as Record<string, unknown>)));
     pendingPostLoadRef.current = true;
   }, [handleReset]);
 
   // After a load, fold viz blocks and optionally auto-analyze
   useEffect(() => {
-    if (!pendingPostLoadRef.current || !combinedCode.trim()) return;
+    if (!pendingPostLoadRef.current || !userCode.trim()) return;
     pendingPostLoadRef.current = false;
-    requestAnimationFrame(() => combinedEditorRef.current?.foldVizBlocks());
-    if (AUTO_ANALYZE_ON_LOAD) handleAnalyzeCombined();
-  }, [combinedCode, handleAnalyzeCombined]);
+    requestAnimationFrame(() => editorRef.current?.foldVizBlocks());
+    if (AUTO_ANALYZE_ON_LOAD) handleAnalyze();
+  }, [userCode, handleAnalyze]);
 
   // Auto-load first sample and return to edit mode
   useEffect(() => {
@@ -370,9 +370,9 @@ function App() {
         e.preventDefault();
         handleSave();
       } else if (e.key === 'Enter') {
-        if (appMode === 'idle' && !isAnalyzingCombined) {
+        if (appMode === 'idle' && !isAnalyzing) {
           e.preventDefault();
-          handleAnalyzeCombined();
+          handleAnalyze();
         } else if (appMode === 'trace' && hasInteractiveElements) {
           e.preventDefault();
           handleEnterInteractive();
@@ -381,7 +381,7 @@ function App() {
     };
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [appMode, isAnalyzingCombined, handleAnalyzeCombined, handleEnterInteractive, handleSave]);
+  }, [appMode, isAnalyzing, handleAnalyze, handleEnterInteractive, handleSave]);
 
   return (
     <AnimationContext.Provider value={{ enabled: animationsEnabled, duration: animationDuration }}>
@@ -456,9 +456,9 @@ function App() {
             onGoToStep={goToStep}
             appMode={appMode}
             onEnterInteractive={handleEnterInteractive}
-            onAnalyze={handleAnalyzeCombined}
-            isAnalyzing={isAnalyzingCombined}
-            canAnalyze={!!combinedCode.trim()}
+            onAnalyze={handleAnalyze}
+            isAnalyzing={isAnalyzing}
+            canAnalyze={!!userCode.trim()}
             hasInteractiveElements={hasInteractiveElements}
             isStaticSnapshot={stepCount === 1 && !hasInteractiveElements && appMode !== 'idle'}
           />
@@ -499,17 +499,17 @@ function App() {
           <Panel defaultSize={50} minSize={20}>
             <div className="h-full border-r border-gray-300 dark:border-gray-600">
               <Editor
-                  ref={combinedEditorRef}
-                  code={combinedCode}
-                  onChange={setCombinedCode}
-                  isEditable={isCombinedEditable}
+                  ref={editorRef}
+                  code={userCode}
+                  onChange={setUserCode}
+                  isEditable={isEditable}
                   currentStep={timeline.length > 0 ? currentStep : undefined}
                   currentLine={
                     appMode === 'trace' && timeline.length > 0
                       ? timeline[currentStep]?.line
                       : undefined
                   }
-                  onEdit={handleEditCombined}
+                  onEdit={handleEdit}
               />
             </div>
           </Panel>
@@ -526,8 +526,8 @@ function App() {
                 textBoxes={textBoxes}
                 onTextBoxesChange={setTextBoxes}
                 elements={currentElements}
-                combinedVizRanges={combinedVizRanges}
-                onCombinedTrace={handleCombinedTrace}
+                vizRanges={vizRanges}
+                onTrace={handleTrace}
                 appMode={appMode}
                 onCreateGif={handleCreateGif}
                 isCreatingGif={isCreatingGif}
@@ -549,7 +549,7 @@ function App() {
       </footer>
       {feedbackOpen && (
         <FeedbackModal
-          combinedCode={combinedCode}
+          userCode={userCode}
           textBoxes={textBoxes}
           onClose={() => setFeedbackOpen(false)}
         />

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import {
-  getCombinedEditorOutput,
+  getEditorOutput,
   subscribeTerminal,
   getTerminalVersion,
   type TerminalLine,
@@ -50,7 +50,7 @@ export function OutputTerminal({ currentStep }: OutputTerminalProps) {
     isAtBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 4;
   };
 
-  const lines = getCombinedEditorOutput(currentStep);
+  const lines = getEditorOutput(currentStep);
 
   useEffect(() => {
     const el = scrollRef.current;
