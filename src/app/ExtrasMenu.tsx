@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 interface ExtrasMenuProps {
   darkMode: boolean;
@@ -15,6 +15,8 @@ interface ExtrasMenuProps {
   onSaveToSamples: () => void;
   saveSampleStatus: 'idle' | 'saving' | 'saved' | 'error';
   onFeedback: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 const btnBase = 'px-3 py-1 rounded text-sm font-medium transition-colors';
@@ -35,11 +37,29 @@ export function ExtrasMenu({
   onSaveToSamples,
   saveSampleStatus,
   onFeedback,
+  open,
+  onOpenChange,
 }: ExtrasMenuProps) {
-  const [open, setOpen] = useState(false);
+  const setOpen = (v: boolean | ((prev: boolean) => boolean)) => {
+    const next = typeof v === 'function' ? v(open) : v;
+    onOpenChange(next);
+  };
+
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        onOpenChange(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open, onOpenChange]);
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -54,8 +74,6 @@ export function ExtrasMenu({
       </button>
 
       {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute right-0 top-full mt-1 z-50 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded shadow-lg py-1">
 
             {/* Feedback */}
@@ -160,7 +178,6 @@ export function ExtrasMenu({
               </>
             )}
           </div>
-        </>
       )}
     </div>
   );

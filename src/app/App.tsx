@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { GIFEncoder, quantize, applyPalette } from 'gifenc';
 import type { CaptureRegion } from '../visual-panel/components/CaptureRegionLayer';
 
@@ -65,6 +66,7 @@ function App() {
   const [pyodideLoading, setPyodideLoading] = useState(false);
   const [pyodideReady, setPyodideReady] = useState(false);
   const [apiReferenceOpen, setApiReferenceOpen] = useState(false);
+  const [extrasOpen, setExtrasOpen] = useState(false);
   const [saveSampleStatus, setSaveSampleStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
@@ -264,12 +266,18 @@ function App() {
     if (AUTO_ANALYZE_ON_LOAD) handleAnalyze();
   }, [userCode, handleAnalyze]);
 
-  // Auto-load first sample and return to edit mode
+  const [searchParams] = useSearchParams();
+
+  // Auto-load sample on mount — prefer ?sample= URL param, fall back to first sample
   useEffect(() => {
     if (!pyodideReady || autoLoadedRef.current || SAMPLES.length === 0) return;
     autoLoadedRef.current = true;
-    handleLoad(SAMPLES[0].data, SAMPLES[0].rawName);
-  }, [pyodideReady, handleLoad]);
+    const sampleParam = searchParams.get('sample');
+    const target = sampleParam
+      ? (SAMPLES.find((s) => s.rawName === sampleParam) ?? SAMPLES[0])
+      : SAMPLES[0];
+    handleLoad(target.data, target.rawName);
+  }, [pyodideReady, handleLoad, searchParams]);
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -498,12 +506,14 @@ function App() {
         <div className="flex items-center justify-end gap-2">
           <button
             type="button"
-            onClick={() => setApiReferenceOpen((o) => !o)}
+            onClick={() => { setApiReferenceOpen((o) => !o); setExtrasOpen(false); }}
             className={`${buttonNeutral} min-w-[90px]`}
           >
             {apiReferenceOpen ? 'Hide' : 'Show'} API
           </button>
           <ExtrasMenu
+            open={extrasOpen}
+            onOpenChange={(v) => { setExtrasOpen(v); if (v) setApiReferenceOpen(false); }}
             darkMode={darkMode}
             onToggleDark={toggleDarkMode}
             animationsEnabled={animationsEnabled}
