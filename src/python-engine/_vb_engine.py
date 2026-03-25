@@ -20,7 +20,7 @@ class PopupException(Exception):
 class SerializationException(Exception):
     """Raised when element serialization or handler validation fails.
 
-    Carries a user-facing message and the line number in the combined code
+    Carries a user-facing message and the line number in the user code
     where the offending handler is defined. The terminal shows just
     'line N: message' without the full traceback.
     """
