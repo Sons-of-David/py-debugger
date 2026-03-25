@@ -203,20 +203,16 @@ function App() {
     setAppMode('idle');
   }, []);
 
-  // Whenever appMode becomes 'interactive' (from any path), jump to the last step.
-  useEffect(() => {
-    if (appMode === 'interactive') goToStep(getMaxTime());
-  }, [appMode, goToStep]);
-
-  const handleEnterInteractive = useCallback(() => {
-    commitSegment('----- end trace -----');
-    setAppMode('interactive');
+  const handleEdit = useCallback(() => {
+    setIsEditable(true);
+    setTimeline([]);
+    clearTimeline();
+    setHandlers({});
+    setHasInteractiveElements(false);
+    setCurrentStep(0);
+    setStepCount(0);
+    setAppMode('idle');
   }, []);
-
-
-  // ---------------------------------------------------------------------------
-  // editor handlers
-  // ---------------------------------------------------------------------------
 
   const startTrace = useCallback((result: TraceStageInfo) => {
     console.log('timeline result:', result.timeline);
@@ -240,6 +236,10 @@ function App() {
     }
   }, [goToStep]);
 
+  const handleTrace = useCallback((result: TraceStageInfo) => {
+    startTrace(result);
+  }, [startTrace]);
+
   const handleAnalyze = useCallback(async () => {
     if (!userCode.trim()) return;
     setIsAnalyzing(true);
@@ -259,20 +259,15 @@ function App() {
     }
   }, [userCode, startTrace]);
 
-  const handleEdit = useCallback(() => {
-    setIsEditable(true);
-    setTimeline([]);
-    clearTimeline();
-    setHandlers({});
-    setHasInteractiveElements(false);
-    setCurrentStep(0);
-    setStepCount(0);
-    setAppMode('idle');
-  }, []);
+  // Whenever appMode becomes 'interactive' (from any path), jump to the last step.
+  useEffect(() => {
+    if (appMode === 'interactive') goToStep(getMaxTime());
+  }, [appMode, goToStep]);
 
-  const handleTrace = useCallback((result: TraceStageInfo) => {
-    startTrace(result);
-  }, [startTrace]);
+  const handleEnterInteractive = useCallback(() => {
+    commitSegment('----- end trace -----');
+    setAppMode('interactive');
+  }, []);
 
   // viz block ranges for the current code; stable until code changes
   const vizRanges = useMemo(() => getVizRanges(userCode), [userCode]);
