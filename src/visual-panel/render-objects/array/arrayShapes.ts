@@ -223,7 +223,8 @@ export const ARRAY_SCHEMA: ObjDoc = {
   properties: [
     { name: 'name', type: 'str', description: 'Label shown above the array on the grid. Omit to show no label.', default: '""' },
     { name: 'cells', type: 'list', description: 'Initial array values. Elements must be primitives (int, float, str, bool, or None).', default: '[]' },
-    { name: 'position', type: 'tuple[int, int]', description: 'Top-left corner (row, col) of the first cell.', default: '(0, 0)' },
+    { name: 'x', type: 'int', description: 'Column of the first cell.', default: '0' },
+    { name: 'y', type: 'int', description: 'Row of the first cell.', default: '0' },
     { name: 'direction', type: 'str', description: '"right", "left", "down", or "up" — layout direction.', default: '"right"' },
     { name: 'color', type: 'tuple[int, int, int] | None', description: 'RGB fill color for all cells. None uses the default theme color.', default: 'None' },
     { name: 'show_index', type: 'bool', description: 'Whether to show [i] index labels.', default: 'True' },
@@ -358,7 +359,8 @@ export const ARRAY2D_SCHEMA: ObjDoc = {
   docstring: 'Displays a 2D array of values as a grid of square cells.',
   properties: [
     { name: 'name', type: 'str', description: 'Label shown above the array on the grid. Omit to show no label.', default: '""' },
-    { name: 'position', type: 'tuple[int, int]', description: 'Top-left corner (row, col).', default: '(0, 0)' },
+    { name: 'x', type: 'int', description: 'Column (left edge).', default: '0' },
+    { name: 'y', type: 'int', description: 'Row (top edge).', default: '0' },
     { name: 'cells', type: 'list[list]', description: '2D list of values (jagged arrays OK). Elements must be primitives (int, float, str, bool, or None).', default: '[]' },
     { name: 'rectangular', type: 'bool', description: 'If True, pad short rows with empty cells to fill the bounding rectangle. If False, only draw cells that exist in the data.', default: 'True' },
     { name: 'color', type: 'tuple[int, int, int] | None', description: 'RGB fill color for all cells. None uses the default theme color.', default: 'None' },

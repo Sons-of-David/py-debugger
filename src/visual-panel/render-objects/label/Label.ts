@@ -55,7 +55,8 @@ export const LABEL_SCHEMA: ObjDoc = {
   docstring: 'Text label.',
   properties: [
     { name: 'label', type: 'str', description: 'Display text.', default: '""' },
-    { name: 'position', type: 'tuple[int, int]', description: 'Top-left corner (row, col).', default: '(0, 0)' },
+    { name: 'x', type: 'int', description: 'Column (left edge).', default: '0' },
+    { name: 'y', type: 'int', description: 'Row (top edge).', default: '0' },
     { name: 'width', type: 'int', description: 'Width in grid cells.', default: '1' },
     { name: 'height', type: 'int', description: 'Height in grid cells.', default: '1' },
     { name: 'font_size', type: 'int', description: 'Font size in pixels.', default: '14' },

@@ -23,7 +23,8 @@ export const CIRCLE_SCHEMA: ObjDoc = {
   objName: 'Circle',
   docstring: 'A circle (or ellipse) shape on the grid.',
   properties: [
-    { name: 'position', type: 'tuple[int, int]', description: 'Top-left corner (row, col) of the bounding box.', default: '(0, 0)' },
+    { name: 'x', type: 'int', description: 'Column (left edge of bounding box).', default: '0' },
+    { name: 'y', type: 'int', description: 'Row (top edge of bounding box).', default: '0' },
     { name: 'width', type: 'int', description: 'Width in grid cells.', default: '1' },
     { name: 'height', type: 'int', description: 'Height in grid cells.', default: '1' },
     { name: 'color', type: 'tuple[int, int, int]', description: 'RGB fill color (0-255 per channel).', default: '(59, 130, 246)' },

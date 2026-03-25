@@ -28,7 +28,8 @@ export const INPUT_SCHEMA: ObjDoc = {
   objName: 'Input',
   docstring: 'A text-input box on the grid. In interactive mode, clicking it opens an inline text field; pressing Enter calls input_changed(text).',
   properties: [
-    { name: 'position', type: 'tuple[int, int]', description: 'Top-left corner (row, col).', default: '(0, 0)' },
+    { name: 'x', type: 'int', description: 'Column (left edge).', default: '0' },
+    { name: 'y', type: 'int', description: 'Row (top edge).', default: '0' },
     { name: 'width', type: 'int', description: 'Width in grid cells.', default: '3' },
     { name: 'height', type: 'int', description: 'Height in grid cells.', default: '1' },
     { name: 'color', type: 'tuple[int, int, int]', description: 'RGB fill color.', default: '(99, 102, 241)' },

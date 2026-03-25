@@ -53,7 +53,8 @@ export const PANEL_SCHEMA: ObjDoc = {
   docstring: 'Container for grouping visual elements. Children use positions relative to the top-left corner. Use add(elem) and remove(elem) to manage children.',
   properties: [
     { name: 'name', type: 'str', description: 'Panel title (shown when show_border=True). Empty string hides the title.', default: '""' },
-    { name: 'position', type: 'tuple[int, int]', description: 'Top-left corner (row, col).', default: '(0, 0)' },
+    { name: 'x', type: 'int', description: 'Column (left edge).', default: '0' },
+    { name: 'y', type: 'int', description: 'Row (top edge).', default: '0' },
     { name: 'width', type: 'int', description: 'Minimum width in grid cells; grows to fit children.', default: '1' },
     { name: 'height', type: 'int', description: 'Minimum height in grid cells; grows to fit children.', default: '1' },
     { name: 'visible', type: 'bool', description: 'Whether the panel is shown.', default: 'True' },
