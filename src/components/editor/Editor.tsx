@@ -153,7 +153,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
           // Close ranges whose indent is >= current
           while (stack.length > 0 && indent <= stack[stack.length - 1].indent) {
             const closed = stack.pop()!;
-            if (i > closed.startLine) ranges.push({ start: closed.startLine, end: i });
+            let endIdx = i - 1;
+            while (endIdx >= 0 && lines[endIdx].trim() === '') endIdx--;
+            const endLine = endIdx + 1; // convert to 1-indexed
+            if (endLine > closed.startLine) ranges.push({ start: closed.startLine, end: endLine });
           }
           // Only start a fold here if the next non-blank line has greater indentation
           let nextIndent = -1;
@@ -242,6 +245,43 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
       },
     });
     disposablesRef.current.push(completionDisposable);
+
+    // Auto-close # @viz blocks: pressing Enter on an unclosed # @viz line
+    // expands it to "# @viz\n\n# @end" with the cursor on the blank middle line.
+    editorInstance.addCommand(monaco.KeyCode.Enter, () => {
+      const model = editorInstance.getModel();
+      const position = editorInstance.getPosition();
+      const selections = editorInstance.getSelections();
+      if (!model || !position || !selections || selections.length !== 1 || !selections[0].isEmpty()) {
+        editorInstance.trigger('keyboard', 'type', { text: '\n' });
+        return;
+      }
+
+      const lineContent = model.getLineContent(position.lineNumber);
+      if (lineContent.trim() === '# @viz') {
+        // Check whether a # @end already closes this block
+        const lineCount = model.getLineCount();
+        let isClosed = false;
+        for (let i = position.lineNumber + 1; i <= lineCount; i++) {
+          const l = model.getLineContent(i).trim();
+          if (l === '# @end') { isClosed = true; break; }
+          if (l === '# @viz') break; // another unclosed block starts
+        }
+
+        if (!isClosed) {
+          const indent = lineContent.match(/^(\s*)/)?.[1] ?? '';
+          const endCol = model.getLineMaxColumn(position.lineNumber);
+          editorInstance.executeEdits('viz-block-close', [{
+            range: new monaco.Range(position.lineNumber, endCol, position.lineNumber, endCol),
+            text: '\n\n' + indent + '# @end',
+          }]);
+          editorInstance.setPosition({ lineNumber: position.lineNumber + 1, column: indent.length + 1 });
+          return;
+        }
+      }
+
+      editorInstance.trigger('keyboard', 'type', { text: '\n' });
+    });
 
     // Hover provider
     const hoverDisposable = monaco.languages.registerHoverProvider('python', {
