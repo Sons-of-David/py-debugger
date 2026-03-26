@@ -14,30 +14,6 @@ cell = MyRect(width=2, height=2, color=(80, 160, 240))
 panel.add(cell)
 # @end`;
 
-const debugCallCode = `arr = [5, 3, 8, 1]
-
-def sort_from(start):
-    for i in range(start, len(arr) - 1):
-        if arr[i] > arr[i + 1]:
-            arr[i], arr[i + 1] = arr[i + 1], arr[i]
-
-# @viz
-class ClickableRect(Rect):
-    def __init__(self, idx, **kwargs):
-        super().__init__(**kwargs)
-        self.idx = idx
-
-    def on_click(self, position):
-        # Return DebugCall to open a traced sub-run of any expression
-        return DebugCall(f'sort_from({self.idx})')
-
-panel = Panel(x=1, y=1)
-arr_view = Array(cells=arr)
-panel.add(arr_view)
-for i in range(4):
-    r = ClickableRect(idx=i, x=i, y=2, width=1, height=1, color=(120, 180, 120))
-    panel.add(r)
-# @end`;
 
 export function InteractiveMode() {
   return (
@@ -82,40 +58,6 @@ export function InteractiveMode() {
           re-serialize the visual state and refresh the grid.
         </p>
         <CodeBlock code={onClickBasicCode} />
-      </section>
-
-      {/* DebugCall */}
-      <section>
-        <h2 className={`${t.heading2} mb-1`}>
-          <code className="font-mono">DebugCall("expression")</code>
-        </h2>
-        <p className={`${t.muted} mb-4`}>
-          Return a <code className={t.inlineCode}>DebugCall</code> from{' '}
-          <code className={t.inlineCode}>on_click</code> to open a{' '}
-          <strong className={t.strong}>traced sub-run</strong>. The expression is wrapped into
-          a function and traced as a mini timeline — the app enters{' '}
-          <code className={t.inlineCode}>debug_in_event</code> mode with full prev/next
-          navigation. Click <strong className={t.strong}>Back to Interactive</strong> when
-          done.
-        </p>
-        <CodeBlock code={debugCallCode} />
-
-        <div className={`mt-4 ${t.surface} rounded-lg p-4`}>
-          <p className={`${t.bodySmall} font-medium mb-2`}>What happens when you click:</p>
-          <ol className="space-y-2">
-            {[
-              'on_click returns DebugCall("sort_from(2)") — the expression string.',
-              'The app wraps it into a function and traces it against the current execution namespace.',
-              'A new timeline appears. Step through it to watch sort_from(2) execute.',
-              'Click "Back to Interactive" — mutations from the sub-run are now live.',
-            ].map((step, i) => (
-              <li key={i} className="flex gap-3">
-                <span className={t.stepBullet}>{i + 1}</span>
-                <span className={`${t.bodySmall} leading-relaxed`}>{step}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
       </section>
 
       {/* CTA */}

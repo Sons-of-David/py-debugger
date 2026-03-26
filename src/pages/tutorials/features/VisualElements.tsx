@@ -76,8 +76,8 @@ export function VisualElements() {
         <p className="text-xs font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wider mb-1">Features</p>
         <h1 className={`${t.heading1} mb-3`}>Visual Elements</h1>
         <p className={`${t.body} leading-relaxed max-w-xl`}>
-          Builder Code declares visual elements that live on the 50×50 grid. Each element is
-          a Python object whose properties can be bound to algorithm variables via{' '}
+          Viz blocks in your code declare visual elements that live on the 50×50 grid. Each
+          element is a Python object whose properties can be bound to algorithm variables via{' '}
           <code className={t.inlineCode}>V("expr")</code>, so the visualization stays in sync
           with the trace automatically.
         </p>
