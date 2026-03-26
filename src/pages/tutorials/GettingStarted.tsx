@@ -2,28 +2,26 @@ import { Link } from 'react-router-dom';
 import { t } from './theme';
 import { CodeBlock } from './CodeBlock';
 
-const debuggerCode = `arr = [4, 2, 7, 1, 5]
+const combinedCode = `arr = [4, 2, 7, 1, 5]
 min_val = arr[0]
 min_idx = 0
-set_debug(True)
+
+# @viz
+vis = Array(cells=arr, x=1, y=1)
+cursor = Arrow(position=V('(0, min_idx)'), angle=Arrow.DOWN, color=(80, 120, 220))
+# @end
 
 for i in range(1, len(arr)):
     if arr[i] < min_val:
         min_val = arr[i]
         min_idx = i`;
 
-const builderCode = `panel = Panel()
-panel.position = (1, 1)
-
-arr = Array(cells=V('arr'), position=(0, 0))
-panel.add(arr)
-
-cursor = Arrow(
-    position=V('(0, i)'),
-    angle=Arrow.DOWN,
-    color=(80, 120, 220)
-)
-panel.add(cursor)`;
+const flowSteps = [
+  { label: 'Write code', sub: 'Algorithm + @viz blocks in one file' },
+  { label: 'Analyze', sub: 'Python runs in-browser, timeline recorded' },
+  { label: 'Trace', sub: 'Step through every frame' },
+  { label: 'Interact', sub: 'Click elements, run handlers' },
+];
 
 export function GettingStarted() {
   return (
@@ -39,34 +37,61 @@ export function GettingStarted() {
         </p>
       </div>
 
+      {/* Flow diagram */}
+      <div className="flex flex-col sm:flex-row items-stretch gap-2">
+        {flowSteps.map((step, i) => (
+          <div key={step.label} className="flex sm:flex-col items-center gap-2 flex-1">
+            <div className={`flex-1 ${t.card} p-3 text-center`}>
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{step.label}</p>
+              <p className={`${t.muted} text-xs mt-0.5`}>{step.sub}</p>
+            </div>
+            {i < flowSteps.length - 1 && (
+              <svg className="shrink-0 text-gray-300 dark:text-gray-600 sm:rotate-90" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 8h10M9 4l4 4-4 4" />
+              </svg>
+            )}
+          </div>
+        ))}
+      </div>
+
       {/* Step 1 */}
       <section>
         <h2 className={`${t.heading2} mb-1`}>Step 1 — Write your code</h2>
         <p className={`${t.muted} mb-4`}>
-          The left panel has two editors. Your algorithm goes in the{' '}
-          <strong className={t.strong}>Debugger Code</strong> editor. The layout of what to
-          draw on the grid goes in the <strong className={t.strong}>Builder Code</strong> editor.
+          Everything goes in one editor. Write your algorithm as normal Python, then add{' '}
+          <code className={t.inlineCode}># @viz</code> /{' '}
+          <code className={t.inlineCode}># @end</code> blocks to declare visual elements and
+          mark snapshot points. You can place as many blocks as you like anywhere in the file.
         </p>
 
-        <div className="space-y-4">
-          <div className={`${t.card} p-4`}>
-            <h3 className={`${t.heading3} mb-2`}>Debugger Code — the algorithm</h3>
-            <p className={`${t.bodySmall} mb-3`}>
-              Write any Python algorithm here. Call{' '}
-              <code className={t.inlineCode}>set_debug(True)</code> to mark where the timeline
-              recording begins — any lines before that call run silently as setup.
-            </p>
-            <CodeBlock code={debuggerCode} />
-          </div>
+        <CodeBlock code={combinedCode} />
 
+        <div className="mt-4 space-y-3">
           <div className={`${t.card} p-4`}>
-            <h3 className={`${t.heading3} mb-2`}>Builder Code — the visualization</h3>
-            <p className={`${t.bodySmall} mb-3`}>
-              Declare visual elements and position them on the grid. Wrap any property in{' '}
-              <code className={t.inlineCode}>V("expr")</code> to bind it to a debugger
-              variable — it updates automatically at every step.
+            <h3 className={`${t.heading3} mb-1`}>Algorithm code</h3>
+            <p className={t.bodySmall}>
+              Any valid Python. Lines outside <code className={t.inlineCode}># @viz</code> blocks
+              run as normal algorithm logic — the tracer records variable values at every line.
             </p>
-            <CodeBlock code={builderCode} />
+          </div>
+          <div className={`${t.card} p-4`}>
+            <h3 className={`${t.heading3} mb-1`}>@viz blocks — setup and snapshots</h3>
+            <p className={t.bodySmall}>
+              A <code className={t.inlineCode}># @viz … # @end</code> block declares or updates
+              visual elements. When execution reaches <code className={t.inlineCode}># @end</code>,
+              the current state of all elements is recorded as a timeline frame.
+            </p>
+          </div>
+          <div className={`${t.card} p-4`}>
+            <h3 className={`${t.heading3} mb-1`}>
+              <code className="font-mono">V("expr")</code> — reactive bindings
+            </h3>
+            <p className={t.bodySmall}>
+              Wrap any element property in <code className={t.inlineCode}>V("expr")</code> to
+              bind it to a Python expression. It is evaluated at every algorithm step — when the
+              value changes, a new frame is recorded automatically, with no extra @viz block
+              needed.
+            </p>
           </div>
         </div>
       </section>
@@ -77,16 +102,16 @@ export function GettingStarted() {
         <p className={`${t.muted} mb-3`}>
           Click <strong className={t.strong}>Analyze</strong> in the header. Python runs
           entirely in your browser (via WebAssembly) and records every traced line as a{' '}
-          <em>timeline</em>. Both editors lock while the trace runs.
+          <em>timeline</em>. The editor locks while the trace runs.
         </p>
         <div className={`${t.surface} rounded-lg p-4`}>
           <p className={`${t.bodySmall} font-medium mb-2`}>What happens during Analyze:</p>
           <ol className="space-y-2">
             {[
-              'Builder Code runs first — sets up visual elements and their V() bindings.',
-              'Debugger Code runs under sys.settrace, recording variable values at every line.',
-              'At each line, V() expressions evaluate against current variables to capture a visual snapshot.',
-              'Two parallel timelines are stored in memory: code state and visual state.',
+              'The @viz setup block runs first — elements are created and the initial snapshot is recorded.',
+              'The algorithm runs under sys.settrace, recording variable values at every line.',
+              'After each line, V() expressions are re-evaluated; changed values trigger a new frame.',
+              'The full timeline is stored in memory — stepping never re-runs Python.',
             ].map((step, i) => (
               <li key={i} className="flex gap-3">
                 <span className={t.stepBullet}>{i + 1}</span>
@@ -117,7 +142,7 @@ export function GettingStarted() {
             },
             {
               heading: 'Code Highlight',
-              body: 'The Debugger Code editor highlights the current line. Click the gutter to set breakpoints and jump between them.',
+              body: 'The editor highlights the current line. Click the gutter to set breakpoints and jump between them.',
             },
             {
               heading: 'No Re-execution',
@@ -140,12 +165,7 @@ export function GettingStarted() {
           timeline and enter interactive mode. Visual elements with{' '}
           <code className={t.inlineCode}>on_click</code> handlers become clickable — the
           cursor changes to a pointer. Clicking an element runs its Python handler and
-          re-renders the grid instantly.
-        </p>
-        <p className={`${t.muted}`}>
-          Handlers can also return a{' '}
-          <code className={t.inlineCode}>DebugCall("expr")</code> to open a traced sub-run,
-          letting you step through handler logic as a mini timeline. See{' '}
+          re-renders the grid instantly. See{' '}
           <Link to="/tutorials/interactive-mode" className={t.linkAccent}>
             Interactive Mode
           </Link>{' '}
@@ -172,8 +192,8 @@ export function GettingStarted() {
       {/* Bottom nav */}
       <div className={`pt-4 border-t ${t.divider} flex justify-between items-center`}>
         <Link to="/tutorials" className={t.linkMuted}>← Back to tutorials</Link>
-        <Link to="/tutorials/visual-elements" className={t.linkMuted}>
-          Visual Elements →
+        <Link to="/tutorials/algorithms/selection-sort" className={t.linkMuted}>
+          Selection Sort →
         </Link>
       </div>
     </div>
