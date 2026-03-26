@@ -44,13 +44,14 @@ interface GridAreaProps {
   /** editor: called when a click produces a traced mini-timeline. */
   onTrace?: (result: TraceStageInfo) => void;
   appMode?: 'idle' | 'trace' | 'interactive';
+  projectName?: string;
   onCreateGif?: (region: CaptureRegion | null) => void;
   isCreatingGif?: boolean;
   allowGif?: boolean;
 }
 
 export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
-  function GridArea({ darkMode, mouseEnabled, textBoxes, onTextBoxesChange, hideToolbar = false, elements, vizRanges: vizRanges, onTrace: onTrace, appMode = 'idle', onCreateGif, isCreatingGif = false, allowGif = false }, ref) {
+  function GridArea({ darkMode, mouseEnabled, textBoxes, onTextBoxesChange, hideToolbar = false, elements, vizRanges: vizRanges, onTrace: onTrace, appMode = 'idle', projectName = 'visual-panel', onCreateGif, isCreatingGif = false, allowGif = false }, ref) {
     const {
       cells,
       overlayCells,
@@ -203,7 +204,7 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
         const dataUrl = await captureFrameData(region);
         if (dataUrl) {
           const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-          downloadDataUrl(dataUrl, `visual-panel-${timestamp}.png`);
+          downloadDataUrl(dataUrl, `${projectName}-${timestamp}.png`);
         }
       } catch (err) {
         console.error('Screenshot failed:', err);
@@ -211,7 +212,7 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
         setIsCapturing(false);
         setCaptureRegion(null);
       }
-    }, [isCapturing, captureFrameData, onCreateGif]);
+    }, [isCapturing, captureFrameData, onCreateGif, projectName]);
 
     const handleScreenshotClick = useCallback(() => {
       if (isCapturing) return;

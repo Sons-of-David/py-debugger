@@ -550,6 +550,7 @@ function App() {
                 vizRanges={vizRanges}
                 onTrace={startTrace}
                 appMode={appMode}
+                projectName={projectName}
                 onCreateGif={handleCreateGif}
                 isCreatingGif={isCreatingGif}
                 allowGif={IS_LOCAL}
