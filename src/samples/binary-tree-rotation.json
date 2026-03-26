@@ -1,4 +1,100 @@
 {
   "userCode": "# \u2500\u2500 Binary Tree Splay (Roll-Up) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n# Interactive mode only \u2014 there is no algorithm to trace.\n# After clicking Analyze, click \"go to interactive mode\" to start.\n#\n# Click any node to splay (roll up) it toward the root via tree rotations.\n# Green nodes are balanced (|left_height \u2212 right_height| \u2264 1); red are not.\n# Height is shown in brackets below each key.\n# \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nclass Node:\n\n    @staticmethod\n    def ht(node: 'Node'):\n        return -1 if node is None else node.height\n\n    def __init__(self, key: int):\n        self.key = key\n        self.parent = None \n        self.left = None\n        self.right = None\n        self.height = 0\n\n        # @viz\n        self._viz = VizNode(self)\n        # @end\n\n\n    def __str__(self):\n        left_str = '' if self.left is None else str(self.left)\n        right_str = '' if self.right is None else str(self.right)\n        if len(left_str) + len(right_str) == 0:\n            return str(self.key)\n        else:\n            return f'{self.key}({left_str},{right_str})'\n\n    def update_height(self):\n        self.height = 1 + max( \n            -1 if self.left is None else self.left.height,\n            -1 if self.right is None else self.right.height)\n        # @viz\n        self._viz.set_label(f'{self.key}\\n[{self.height}]')\n        # @end\n\n    def set_child(self, node: 'Node', left_side: bool):\n        if left_side:\n            self.left = node\n        else:\n            self.right = node\n        if node is not None:\n            node.parent = self\n            # @viz\n            node._viz.edge.start = self._viz.edge.end\n            # @end\n\n    def roll_up(self):\n        if self.parent is None:\n            return\n\n        parent = self.parent\n        grandparent = parent.parent\n        if grandparent is not None:\n            if grandparent.left is parent:\n                grandparent.set_child(self, left_side = True)\n            else:\n                grandparent.set_child(self, left_side = False)\n        else:\n            self.parent = None\n\n        if parent.left is self:\n            child = self.right\n            self.set_child(parent, left_side = False)\n            parent.set_child(child, left_side = True)\n        else:\n            child = self.left\n            self.set_child(parent, left_side = True)\n            parent.set_child(child, left_side = False)\n        \n        parent.update_height()\n        self.update_height()\n\n\nclass Tree:\n\n    @staticmethod\n    def parse_tree(rep: str) -> 'Tree':\n        \"\"\"\n        Parse strings like A(B(C,D),E(F,)) into a tree.\n        Brackets with comma (,) are use to show the children. There should\n        always be just one comma, and the left \\ right sides can be left empty.\n        \"\"\"\n        def _parse_tree(rep: str, index: int) -> tuple[Node, int]:\n            route = []\n            key_str = []\n            left_child = True\n            while index < len(rep) and rep[index] not in ('(',')',','):\n                key_str.append(rep[index])\n                index += 1\n                    \n            if index < len(rep) and rep[index] == '(':\n\n                if len(key_str) == 0:\n                    raise PopupException(f'empty key at index {rep}[{index}] ')   \n                key = int(''.join(key_str))\n                node = Node(key)\n                \n                left, index = _parse_tree(rep, index+1)\n                node.set_child(left, left_side=True)\n                \n                if rep[index] != ',':\n                    raise PopupException(f'key {key} doesn\\'t have 2 children in {rep}')\n\n                right, index = _parse_tree(rep, index+1)\n                node.set_child(right, left_side=False)\n                \n                if rep[index] != ')':\n                    raise PopupException(f'key {key} doesn\\'t have closing bracket in {rep}')\n                node.update_height()\n                return node, index+1\n            else:   # found just ',', ')' or end of string\n                if len(key_str) == 0:\n                    return None, index\n                \n                node = Node(int(''.join(key_str)))\n                node.update_height()\n                return node, index\n        root, _ = _parse_tree(rep, 0)\n        return Tree(root)\n\n\n    def __init__(self, root: Node):\n        self.root = root\n\n        # @viz\n        self._viz = VizTree(self)\n        # @end\n\n    def roll_up(self, node: Node):\n        node.roll_up()\n        if node.parent is None:\n            self.root = node\n        else:\n            while node.parent is not None:\n                node = node.parent\n                node.update_height()\n        # @viz\n        self._viz.redraw()\n        # @end\n\n\n\n\n# @viz\nfrom graphs import compute_rel_positions\n\nclass VizNode:\n    def __init__(self, node: Node):\n        self.node = node\n        self.edge = Line(end_offset=(0.5,0), z=1)\n        self.btn = LabeledButton(label=f'{node.key}', color=[0,100,50], on_click=lambda x,y: print(1))\n\n    def set_position(self, x: int, y: int):\n        self.btn.x = x\n        self.btn.y = y\n        self.edge.end = (y, x)\n        if self.node.left is not None:\n            self.node.left._viz.edge.start = (y, x)\n        if self.node.right is not None:\n            self.node.right._viz.edge.start = (y, x)\n\n    def set_color(self, color: tuple[int, int, int]):\n        self.btn.rect.color = color\n\n    def set_label(self, label: str):\n        self.btn.label.label = label\n\n    def set_on_click(self, on_click: callable):\n        self.btn.set_on_click(on_click)\n\nclass VizTree:\n    def __init__(self, tree: Tree):\n        self.tree = tree\n\n        def _on_click(node: Node):\n            if node is None:\n                return\n            node._viz.set_on_click(lambda x,y: no_debug(tree.roll_up)(node))\n            _on_click(node.left)\n            _on_click(node.right)\n\n        _on_click(tree.root)\n\n        self.redraw()\n\n    def to_dict(self):\n        def _to_dict(node: Node):\n            if node is None:\n                return\n            tree_dict[node] = (node.left, node.right)\n            _to_dict(node.left)\n            _to_dict(node.right)\n        tree_dict = {}\n        _to_dict(self.tree.root)\n        return tree_dict\n\n    def redraw(self, position: tuple[int,int] | None = None):\n\n        def _draw_dict(node: Node, position: tuple[int, int], rel_x: dict):\n            if node is None:\n                return\n            node._viz.set_position(position[1], position[0])\n            if abs(Node.ht(node.left) - Node.ht(node.right)) <= 1:\n                node._viz.set_color((0,100,50))\n            else:\n                node._viz.set_color((200,50,0))\n            _draw_dict(node.left, (position[0]+2, position[1]+rel_x[node.left]), rel_x)\n            _draw_dict(node.right, (position[0]+2, position[1]+rel_x[node.right]), rel_x)\n\n        rel_x = compute_rel_positions(self.to_dict(), self.tree.root)\n        rel_x[None] = 0\n\n        if position is None:\n            position = (1, 7)\n        self.tree.root._viz.edge.start = position\n        _draw_dict(self.tree.root, position, rel_x)\n\n\nclass LabeledButton(Panel):\n    def __init__(self, label: str, color: tuple[int,int,int] = (220,140,160), on_click: callable  = None, **kwargs):\n        super().__init__(**kwargs)\n        self.rect = Rect(color=color)\n        self.rect.on_click = on_click\n        self.label = Label(label=label)\n        self.add(self.label, self.rect)\n\n    def set_on_click(self, on_click: callable):\n        self.rect.on_click = on_click\n\n# @end\n\n\ntree_rep = \"8(3(1,4(,6)),11(9,15(13(,14),16)))\"\n# tree_rep = \"5(1(,3(,4)),10(7,11))\"\n\ntree = no_debug(Tree.parse_tree)(tree_rep)\n\n\n\n\n# @viz\ntree._viz.redraw()\n# @end\n\n\n\n\n\n    \n\n    \n",
-  "textBoxes": []
+  "textBoxes": [
+    {
+      "id": "text-btr-explain",
+      "row": 18,
+      "col": 2,
+      "widthCells": 16,
+      "heightCells": 10,
+      "content": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {"type": "textStyle", "attrs": {"color": "#ffb43f", "fontSize": "24px"}},
+                  {"type": "bold"}
+                ],
+                "text": "Binary Tree Splay:"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {"type": "textStyle", "attrs": {"color": "#ff8c82", "fontSize": "18px"}},
+                  {"type": "bold"}
+                ],
+                "text": "Why balance matters"
+              },
+              {"type": "text", "text": ":"}
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "marks": [{"type": "textStyle", "attrs": {"color": "#d6d6d6", "fontSize": "16px"}}],
+                "text": "In a BST, most operations (search, insert, delete) run in O(height) time. For a balanced tree of n nodes, height \u2248 log\u2082(n) \u2014 but an unbalanced tree can degenerate to height n, making every operation O(n)."
+              }
+            ]
+          },
+          {"type": "paragraph"},
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {"type": "textStyle", "attrs": {"color": "#96d35f", "fontSize": "18px"}},
+                  {"type": "bold"}
+                ],
+                "text": "Rotations"
+              },
+              {"type": "text", "text": ":"}
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "marks": [{"type": "textStyle", "attrs": {"color": "#d6d6d6", "fontSize": "16px"}}],
+                "text": "A rotation is a local restructuring that moves a node closer to the root without breaking the BST property. In a splay tree, every accessed node is rolled up until it becomes the root \u2014 frequently accessed nodes stay near the top. Balanced nodes (height difference \u2264 1) are shown in "
+              },
+              {
+                "type": "text",
+                "marks": [{"type": "textStyle", "attrs": {"color": "#96d35f", "fontSize": "16px"}}],
+                "text": "green"
+              },
+              {
+                "type": "text",
+                "marks": [{"type": "textStyle", "attrs": {"color": "#d6d6d6", "fontSize": "16px"}}],
+                "text": "; unbalanced ones in "
+              },
+              {
+                "type": "text",
+                "marks": [{"type": "textStyle", "attrs": {"color": "#ff8c82", "fontSize": "16px"}}],
+                "text": "red"
+              },
+              {
+                "type": "text",
+                "marks": [{"type": "textStyle", "attrs": {"color": "#d6d6d6", "fontSize": "16px"}}],
+                "text": "."
+              }
+            ]
+          }
+        ]
+      },
+      "bgColor": "#444444"
+    }
+  ]
 }
