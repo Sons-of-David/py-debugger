@@ -16,12 +16,6 @@ for i in range(1, len(arr)):
         min_val = arr[i]
         min_idx = i`;
 
-const flowSteps = [
-  { label: 'Write code', sub: 'Algorithm + @viz blocks in one file' },
-  { label: 'Analyze', sub: 'Python runs in-browser, timeline recorded' },
-  { label: 'Trace', sub: 'Step through every frame' },
-  { label: 'Interact', sub: 'Click elements, run handlers' },
-];
 
 export function GettingStarted() {
   return (
@@ -38,20 +32,41 @@ export function GettingStarted() {
       </div>
 
       {/* Flow diagram */}
-      <div className="flex flex-col sm:flex-row items-stretch gap-2">
-        {flowSteps.map((step, i) => (
-          <div key={step.label} className="flex sm:flex-col items-center gap-2 flex-1">
-            <div className={`flex-1 ${t.card} p-3 text-center`}>
-              <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{step.label}</p>
-              <p className={`${t.muted} text-xs mt-0.5`}>{step.sub}</p>
-            </div>
-            {i < flowSteps.length - 1 && (
-              <svg className="shrink-0 text-gray-300 dark:text-gray-600 sm:rotate-90" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M3 8h10M9 4l4 4-4 4" />
-              </svg>
-            )}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {/* Write code */}
+        <div className={`${t.card} p-3 text-center min-w-[7rem] flex-1`}>
+          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Write code</p>
+          <p className={`${t.muted} text-xs mt-0.5`}>Algorithm + @viz blocks</p>
+        </div>
+        {/* → */}
+        <svg className="shrink-0 text-gray-300 dark:text-gray-600" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M3 8h10M9 4l4 4-4 4" />
+        </svg>
+        {/* Analyze */}
+        <div className={`${t.card} p-3 text-center min-w-[7rem] flex-1`}>
+          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Analyze</p>
+          <p className={`${t.muted} text-xs mt-0.5`}>Timeline recorded</p>
+        </div>
+        {/* → */}
+        <svg className="shrink-0 text-gray-300 dark:text-gray-600" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M3 8h10M9 4l4 4-4 4" />
+        </svg>
+        {/* Trace ⇄ Interact */}
+        <div className="flex items-center gap-1.5 flex-1">
+          <div className={`${t.card} p-3 text-center min-w-[5rem] flex-1`}>
+            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Trace</p>
+            <p className={`${t.muted} text-xs mt-0.5`}>Step through</p>
           </div>
-        ))}
+          {/* ⇄ loop arrow */}
+          <svg className="shrink-0 text-indigo-400 dark:text-indigo-500" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <path d="M5 9h14M15 5l4 4-4 4" />
+            <path d="M19 15H5M9 19l-4-4 4-4" />
+          </svg>
+          <div className={`${t.card} p-3 text-center min-w-[5rem] flex-1`}>
+            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Interact</p>
+            <p className={`${t.muted} text-xs mt-0.5`}>Click elements</p>
+          </div>
+        </div>
       </div>
 
       {/* Step 1 */}
