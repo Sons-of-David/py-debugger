@@ -233,7 +233,7 @@ export function VisualElements() {
 
       {/* Bottom nav */}
       <div className={`pt-4 border-t ${t.divider} flex justify-between items-center`}>
-        <Link to="/tutorials/getting-started" className={t.linkMuted}>← Getting Started</Link>
+        <Link to="/tutorials/algorithms/bfs-maze" className={t.linkMuted}>← BFS Maze</Link>
         <Link to="/tutorials/tracing" className={t.linkMuted}>
           Tracing &amp; Variables →
         </Link>

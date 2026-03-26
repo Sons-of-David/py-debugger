@@ -385,7 +385,7 @@ export function TrappingRain() {
 
       {/* Bottom nav */}
       <div className={`pt-4 border-t ${t.divider} flex justify-between items-center`}>
-        <Link to="/tutorials/algorithms/bubble-sort" className={t.linkMuted}>← Bubble Sort</Link>
+        <Link to="/tutorials/algorithms/selection-sort" className={t.linkMuted}>← Selection Sort</Link>
         <Link to="/tutorials/algorithms/bfs-maze" className={t.linkMuted}>BFS Maze →</Link>
       </div>
 

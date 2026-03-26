@@ -518,6 +518,7 @@ export function BFSMaze() {
       {/* Bottom nav */}
       <div className={`pt-4 border-t ${t.divider} flex justify-between items-center`}>
         <Link to="/tutorials/algorithms/trapping-rain" className={t.linkMuted}>← Trapping Rain</Link>
+        <Link to="/tutorials/visual-elements" className={t.linkMuted}>Visual Elements →</Link>
       </div>
 
     </div>

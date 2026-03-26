@@ -76,9 +76,7 @@ export function InteractiveMode() {
       {/* Bottom nav */}
       <div className={`pt-4 border-t ${t.divider} flex justify-between items-center`}>
         <Link to="/tutorials/tracing" className={t.linkMuted}>← Tracing &amp; Variables</Link>
-        <Link to="/tutorials/algorithms/selection-sort" className={t.linkMuted}>
-          Selection Sort →
-        </Link>
+        <Link to="/tutorials" className={t.linkMuted}>Back to tutorials →</Link>
       </div>
     </div>
   );

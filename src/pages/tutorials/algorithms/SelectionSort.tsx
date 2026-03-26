@@ -386,9 +386,9 @@ export function SelectionSort() {
 
       {/* Bottom nav */}
       <div className={`pt-4 border-t ${t.divider} flex justify-between items-center`}>
-        <Link to="/tutorials" className={t.linkMuted}>← Back to tutorials</Link>
-        <Link to="/tutorials/algorithms/bubble-sort" className={t.linkMuted}>
-          Bubble Sort →
+        <Link to="/tutorials/getting-started" className={t.linkMuted}>← Getting Started</Link>
+        <Link to="/tutorials/algorithms/trapping-rain" className={t.linkMuted}>
+          Trapping Rain →
         </Link>
       </div>
 
