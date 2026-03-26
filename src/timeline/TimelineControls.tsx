@@ -127,19 +127,17 @@ export function TimelineControls({
           →
         </button>
 
-        {appMode === 'trace' && onEnterInteractive && (
-          <>
-            <div className="w-px h-5 bg-gray-300 dark:bg-gray-500 mx-0.5" />
-            <button
-              onClick={canEnterInteractive ? onEnterInteractive : undefined}
-              disabled={!canEnterInteractive}
-              className={canEnterInteractive ? btnActive : btnDisabled}
-              title={canEnterInteractive ? "Finish trace and enter interactive mode" : "No interactive elements"}
-            >
-              <MousePointerClick size={14} />
-            </button>
-          </>
-        )}
+        <>
+          <div className="w-px h-5 bg-gray-300 dark:bg-gray-500 mx-0.5" />
+          <button
+            onClick={appMode === 'trace' && canEnterInteractive && onEnterInteractive ? onEnterInteractive : undefined}
+            disabled={appMode !== 'trace' || !canEnterInteractive || !onEnterInteractive}
+            className={appMode === 'trace' && canEnterInteractive && onEnterInteractive ? btnActive : btnDisabled}
+            title={appMode === 'trace' && canEnterInteractive ? "Finish trace and enter interactive mode" : "No interactive elements"}
+          >
+            <MousePointerClick size={14} />
+          </button>
+        </>
 
       </div>
     </div>
