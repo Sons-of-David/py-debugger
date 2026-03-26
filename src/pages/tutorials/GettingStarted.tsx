@@ -32,9 +32,9 @@ export function GettingStarted() {
       </div>
 
       {/* Flow diagram */}
-      <div className="flex items-center gap-1.5 flex-wrap">
+      <div className="flex items-center gap-1.5">
         {/* Write code */}
-        <div className={`${t.card} p-3 text-center min-w-[7rem] flex-1`}>
+        <div className={`${t.card} p-3 text-center flex-1`}>
           <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Write code</p>
           <p className={`${t.muted} text-xs mt-0.5`}>Algorithm + @viz blocks</p>
         </div>
@@ -43,7 +43,7 @@ export function GettingStarted() {
           <path d="M3 8h10M9 4l4 4-4 4" />
         </svg>
         {/* Analyze */}
-        <div className={`${t.card} p-3 text-center min-w-[7rem] flex-1`}>
+        <div className={`${t.card} p-3 text-center flex-1`}>
           <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Analyze</p>
           <p className={`${t.muted} text-xs mt-0.5`}>Timeline recorded</p>
         </div>
@@ -51,21 +51,20 @@ export function GettingStarted() {
         <svg className="shrink-0 text-gray-300 dark:text-gray-600" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M3 8h10M9 4l4 4-4 4" />
         </svg>
-        {/* Trace ⇄ Interact */}
-        <div className="flex items-center gap-1.5 flex-1">
-          <div className={`${t.card} p-3 text-center min-w-[5rem] flex-1`}>
-            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Trace</p>
-            <p className={`${t.muted} text-xs mt-0.5`}>Step through</p>
-          </div>
-          {/* ⇄ loop arrow */}
-          <svg className="shrink-0 text-indigo-400 dark:text-indigo-500" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-            <path d="M5 9h14M15 5l4 4-4 4" />
-            <path d="M19 15H5M9 19l-4-4 4-4" />
-          </svg>
-          <div className={`${t.card} p-3 text-center min-w-[5rem] flex-1`}>
-            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Interact</p>
-            <p className={`${t.muted} text-xs mt-0.5`}>Click elements</p>
-          </div>
+        {/* Trace */}
+        <div className={`${t.card} p-3 text-center flex-1`}>
+          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Trace</p>
+          <p className={`${t.muted} text-xs mt-0.5`}>Step through</p>
+        </div>
+        {/* ⇄ loop arrow — taller SVG so top/bottom paths have breathing room */}
+        <svg className="shrink-0 text-indigo-400 dark:text-indigo-500" width="24" height="32" viewBox="0 0 24 32" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <path d="M3 9h18M15 5l4 4-4 4" />
+          <path d="M21 23H3M9 27l-4-4 4-4" />
+        </svg>
+        {/* Interact */}
+        <div className={`${t.card} p-3 text-center flex-1`}>
+          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Interact</p>
+          <p className={`${t.muted} text-xs mt-0.5`}>Click elements</p>
         </div>
       </div>
 
