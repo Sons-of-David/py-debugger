@@ -4,6 +4,7 @@ import type { VisualBuilderElementBase } from '../api/visualBuilder';
 import VB_ENGINE_PYTHON from './_vb_engine.py?raw';
 import USER_API_PYTHON from './user_api.py?raw';
 import VISUAL_BUILDER_PYTHON from './vb_serializer.py?raw';
+const IMPORT_MODULES = import.meta.glob('./imports/*.py', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
 import { validateVizBlocks, getVizRanges } from './viz-block-parser';
 
 export interface TraceVariable {
@@ -96,6 +97,10 @@ async function initializePythonEngine(code: string): ReturnType<typeof loadPyodi
     // Write engine modules to Pyodide VFS so visualBuilder.py can import them
     py.FS.writeFile('/home/pyodide/_vb_engine.py', VB_ENGINE_PYTHON);
     py.FS.writeFile('/home/pyodide/user_api.py', USER_API_PYTHON);
+    for (const [path, src] of Object.entries(IMPORT_MODULES)) {
+      const filename = path.split('/').pop()!;
+      py.FS.writeFile(`/home/pyodide/${filename}`, src);
+    }
 
     // Clear any cached imports so the freshly written files are picked up
     await py.runPythonAsync(`
