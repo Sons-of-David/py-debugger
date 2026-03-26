@@ -12,20 +12,19 @@ const NAV = [
     ],
   },
   {
+    section: 'Algorithm Walkthroughs',
+    items: [
+      { label: 'Selection Sort', to: '/tutorials/algorithms/selection-sort' },
+      { label: 'Trapping Rain', to: '/tutorials/algorithms/trapping-rain' },
+      { label: 'BFS Maze', to: '/tutorials/algorithms/bfs-maze' },
+    ],
+  },
+  {
     section: 'Features',
     items: [
       { label: 'Visual Elements', to: '/tutorials/visual-elements' },
       { label: 'Tracing & Variables', to: '/tutorials/tracing' },
       { label: 'Interactive Mode', to: '/tutorials/interactive-mode' },
-    ],
-  },
-  {
-    section: 'Algorithm Walkthroughs',
-    items: [
-      { label: 'Selection Sort', to: '/tutorials/algorithms/selection-sort' },
-      { label: 'Bubble Sort', to: '/tutorials/algorithms/bubble-sort' },
-      { label: 'Trapping Rain', to: '/tutorials/algorithms/trapping-rain' },
-      { label: 'BFS Maze', to: '/tutorials/algorithms/bfs-maze' },
     ],
   },
 ];
