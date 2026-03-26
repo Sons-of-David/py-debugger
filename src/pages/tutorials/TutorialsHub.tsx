@@ -41,7 +41,13 @@ export function TutorialsHub() {
           AlgoPlay is a browser-based visual algorithm debugger. You write Python, click
           Analyze, then step through a recorded timeline watching your data structures animate
           in sync with the code. You can also interact with the visualization and trigger new events — no installs, no server.
-         </p>
+        </p>
+        <p className={`mt-2 text-sm ${t.bodySmall}`}>
+          By{' '}
+          <a href="https://prove-me-wrong.com" target="_blank" rel="noopener noreferrer" className={t.linkAccent}>
+            Ofir David
+          </a>
+        </p>
         <div className="mt-5">
           <Link to="/" className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm">
             Open the Editor

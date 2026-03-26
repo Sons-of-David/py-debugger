@@ -4,7 +4,6 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { ThemeProvider } from './contexts/ThemeContext.tsx'
 import './index.css'
 import App from './app/App.tsx'
-import { PlanPage } from './pages/PlanPage.tsx'
 import { EmbedPage } from './app/EmbedPage.tsx'
 import { TutorialLayout } from './pages/tutorials/TutorialLayout.tsx'
 import { TutorialsHub } from './pages/tutorials/TutorialsHub.tsx'
@@ -23,7 +22,6 @@ createRoot(document.getElementById('root')!).render(
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<App />} />
-          <Route path="/plan" element={<PlanPage />} />
           <Route path="/embed" element={<EmbedPage />} />
           <Route path="/tutorials" element={<TutorialLayout />}>
             <Route index element={<TutorialsHub />} />
