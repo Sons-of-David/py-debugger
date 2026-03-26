@@ -37,11 +37,11 @@ export function TutorialsHub() {
       {/* Hero */}
       <div className="mb-10">
         <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-3">AlgoPlay Tutorials</h1>
-        <p className={`text-lg ${t.body} max-w-xl leading-relaxed`}>
-          AlgoPlay is a browser-based visual debugger for Python algorithms.
-          Write your algorithm, describe a visualization in Python, then step through
-          every line and watch your data structures come to life.
-        </p>
+        <p className={`text-lg ${t.body} leading-relaxed`}>
+          AlgoPlay is a browser-based visual algorithm debugger. You write Python, click
+          Analyze, then step through a recorded timeline watching your data structures animate
+          in sync with the code. You can also interact with the visualization and trigger new events — no installs, no server.
+         </p>
         <div className="mt-5">
           <Link to="/" className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm">
             Open the Editor
