@@ -2,7 +2,7 @@
 
 [← dev-notes](./dev-notes.md)
 
-Quick reference for writing `combinedCode` in sample JSON files. Check this before writing any sample. Update it when you discover new patterns or verify uncertain behavior.
+Quick reference for writing `code` in sample JSON files (in `src/samples`). Check this before writing any sample. Update it when you discover new patterns or verify uncertain behavior.
 
 **Source of truth:** `src/python-engine/user_api.py` and `src/api/functionsSchema.ts`
 
@@ -96,10 +96,11 @@ When a `WallBlock` is placed on a board cell, it overwrites the cell's Panel ent
 
 ## Z-ordering
 
-Lower `z` = rendered on **top** (drawn last).
+Lower `z` = rendered on **top** (drawn last). Negative values are valid — `z=-1` draws in front of `z=0`.
 
 ```python
-Rect(z=0)   # on top
+Rect(z=-1)  # furthest in front
+Rect(z=0)   # on top (default)
 Rect(z=5)   # behind
 Rect(z=10)  # furthest back
 ```
@@ -248,6 +249,24 @@ class Block(Rect):
 
 Block(x=2, y=3, animate=False)
 ```
+
+### Standard text box style
+
+Algorithm-explanation text boxes use this canonical style (reference: `2-binary-search.json`):
+
+```
+bgColor:          #444444
+Title:            color #ffb43f (gold),   24px, bold
+Section labels:   color #ff8c82 (salmon)  — "Problem"
+                  color #96d35f (green)   — "Algorithm"
+                  18px, bold
+Body text:        color #d6d6d6 (light gray), 16px
+Inline highlights: color #74a7fe (blue),  16px
+```
+
+Section label lines use a colored bold span followed by a plain `":"` in a separate text run (no color on the colon).
+
+---
 
 ### Spawning element on drag (source block pattern)
 ```python
