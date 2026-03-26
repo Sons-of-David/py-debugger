@@ -26,7 +26,9 @@ for j in range(7):
 
 const codeBFS = `def bfs(row, col):
     global clear_board
-    if not (in_board(row, col) and board[row][col] == EMPTY and clear_board):
+    if not (clear_board and 
+            in_board(row, col) and 
+            board[row][col] == EMPTY):
         return
     clear_board = False
 
@@ -87,14 +89,12 @@ panel.add(
 )`;
 
 const codeWallDrag = `def on_wall_drag(x: int, y: int, drag_type: str):
+    drag_wall.x = x
+    drag_wall.y = y
     if drag_type == 'start':
-        drag_wall.x = x
-        drag_wall.y = y
         drag_wall.alpha = 1
         return -1
     if drag_type == 'mid':
-        drag_wall.x = x
-        drag_wall.y = y
         return -1
     if drag_type == 'end':
         drag_wall.alpha = 0

@@ -24,7 +24,7 @@ def trap_rain() -> int:
         for i in indices:
             if last_max < heights[i]:
                 last_max = heights[i]
-            elif heights[0] < last_max:
+            elif heights[i] < last_max:
                 value += last_max - heights[i]
                 # @viz
                 # add water rectangle
@@ -321,8 +321,9 @@ export function TrappingRain() {
         <p className={t.muted}>
           The full <code className={t.inlineCode}>on_drag</code> signature and all its
           edge cases are listed in the API panel (top-right of the editor). The{' '}
-          <Link to="/?sample=feature-7-dragging" className={t.linkAccent}>feature-7-dragging</Link>{' '}
-          sample also demonstrates more advanced dragging patterns.
+          <Link to="/?sample=feature-7-dragging" className={t.linkAccent}>dragging sample</Link>{' '}
+          shows a simple self contained example of dragging, and for more details about the 
+          interaction mode <Link to="/tutorials/interaction-mode" className={t.linkAccent}>see here</Link>.
         </p>
       </section>
 
@@ -377,9 +378,8 @@ export function TrappingRain() {
         </div>
 
         <p className={t.muted}>
-          The{' '}
-          <Link to="/?sample=feature-6-interactive" className={t.linkAccent}>feature-6-interactive</Link>{' '}
-          sample covers more click patterns including combining class-level and instance-level handlers.
+          For more click patterns, see the{' '}
+          <Link to="/?sample=feature-6-interactive" className={t.linkAccent}>click interaction sample</Link>.
         </p>
       </section>
 

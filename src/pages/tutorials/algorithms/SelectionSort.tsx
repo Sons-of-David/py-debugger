@@ -6,6 +6,19 @@ import { EmbedPreview } from '../EmbedPreview';
 // ---------------------------------------------------------------------------
 // Code samples
 // ---------------------------------------------------------------------------
+const onlyAlgorithm = `arr = [5, 7, 2, 6, 3, 1]
+
+n = len(arr)
+
+for i in range(n):
+    min_index = i
+
+    for j in range(i + 1, n):
+        if arr[j] < arr[min_index]:
+            min_index = j
+
+    arr[i], arr[min_index] = arr[min_index], arr[i]`;
+
 
 const codeVizBlocks = `arr = [5, 7, 2, 6, 3, 1]
 
@@ -103,8 +116,12 @@ panel = Panel(x=2, y=2)
 panel.add(
     Array(cells=arr),
     Rect(width=V('i', default=0), alpha=0.7),
-    LabeledArrow(label='min index', color=(220, 70, 120), x=V('min_index'), y=-2),
-    LabeledArrow(label='j', color=(120, 70, 220), x=V('j'), y=-2)
+    LabeledArrow(label='min index', 
+                 x=V('min_index'), y=-2),
+                 color=(220, 70, 120))
+    LabeledArrow(label='j', 
+                 x=V('j'), y=-2,
+                 color=(120, 70, 220))
 )
 # @end
 
@@ -177,7 +194,7 @@ export function SelectionSort() {
             },
             {
               heading: 'Two pointers',
-              body: 'One arrow for min_index (the best candidate so far) and one for j (the current element being compared).',
+              body: 'One arrow for index of min (the best candidate so far) and one for j (the current element being compared).',
             },
             {
               heading: 'The sorted boundary',
@@ -204,6 +221,15 @@ export function SelectionSort() {
             The straightforward approach: <code className="font-mono">@viz</code> blocks
           </h2>
           <p className={`${t.muted}`}>
+            The algorithm itself for selection sort is very simple:
+          </p>
+        </div>
+
+        <CodeBlock code={onlyAlgorithm} />
+
+        <div>
+          <p className={`${t.muted} mt-3`}>
+            We add visualization using <code className={t.inlineCode}># @viz</code> blocks.
             Each <code className={t.inlineCode}># @viz … # @end</code> block marks a{' '}
             <strong className={t.strong}>snapshot point</strong> — when execution hits{' '}
             <code className={t.inlineCode}># @end</code>, the current state of all visual
