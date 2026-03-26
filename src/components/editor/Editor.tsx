@@ -127,14 +127,47 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
       ],
     });
 
-    // Register folding range provider for viz blocks
+    // Register folding range provider for viz blocks + indentation-based Python blocks
     const foldingDisposable = monaco.languages.registerFoldingRangeProvider('python', {
       provideFoldingRanges: (model: MonacoTypes.editor.ITextModel) => {
-        return getVizRanges(model.getValue()).map((r) => ({
-          start: r.startLine,
-          end: r.endLine,
-          kind: monaco.languages.FoldingRangeKind.Region,
-        }));
+        const code = model.getValue();
+        const ranges: MonacoTypes.languages.FoldingRange[] = [];
+
+        // Viz block ranges
+        for (const r of getVizRanges(code)) {
+          ranges.push({ start: r.startLine, end: r.endLine, kind: monaco.languages.FoldingRangeKind.Region });
+        }
+
+        // Indentation-based ranges for standard Python blocks
+        const lines = model.getLinesContent();
+        // Precompute indent levels (-1 for blank/comment lines)
+        const indents = lines.map((line) => {
+          const trimmed = line.trimStart();
+          return trimmed === '' || trimmed.startsWith('#') ? -1 : line.length - trimmed.length;
+        });
+        const lastContentLine = indents.reduce((last, d, i) => (d !== -1 ? i + 1 : last), 0);
+        const stack: { indent: number; startLine: number }[] = [];
+        for (let i = 0; i < lines.length; i++) {
+          const indent = indents[i];
+          if (indent === -1) continue;
+          // Close ranges whose indent is >= current
+          while (stack.length > 0 && indent <= stack[stack.length - 1].indent) {
+            const closed = stack.pop()!;
+            if (i > closed.startLine) ranges.push({ start: closed.startLine, end: i });
+          }
+          // Only start a fold here if the next non-blank line has greater indentation
+          let nextIndent = -1;
+          for (let j = i + 1; j < lines.length; j++) {
+            if (indents[j] !== -1) { nextIndent = indents[j]; break; }
+          }
+          if (nextIndent > indent) stack.push({ indent, startLine: i + 1 }); // 1-indexed
+        }
+        while (stack.length > 0) {
+          const closed = stack.pop()!;
+          if (lastContentLine > closed.startLine) ranges.push({ start: closed.startLine, end: lastContentLine });
+        }
+
+        return ranges;
       },
     });
     disposablesRef.current.push(foldingDisposable);
@@ -259,16 +292,22 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
   useImperativeHandle(ref, () => ({
     foldVizBlocks: () => {
       const editor = editorRef.current;
-      const monaco = monacoRef.current;
-      if (!editor || !monaco) return;
-      // TODO: folding is unreliable — editor.fold is a no-op if Monaco hasn't finished
-      // computing folding ranges yet (async). Need a reliable way to wait for the
-      // folding model to be ready before triggering fold (e.g. getFoldingModel() promise
-      // or polling editor.getHiddenAreas()).
-      for (const r of getVizRanges(code)) {
-        editor.setSelection(new monaco.Range(r.startLine, 1, r.startLine, 1));
-        editor.trigger('fold', 'editor.fold', {});
-      }
+      if (!editor) return;
+      const vizRanges = getVizRanges(code);
+      if (vizRanges.length === 0) return;
+      // Access the folding model directly instead of using editor.trigger('fold'),
+      // which is async and loses the correct selection by the time it runs.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const foldingController = editor.getContribution<any>('editor.contrib.folding');
+      foldingController?.getFoldingModel?.()?.then((foldingModel: any) => {
+        if (!foldingModel) return;
+        const toCollapse: unknown[] = [];
+        for (const r of vizRanges) {
+          const region = foldingModel.getRegionAtLine(r.startLine);
+          if (region && !region.isCollapsed) toCollapse.push(region);
+        }
+        if (toCollapse.length > 0) foldingModel.toggleCollapseState(toCollapse);
+      });
     },
   }), [code]);
 
