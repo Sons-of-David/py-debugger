@@ -441,7 +441,7 @@ function App() {
               type="button"
               onClick={handleAnalyze}
               disabled={isAnalyzing || !userCode.trim()}
-              className={`w-24 px-3 py-1 rounded text-sm font-medium border transition-colors flex items-center justify-center ${
+              className={`w-40 py-1 rounded text-sm font-medium border transition-colors flex items-center justify-center whitespace-nowrap ${
                 isAnalyzing || !userCode.trim()
                   ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 border-gray-200 dark:border-gray-600 cursor-not-allowed'
                   : 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-500 hover:border-indigo-500'
@@ -454,7 +454,7 @@ function App() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
                   </svg>
-                  Analyzing...
+                  Analyzing
                 </span>
               ) : (
                 <span className="flex items-center gap-1">
@@ -469,7 +469,7 @@ function App() {
             <button
               type="button"
               onClick={handleEdit}
-              className="w-24 px-3 py-1 rounded text-sm font-medium border transition-colors flex items-center justify-center bg-blue-600 text-white border-blue-600 hover:bg-blue-500 hover:border-blue-500"
+              className="w-40 py-1 rounded text-sm font-medium border transition-colors flex items-center justify-center whitespace-nowrap bg-blue-600 text-white border-blue-600 hover:bg-blue-500 hover:border-blue-500"
             >
               Edit Code
             </button>
