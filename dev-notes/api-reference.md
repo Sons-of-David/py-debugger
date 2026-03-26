@@ -41,14 +41,12 @@ Panel subclasses **can** have `on_click` — set it as an instance attribute or 
 
 ### `on_click(self, x, y)`
 - Called when user clicks the element in interactive mode
-- `x` = col, `y` = row
-- If element is **inside a Panel**: `(x, y)` is **relative to the panel's top-left**
-- If element is **top-level**: `(x, y)` is **absolute grid coordinates**
+- `x` = col, `y` = row — relative to the containing Panel; absolute if top-level
 - Return `None`
 
 ### `on_drag(self, x, y, drag_type)`
 - Called when user drags the element
-- `x` = col, `y` = row — **always absolute**, regardless of Panel containment
+- `x` = col, `y` = row — same rule as `on_click`: relative to the containing Panel; absolute if top-level
 - `drag_type`: `'start'` (mouse-down), `'mid'` (each new cell entered), `'end'` (mouse-up)
 - Return `None`
 - Set `animate=False` for snap-to-cursor behavior (no slide)
@@ -148,12 +146,8 @@ for i in range(5):  # rect.width updates automatically
 
 ## Coordinate System Summary
 
-| Context | `x` | `y` |
-|---------|-----|-----|
-| Shape constructor | col | row |
-| `on_click` (top-level) | col (absolute) | row (absolute) |
-| `on_click` (inside Panel) | col (panel-relative) | row (panel-relative) |
-| `on_drag` (any) | col (absolute) | row (absolute) |
+`x` and `y` coordinate are always relative to the containing panel, and if there
+isn't such, then to the top left corner of the grid.
 
 ---
 
@@ -206,15 +200,16 @@ class Cell(Panel):
         else:           self._bg.color = FILL_COLOR;  self._lbl.label = str(val)
 ```
 
-### Converting drag coordinates to board-relative
+### Converting drag coordinates to another panel's space
 
-`on_drag` always gives absolute grid coords. To convert to panel-relative:
+If a dragged element is **top-level** (not inside the target panel), `x, y` are absolute. Subtract the target panel's position to get panel-relative coords:
 ```python
-# board Panel is at absolute (BOARD_X, BOARD_Y)
+# board Panel is at absolute (BOARD_X, BOARD_Y); dragged block is top-level
 def on_drag(self, x, y, drag_type):
     r = y - board.y   # board-relative row
     c = x - board.x   # board-relative col
 ```
+If the dragged element **is** a child of the panel, `x, y` are already panel-relative — no conversion needed.
 
 ---
 
