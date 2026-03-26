@@ -1,5 +1,5 @@
-import { NavLink, Outlet, Link } from 'react-router-dom';
-import { useState } from 'react';
+import { NavLink, Outlet, Link, useLocation } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { t } from './theme';
 
@@ -32,6 +32,12 @@ const NAV = [
 export function TutorialLayout() {
   const { darkMode, toggleDarkMode } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const mainRef = useRef<HTMLElement>(null);
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    mainRef.current?.scrollTo(0, 0);
+  }, [pathname]);
 
   return (
     <div className="h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
@@ -101,7 +107,7 @@ export function TutorialLayout() {
         )}
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto">
+        <main ref={mainRef} className="flex-1 overflow-y-auto">
           <div className="max-w-3xl mx-auto px-8 py-10">
             <Outlet />
           </div>

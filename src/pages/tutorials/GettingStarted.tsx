@@ -80,7 +80,10 @@ export function GettingStarted() {
         </div>
       </div>
 
-      <EmbedPreview sample="feature-4-tracing" vx={0} vy={1} vw={10} vh={3}/>
+      <div>
+        <p className={`${t.heading3} mb-2 text-center`}>Finding max in an array</p>
+        <EmbedPreview sample="feature-4-tracing" vx={0} vy={1} vw={10} vh={3}/>
+      </div>
 
 
       {/* Step 1 */}
