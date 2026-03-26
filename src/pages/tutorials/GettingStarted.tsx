@@ -1,20 +1,32 @@
 import { Link } from 'react-router-dom';
 import { t } from './theme';
 import { CodeBlock } from './CodeBlock';
+import { EmbedPreview } from './EmbedPreview';
+import { MousePointerClick } from 'lucide-react';
 
-const combinedCode = `arr = [4, 2, 7, 1, 5]
-min_val = arr[0]
-min_idx = 0
+const combinedCode = `arr = [1,5,4,7,9,3,5,2]
+index_max = 0
 
 # @viz
-vis = Array(cells=arr, x=1, y=1)
-cursor = Arrow(position=V('(0, min_idx)'), angle=Arrow.DOWN, color=(80, 120, 220))
+panel = Panel(x=1, y=1)
+label = Label(label=V('current max'), x=2, y=2, width=4)
+
+panel.add(
+    Array(cells=V('arr'), x=0, y=1),
+    Arrow(angle=Arrow.DOWN, x=V('i', default=0), color=(230,70,80)),
+    Rect(x=V('index_max'), y=1, alpha=0.3),
+    label
+)
 # @end
 
-for i in range(1, len(arr)):
-    if arr[i] < min_val:
-        min_val = arr[i]
-        min_idx = i`;
+for i in range(len(arr)):
+    if arr[index_max] < arr[i]:
+        index_max = i
+        # @viz
+        label.label = f'current max: {arr[i]}'
+        # @end
+        
+print(f'max value is {arr[index_max]=}')`;
 
 
 export function GettingStarted() {
@@ -24,22 +36,22 @@ export function GettingStarted() {
       <div>
         <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-1">Getting Started</p>
         <h1 className={`${t.heading1} mb-3`}>Getting Started</h1>
-        <p className={`${t.body} leading-relaxed max-w-xl`}>
+        <p className={`${t.body} leading-relaxed`}>
           AlgoPlay is a browser-based visual algorithm debugger. You write Python, click
           Analyze, then step through a recorded timeline watching your data structures animate
-          in sync with the code — no installs, no server.
+          in sync with the code. You can also interact with the visualization and trigger new events — no installs, no server.
         </p>
       </div>
 
       {/* Flow diagram */}
-      <div className="flex items-center gap-1.5">
+      <div className="flex gap-1.5">
         {/* Write code */}
         <div className={`${t.card} p-3 text-center flex-1`}>
           <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Write code</p>
           <p className={`${t.muted} text-xs mt-0.5`}>Algorithm + @viz blocks</p>
         </div>
         {/* → */}
-        <svg className="shrink-0 text-gray-300 dark:text-gray-600" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg className="shrink-0 self-center text-gray-300 dark:text-gray-600" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M3 8h10M9 4l4 4-4 4" />
         </svg>
         {/* Analyze */}
@@ -48,7 +60,7 @@ export function GettingStarted() {
           <p className={`${t.muted} text-xs mt-0.5`}>Timeline recorded</p>
         </div>
         {/* → */}
-        <svg className="shrink-0 text-gray-300 dark:text-gray-600" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg className="shrink-0 self-center text-gray-300 dark:text-gray-600" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M3 8h10M9 4l4 4-4 4" />
         </svg>
         {/* Trace */}
@@ -56,8 +68,8 @@ export function GettingStarted() {
           <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Trace</p>
           <p className={`${t.muted} text-xs mt-0.5`}>Step through</p>
         </div>
-        {/* ⇄ loop arrow — taller SVG so top/bottom paths have breathing room */}
-        <svg className="shrink-0 text-indigo-400 dark:text-indigo-500" width="24" height="32" viewBox="0 0 24 32" fill="none" stroke="currentColor" strokeWidth="1.8">
+        {/* ⇄ loop arrow */}
+        <svg className="shrink-0 self-center text-indigo-400 dark:text-indigo-500" width="24" height="32" viewBox="0 0 24 32" fill="none" stroke="currentColor" strokeWidth="1.8">
           <path d="M3 9h18M15 5l4 4-4 4" />
           <path d="M21 23H3M9 27l-4-4 4-4" />
         </svg>
@@ -68,6 +80,9 @@ export function GettingStarted() {
         </div>
       </div>
 
+      <EmbedPreview sample="feature-4-tracing" vx={0} vy={1} vw={10} vh={3}/>
+
+
       {/* Step 1 */}
       <section>
         <h2 className={`${t.heading2} mb-1`}>Step 1 — Write your code</h2>
@@ -77,22 +92,23 @@ export function GettingStarted() {
           <code className={t.inlineCode}># @end</code> blocks to declare visual elements and
           mark snapshot points. You can place as many blocks as you like anywhere in the file.
         </p>
-
         <CodeBlock code={combinedCode} />
 
-        <div className="mt-4 space-y-3">
+        <div className="mt-4 space-y-3 mb-2">
           <div className={`${t.card} p-4`}>
             <h3 className={`${t.heading3} mb-1`}>Algorithm code</h3>
             <p className={t.bodySmall}>
               Any valid Python. Lines outside <code className={t.inlineCode}># @viz</code> blocks
-              run as normal algorithm logic — the tracer records variable values at every line.
+              run as normal algorithm logic.
             </p>
           </div>
           <div className={`${t.card} p-4`}>
             <h3 className={`${t.heading3} mb-1`}>@viz blocks — setup and snapshots</h3>
             <p className={t.bodySmall}>
               A <code className={t.inlineCode}># @viz … # @end</code> block declares or updates
-              visual elements. When execution reaches <code className={t.inlineCode}># @end</code>,
+              {' '}<Link to="/tutorials/visual-elements" className={t.linkAccent}>
+            visual elements
+          </Link>. When execution reaches <code className={t.inlineCode}># @end</code>,
               the current state of all elements is recorded as a timeline frame.
             </p>
           </div>
@@ -104,7 +120,10 @@ export function GettingStarted() {
               Wrap any element property in <code className={t.inlineCode}>V("expr")</code> to
               bind it to a Python expression. It is evaluated at every algorithm step — when the
               value changes, a new frame is recorded automatically, with no extra @viz block
-              needed.
+              needed. More details in {' '}
+          <Link to="/tutorials/tracing" className={t.linkAccent}>
+            the tracing tutorial
+          </Link>.{' '}
             </p>
           </div>
         </div>
@@ -116,24 +135,10 @@ export function GettingStarted() {
         <p className={`${t.muted} mb-3`}>
           Click <strong className={t.strong}>Analyze</strong> in the header. Python runs
           entirely in your browser (via WebAssembly) and records every traced line as a{' '}
-          <em>timeline</em>. The editor locks while the trace runs.
+          <em>timeline</em>. The editor locks while the trace runs. Once it is done, you can 
+          see your algorithm in motion. You can always  
+          click <strong className={t.strong}>Edit Code</strong> to go back and change your code.
         </p>
-        <div className={`${t.surface} rounded-lg p-4`}>
-          <p className={`${t.bodySmall} font-medium mb-2`}>What happens during Analyze:</p>
-          <ol className="space-y-2">
-            {[
-              'The @viz setup block runs first — elements are created and the initial snapshot is recorded.',
-              'The algorithm runs under sys.settrace, recording variable values at every line.',
-              'After each line, V() expressions are re-evaluated; changed values trigger a new frame.',
-              'The full timeline is stored in memory — stepping never re-runs Python.',
-            ].map((step, i) => (
-              <li key={i} className="flex gap-3">
-                <span className={t.stepBullet}>{i + 1}</span>
-                <span className={`${t.bodySmall} leading-relaxed`}>{step}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
       </section>
 
       {/* Step 3 */}
@@ -141,22 +146,21 @@ export function GettingStarted() {
         <h2 className={`${t.heading2} mb-1`}>Step 3 — Step through the timeline</h2>
         <p className={`${t.muted} mb-4`}>
           After Analyze, the app enters <strong className={t.strong}>trace mode</strong>. Use
-          the controls in the header to step forward, step back, or jump to the nearest
-          breakpoint.
+          the timeline controls in the header to step forward, step back, or just let it play automatically.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {[
+            {
+              heading: 'Code Highlight',
+              body: 'The editor highlights the current executed line.',
+            },
             {
               heading: 'Visual Panel',
               body: 'Animates the grid snapshot at the current step. Elements move, resize, and recolor as variables change.',
             },
             {
-              heading: 'Variable Panel',
-              body: 'Shows all captured variables at the current step. Variables are back-filled — one defined later is still visible at earlier steps.',
-            },
-            {
-              heading: 'Code Highlight',
-              body: 'The editor highlights the current line. Click the gutter to set breakpoints and jump between them.',
+              heading: 'Output Panel',
+              body: 'Shows all captured output up to the current step. ',
             },
             {
               heading: 'No Re-execution',
@@ -175,11 +179,11 @@ export function GettingStarted() {
       <section>
         <h2 className={`${t.heading2} mb-1`}>Step 4 — Enter Interactive Mode</h2>
         <p className={`${t.muted} mb-3`}>
-          Click <strong className={t.strong}>Finish &amp; Interact</strong> to leave the
-          timeline and enter interactive mode. Visual elements with{' '}
-          <code className={t.inlineCode}>on_click</code> handlers become clickable — the
-          cursor changes to a pointer. Clicking an element runs its Python handler and
-          re-renders the grid instantly. See{' '}
+          Click the <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-gray-100 dark:bg-gray-700 align-middle mx-0.5">
+                <MousePointerClick size={12} className="text-gray-700 dark:text-gray-300" />
+              </span> button to finish the trace and enter interactive mode. Visual elements 
+          can become clickable, draggable and more. These events can trigger python functions
+          looping us back to tracing your code and see it in action. See{' '}
           <Link to="/tutorials/interactive-mode" className={t.linkAccent}>
             Interactive Mode
           </Link>{' '}
