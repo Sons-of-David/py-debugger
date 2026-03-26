@@ -16,28 +16,6 @@ Most algorithm visualizers show pre-built demos you watch. AlgoPlay lets you:
 
 The **interactive mode** (`on_click`, click-traced sub-runs) is the core differentiator. No other tool in this space has it.
 
----
-
-## Branch Strategy
-
-| Branch | Status | Purpose |
-|--------|--------|---------|
-| `main` | active | stable base |
-| `tutorial-pages` | parked | tutorial pages (Getting Started, Features, Bubble Sort) — merge after combine-editors |
-| ~~`combine-editors`~~ | ~~in progress~~ | ~~single combined editor with collapsible viz blocks — **merged to main**~~ |
-
----
-
-## ~~Immediate: combine-editors~~ ✓ Done
-
-~~The two-editor model (separate Debugger Code + Builder Code tabs) is the main UX blocker. Replacing it with a single editor using collapsible `# @viz … # @end` blocks makes the tool more approachable and enables line-specific visualization.~~
-
-~~**Status:** `combinedExecutor`, `vizBlockParser`, and `CombinedEditor` are implemented and wired into `App.tsx` behind `USE_COMBINED_EDITOR = true`.~~
-
-~~**Remaining on this branch:**~~
-~~- Polish CombinedEditor UX (folding UX, decoration colors, error line mapping)~~
-~~- Migrate/update existing samples to combined format~~
-~~- Fix any rough edges before merging to main~~
 
 ---
 
@@ -45,8 +23,8 @@ The **interactive mode** (`on_click`, click-traced sub-runs) is the core differe
 
 1. **Search tree hero sample** — BST/AVL with interactive search, insert, delete, rotations via click tracing
 2. **Merge tutorial-pages** and update tutorials for combined editor
-3. **More interactive examples** — heap insert, graph BFS click-to-start
-4. **Rename** Math-Insight → AlgoPlay across codebase and tutorials
+3. **More interactive examples** — heap insert, ~~graph BFS click-to-start~~
+4. ~~**Rename** Math-Insight → AlgoPlay across codebase and tutorials~~
 5. **Beta launch** (see Beta Launch section below)
 
 ---
@@ -67,9 +45,9 @@ The **interactive mode** (`on_click`, click-traced sub-runs) is the core differe
 - **Examples overhaul:** ~~Split existing samples into two categories~~ ✓ — samples are now grouped as *Algorithms* / *Features* in the dropdown (prefix-based: `feature-*.json`). Remaining: add missing feature examples so the full API surface has coverage.
 
 - **About page redesign:** Rewrite `src/pages/PlanPage.tsx` to be user-facing (not dev notes). Add link to `https://prove-me-wrong.com`.
-- **Feedback widget:** Floating button visible in the editor. Opens a modal with a text area for feedback and a checkbox to include the current code (combined JSON). Submits to a placeholder endpoint — backend wiring deferred; UI ships first.
+- ~~**Feedback widget:** Floating button visible in the editor. Opens a modal with a text area for feedback and a checkbox to include the current code (combined JSON). Submits to a placeholder endpoint — backend wiring deferred; UI ships first.~~
 - **Tutorial pages:** In-app React Router pages (like the current About page), one per major feature area (arrays, interactive mode, text boxes, libraries, etc.). Interactive walkthrough layer can be added later.
-- **Error display:** Improve error viewing to show line numbers relative to user code (not the engine). In the combined editor, show the line within the combined file and mark whether it was in a viz block or algorithm section. Auto-jump to the offending line in the editor.
+- ~~**Error display:** Improve error viewing to show line numbers relative to user code (not the engine). In the combined editor, show the line within the combined file and mark whether it was in a viz block or algorithm section. Auto-jump to the offending line in the editor.~~
 
 ### Nice to Have
 
@@ -86,13 +64,13 @@ The **interactive mode** (`on_click`, click-traced sub-runs) is the core differe
 ## Features
 
 - **Curved lines:** Make lines between objects support curves. Curve shape determined by leaving/entry points relative to cell centers.
-- **View-only mode:** Let a user see only the editor and visual panel from premade code. User can trace and use mouse interaction, but not edit anything.
+- ~~**View-only mode:** Let a user see only the editor and visual panel from premade code. User can trace and use mouse interaction, but not edit anything.~~
 - **Record to GIF:** Add record button to capture a timeline as a GIF. Let user select a region of the grid. Do something similar for static screenshots.
 - **Images in grid:** Similar to text boxes, add image elements to the grid that do not go through the Python engine.
 - **LaTeX in text boxes:** Support LaTeX rendering in text box elements.
 - ~~**setDebug(bool):** Add a `set_debug(bool)` to the debugger side. Lets the user mark when variables are initialized and debugging should begin.~~
 - ~~**input component:** a renderable object where the user can input a text, which is an event available during interactive mode.~~ **Done.**
-- **keyboard events:** for interactive mode
+- ~~**keyboard events:** for interactive mode~~
 - **drag screen:** use mouse to drag the whole grid (only when not already dragging a visual element).
 
 ---
@@ -109,7 +87,7 @@ The **interactive mode** (`on_click`, click-traced sub-runs) is the core differe
 
 - **gif taking:** still slow.
 
-- **Show API \ Setting:** Make sure that at most one of them is open at any given time.
+- ~~**Show API \ Setting:** Make sure that at most one of them is open at any given time.~~
 
 - **auto add # @end:** 
 
@@ -119,12 +97,11 @@ The **interactive mode** (`on_click`, click-traced sub-runs) is the core differe
 
 - **add more tabs to the python code**
 
-- **collapsible blocks in python**
+- ~~**collapsible blocks in python** ~~
 
-- **keep visual:** When pressing edit, don't erase the visuals.
+- ~~**keep visual:** When pressing edit, don't erase the visuals.~~
 
 - ~~**setDebugCallSuffix location:** Check if `setDebugCallSuffix` can be handled at `CodeEditorArea` level instead of `App.tsx` (see [sharp-edges.md → debugCallSuffix](./sharp-edges.md)).~~
-  **Removed:** `debugCallSuffix` mechanism eliminated with the old two-editor architecture.
 
 - **Unify shape ObjDoc schemas:** All 8 shape schemas (`RECT_SCHEMA`, `CIRCLE_SCHEMA`, etc.) repeat the same `alpha`, `animate`, `visible`, `z`, and `delete()` entries verbatim. Extract a `BASE_SHAPE_PROPERTIES` array and `BASE_SHAPE_METHODS` array and spread them into each schema to eliminate duplication.
 
@@ -132,7 +109,7 @@ The **interactive mode** (`on_click`, click-traced sub-runs) is the core differe
 
 - **Unify userZ + zOrder:** Consider merging `userZ` and `zOrder` in `RenderableObjectData` into a single `depth: [number, number]` tuple — they always travel and sort together in `Grid.tsx`.
 - **Unify event-handler position relativity:** `on_click` position is relative to the shape's containing panel (or the grid if top-level), but `on_drag` position is the absolute grid cell. Decide whether to unify them (both panel-relative is the more consistent choice).
-- **Clear editors button**
+- ~~**Clear editors button** ~~
 
 - ~~**R instance caching:** `R.__new__` now returns a cached instance per `orig_id` via `R._instance_cache`, so the same original object always maps to the same `R` Python object across steps. Builder code can use `R` objects as dict keys. Cache is cleared in `_reset_exec_state()`. Dev notes (`python-engine.md`) should be updated to document this guarantee.~~
 
