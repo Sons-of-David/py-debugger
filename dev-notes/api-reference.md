@@ -134,12 +134,13 @@ for i in range(5):  # rect.width updates automatically
 # @viz
 # ... element setup code ...
 # V() change detection is paused inside here
-# @end   ← always takes a snapshot
+# @end   ← takes a snapshot only if elements exist
 ```
 
 - Every `# @viz` needs a matching `# @end` at the same indentation
 - No nesting allowed
-- Snapshot triggers: `# @end` (always) and any V() value change outside a viz block
+- Snapshot triggers: `# @end` (when visual elements exist) and any V() value change outside a viz block
+- If no visual elements are registered when `# @end` is reached, the snapshot is silently skipped — use this to define classes or helpers in a viz block without polluting the timeline
 - Preprocessed before exec: `# @viz` → `__viz_begin__()`, `# @end` → `__viz_end__(dict(locals()))`
 
 ---

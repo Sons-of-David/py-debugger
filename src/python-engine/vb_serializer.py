@@ -157,6 +157,8 @@ def _exec_traced(execute_fn):
     steps = []
 
     def snap(_, line, is_viz=False):
+        if is_viz and not _engine.VisualElem._registry:
+            return
         all_out = _sys.stdout.getvalue()
         delta = all_out[last_stdout_pos[0]:]
         last_stdout_pos[0] = len(all_out)
