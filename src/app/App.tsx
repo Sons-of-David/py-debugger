@@ -120,32 +120,28 @@ function App() {
   // Main Flow
   // ---------------------------------------------------------------------------
 
-  const handleReset = useCallback(() => {
-    // TODO: DAMMIT. Stop duplicate code! combine with handleEdit
-    resetPythonState();
-    clearTimeline();
-    goToStep(0);
-    setStepCount(0);
-    setTimeline([]);
-    setProjectName('untitled');
-    setTextBoxes([]);
-    setUserCode('');
-    setIsEditable(true);
-    setHandlers({});
-    setHasInteractiveElements(false);
-    setAppMode('idle');
-  }, [goToStep]);
-
   const handleEdit = useCallback(() => {
     setIsEditable(true);
     setHandlers({});
     setHasInteractiveElements(false);
     setAppMode('idle');
-    // setTimeline([]);
-    // clearTimeline();
-    // setCurrentStep(0);
-    // setStepCount(0);
   }, []);
+
+  const handleReset = useCallback(() => {
+    resetPythonState();
+
+    clearTimeline();
+    setTimeline([]);
+    goToStep(0);
+    setStepCount(0);
+    
+    setProjectName('untitled');
+    setUserCode('');
+
+    setTextBoxes([]);
+
+    handleEdit();
+  }, [goToStep, handleEdit]);
 
   const startTrace = useCallback((result: TraceStageInfo) => {
     setFullTimeline(result.timeline);
