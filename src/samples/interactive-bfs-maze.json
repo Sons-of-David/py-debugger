@@ -16,8 +16,16 @@
               {
                 "type": "text",
                 "marks": [
-                  {"type": "textStyle", "attrs": {"color": "#ffb43f", "fontSize": "24px"}},
-                  {"type": "bold"}
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "#ffb43f",
+                      "fontSize": "24px"
+                    }
+                  },
+                  {
+                    "type": "bold"
+                  }
                 ],
                 "text": "BFS Maze Explorer:"
               }
@@ -29,62 +37,69 @@
               {
                 "type": "text",
                 "marks": [
-                  {"type": "textStyle", "attrs": {"color": "#ff8c82", "fontSize": "18px"}},
-                  {"type": "bold"}
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "rgb(150, 211, 95)",
+                      "fontSize": "18px"
+                    }
+                  },
+                  {
+                    "type": "bold"
+                  }
                 ],
-                "text": "Build"
+                "text": "Problem"
               },
-              {"type": "text", "text": ":"}
-            ]
-          },
-          {
-            "type": "paragraph",
-            "content": [
               {
                 "type": "text",
-                "marks": [{"type": "textStyle", "attrs": {"color": "#d6d6d6", "fontSize": "16px"}}],
-                "text": "Drag a wall block from the source (bottom) onto any empty board cell to place a wall. Drag an existing wall to move it. Click Clear to reset the fill."
+                "text": ":"
               }
             ]
           },
-          {"type": "paragraph"},
           {
             "type": "paragraph",
             "content": [
               {
                 "type": "text",
                 "marks": [
-                  {"type": "textStyle", "attrs": {"color": "#96d35f", "fontSize": "18px"}},
-                  {"type": "bold"}
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "rgb(214, 214, 214)",
+                      "fontSize": "16px"
+                    }
+                  }
                 ],
-                "text": "Problem"
-              },
-              {"type": "text", "text": ":"}
-            ]
-          },
-          {
-            "type": "paragraph",
-            "content": [
-              {
-                "type": "text",
-                "marks": [{"type": "textStyle", "attrs": {"color": "#d6d6d6", "fontSize": "16px"}}],
                 "text": "Given a maze grid with walls, find the shortest distance (in steps) from a chosen start cell to every reachable cell."
               }
             ]
           },
-          {"type": "paragraph"},
+          {
+            "type": "paragraph"
+          },
           {
             "type": "paragraph",
             "content": [
               {
                 "type": "text",
                 "marks": [
-                  {"type": "textStyle", "attrs": {"color": "#74a7fe", "fontSize": "18px"}},
-                  {"type": "bold"}
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "#ff8c82",
+                      "fontSize": "18px"
+                    }
+                  },
+                  {
+                    "type": "bold"
+                  }
                 ],
-                "text": "Algorithm"
+                "text": "Interaction"
               },
-              {"type": "text", "text": ":"}
+              {
+                "type": "text",
+                "text": ":"
+              }
             ]
           },
           {
@@ -92,8 +107,62 @@
             "content": [
               {
                 "type": "text",
-                "marks": [{"type": "textStyle", "attrs": {"color": "#d6d6d6", "fontSize": "16px"}}],
-                "text": "BFS explores cells in order of distance. A queue holds (row, col, dist). Dequeue one cell; enqueue its four empty neighbors at dist+1. Each reached cell is labeled with its distance. Walls are never enqueued \u2014 they block the fill."
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "#d6d6d6",
+                      "fontSize": "16px"
+                    }
+                  }
+                ],
+                "text": "Drag a wall block from the source (bottom) onto any empty board cell to place a wall. Drag an existing wall to move it, or outside the maze to remove it. Click an empty cell to start the BFS, and finally clear it using the button to start again."
+              }
+            ]
+          },
+          {
+            "type": "paragraph"
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "#74a7fe",
+                      "fontSize": "18px"
+                    }
+                  },
+                  {
+                    "type": "bold"
+                  }
+                ],
+                "text": "Algorithm"
+              },
+              {
+                "type": "text",
+                "text": ":"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "#d6d6d6",
+                      "fontSize": "16px"
+                    }
+                  }
+                ],
+                "text": "BFS explores cells in order of distance. A queue holds (row, col, dist). Dequeue one cell; enqueue its four empty neighbors at dist+1. Each reached cell is labeled with its distance. Walls are never enqueued — they block the fill."
               }
             ]
           }
