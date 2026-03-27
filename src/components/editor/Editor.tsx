@@ -273,7 +273,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
           const endCol = model.getLineMaxColumn(position.lineNumber);
           editorInstance.executeEdits('viz-block-close', [{
             range: new monaco.Range(position.lineNumber, endCol, position.lineNumber, endCol),
-            text: '\n\n' + indent + '# @end',
+            text: '\n' + indent + '\n' + indent + '# @end',
           }]);
           editorInstance.setPosition({ lineNumber: position.lineNumber + 1, column: indent.length + 1 });
           return;
