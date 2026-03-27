@@ -119,7 +119,7 @@ export function TrappingRain() {
       </div>
 
       {/* Embedded preview */}
-      <EmbedPreview sample="trapping-rain" vx={0} vy={0} vw={16} vh={11} />
+      <EmbedPreview sample="4-trapping-rain" vx={0} vy={0} vw={16} vh={11} />
 
       {/* CTA */}
       <div className={t.ctaBanner}>
@@ -129,7 +129,7 @@ export function TrappingRain() {
             Open it in the editor, drag bars, and click the button to re-run.
           </p>
         </div>
-        <Link to="/?sample=trapping-rain" className={`shrink-0 ${t.btnPrimary}`}>
+        <Link to="/?sample=4-trapping-rain" className={`shrink-0 ${t.btnPrimary}`}>
           Open in Editor →
         </Link>
       </div>
