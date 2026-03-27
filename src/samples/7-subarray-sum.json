@@ -1,0 +1,377 @@
+{
+  "userCode": "\narr = [0, 2, 3, 4, 2, 1, 3, 2, 5, 6]\nn = len(arr)\n\ns = 6\nstart = 0\nend = 0\ncur_sum = 0\n\n# @viz\n\nprefix_sum = [0]\nfor elem in arr:\n    prefix_sum.append(prefix_sum[-1]+elem)\n\npanel = Panel(x=2, y=2)\n\npanel.add(\n    Array(cells=arr, x=1),\n    Rect(x=V('start+1'), width=V('end-start'), alpha=0.3),\n    Label(label=V('f\"{sum(arr[start:end])} ? {s}\"'), y=1, x=V('start'), width=3)\n)\n\npanel2d = Panel(x=0, y=3)\npanel.add(panel2d)\npanel2d.add(Circle(x=V('end'), y=V('start')))\n\nfor i in range(n+1):\n    for j in range(i, n+1):\n        cell_value = prefix_sum[j]-prefix_sum[i]\n        color = (200, 50, 80)\n        if cell_value == s:\n            color = (50, 80, 200)\n        if cell_value > s:\n            color = (80, 200, 50)\n        panel2d.add(\n            Label(label=cell_value, x=j, y=i, color=color, font_size=20)\n        )\n\n# @end\n\n\nwhile end <= n:\n    if start == end:\n        if end == n:\n            break\n        cur_sum += arr[end]\n        end += 1\n        continue\n\n    if cur_sum < s:\n        if end == n:\n            break\n        cur_sum += arr[end]\n        end += 1\n        continue\n\n    if cur_sum > s:\n        cur_sum -= arr[start]\n        start += 1\n        continue\n\n    print(f'found arr[{start}:{end}]')\n    cur_sum -= arr[start]\n    start += 1\n    continue\n",
+  "textBoxes": [
+    {
+      "id": "text-1774636523052",
+      "row": 2,
+      "col": 14,
+      "widthCells": 11,
+      "heightCells": 11,
+      "content": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "rgb(255, 180, 63)",
+                      "fontSize": "24px"
+                    }
+                  },
+                  {
+                    "type": "bold"
+                  }
+                ],
+                "text": "Subarray sum problem:"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "rgb(255, 140, 130)",
+                      "fontSize": "18px"
+                    }
+                  },
+                  {
+                    "type": "bold"
+                  }
+                ],
+                "text": "Problem"
+              },
+              {
+                "type": "text",
+                "text": ":"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "rgb(214, 214, 214)",
+                      "fontSize": "16px"
+                    }
+                  }
+                ],
+                "text": "Given an array with nonnegative numbers, and a value "
+              },
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "#74a7fe",
+                      "fontSize": "16px"
+                    }
+                  }
+                ],
+                "text": "s"
+              },
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "rgb(214, 214, 214)",
+                      "fontSize": "16px"
+                    }
+                  }
+                ],
+                "text": ", find a consecutive (non empty) subarray with sum equal exactly "
+              },
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "#74a7fe",
+                      "fontSize": "16px"
+                    }
+                  }
+                ],
+                "text": "s"
+              },
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "rgb(214, 214, 214)",
+                      "fontSize": "16px"
+                    }
+                  }
+                ],
+                "text": "."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "rgb(150, 211, 95)",
+                      "fontSize": "18px"
+                    }
+                  },
+                  {
+                    "type": "bold"
+                  }
+                ],
+                "text": "Algorithm"
+              },
+              {
+                "type": "text",
+                "text": ":"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "rgb(214, 214, 214)",
+                      "fontSize": "16px"
+                    }
+                  }
+                ],
+                "text": "Since the entries are nonnegative, increasing (resp. decreasing) the array's size increases (resp. decreases) the sum. "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "rgb(214, 214, 214)",
+                      "fontSize": "16px"
+                    }
+                  }
+                ],
+                "text": "Start with "
+              },
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "#74a7fe",
+                      "fontSize": "16px"
+                    }
+                  }
+                ],
+                "text": "start=end=0"
+              },
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "rgb(214, 214, 214)",
+                      "fontSize": "16px"
+                    }
+                  }
+                ],
+                "text": " and the subarray "
+              },
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "#74a7fe",
+                      "fontSize": "16px"
+                    }
+                  }
+                ],
+                "text": "arr[start:end] "
+              },
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "rgb(214, 214, 214)",
+                      "fontSize": "16px"
+                    }
+                  }
+                ],
+                "text": "with sum 0. Then update the indices "
+              },
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "#74a7fe",
+                      "fontSize": "16px"
+                    }
+                  }
+                ],
+                "text": "start"
+              },
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "rgb(214, 214, 214)",
+                      "fontSize": "16px"
+                    }
+                  }
+                ],
+                "text": " and "
+              },
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "#74a7fe",
+                      "fontSize": "16px"
+                    }
+                  }
+                ],
+                "text": "end"
+              },
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "rgb(214, 214, 214)",
+                      "fontSize": "16px"
+                    }
+                  }
+                ],
+                "text": " greedily. If the sum is too small (or "
+              },
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "#74a7fe",
+                      "fontSize": "16px"
+                    }
+                  }
+                ],
+                "text": "start = end"
+              },
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "rgb(214, 214, 214)",
+                      "fontSize": "16px"
+                    }
+                  }
+                ],
+                "text": ") increase the "
+              },
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "#74a7fe",
+                      "fontSize": "16px"
+                    }
+                  }
+                ],
+                "text": "end"
+              },
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "rgb(214, 214, 214)",
+                      "fontSize": "16px"
+                    }
+                  }
+                ],
+                "text": " index, and if it is too high, increase the "
+              },
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "#74a7fe",
+                      "fontSize": "16px"
+                    }
+                  }
+                ],
+                "text": "start"
+              },
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "color": "rgb(214, 214, 214)",
+                      "fontSize": "16px"
+                    }
+                  }
+                ],
+                "text": " index. Do this until you hit the required value, or exit the array and fail."
+              }
+            ]
+          }
+        ]
+      },
+      "bgColor": "#444444"
+    }
+  ]
+}
