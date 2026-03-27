@@ -6,10 +6,43 @@ import inspect as _inspect
 
 # ── Snapshot helpers ──────────────────────────────────────────────────────────
 
+# Tracks state between snapshots for delta serialization.
+# 'initialized': False means the next call produces a full snapshot.
+# 'prev_ids': set of elem_ids present at the last snapshot (to detect deletions).
+_snap_state: dict = {'initialized': False, 'prev_ids': set()}
 
-def _serialize_visual_builder():
-    """Walk VisualElem._registry and return list of serialized elements."""
-    return _json.dumps([elem._serialize() for elem in _engine.VisualElem._registry])
+
+def _serialize_visual_builder() -> str:
+    """Serialize visual elements as a full snapshot or a delta since the last call.
+
+    First call (or after reset): returns a JSON array of all elements.
+    Subsequent calls: returns a delta object {is_delta, changed, deleted} where
+      - changed: elements whose _dirty flag is True
+      - deleted: elem_ids that were in _registry at the last snapshot but are gone now
+    Dirty flags are cleared after each call.
+    """
+    registry = _engine.VisualElem._registry
+    current_ids = {e._elem_id for e in registry}
+
+    if not _snap_state['initialized']:
+        result = _json.dumps([e._serialize() for e in registry])
+        _snap_state['initialized'] = True
+    else:
+        deleted = list(_snap_state['prev_ids'] - current_ids)
+        changed = [e._serialize() for e in registry
+                   if object.__getattribute__(e, '_dirty')]
+        result = _json.dumps({'is_delta': True, 'changed': changed, 'deleted': deleted})
+
+    for e in registry:
+        object.__setattr__(e, '_dirty', False)
+    _snap_state['prev_ids'] = current_ids
+    return result
+
+
+def _reset_snap_state():
+    """Reset delta tracking. Call at the start of each traced execution."""
+    _snap_state['initialized'] = False
+    _snap_state['prev_ids'] = set()
 
 
 def _build_scope(frame):
@@ -151,9 +184,9 @@ def _exec_traced(execute_fn):
     if so. Returns steps (list of snapshot dicts).
     """
     import sys as _sys, io as _io
+    _reset_snap_state()
     last_stdout_pos = [0]
     last_v_snap = {}
-    last_visual_snap = [_serialize_visual_builder()]  # track visual state at last snap
     steps = []
 
     def snap(_, line, is_viz=False):
@@ -165,7 +198,6 @@ def _exec_traced(execute_fn):
         last_v_snap.clear()
         last_v_snap.update(_collect_v_values())
         visual_json = _serialize_visual_builder()
-        last_visual_snap[0] = visual_json
         steps.append({
             'visual': _json.loads(visual_json),
             'variables': {},  # TODO: separate user-algorithm variables from viz-block variables before re-enabling _collect_variables
@@ -185,13 +217,16 @@ def _exec_traced(execute_fn):
         finally:
             _sys.settrace(None)
         # Post-exec flush: the last line runs after the last 'line' event fires,
-        # so it's never observed by the tracer. Take one final snapshot if the visual
-        # state changed (covers V() bindings, plain attribute mutations, drag handlers, etc.)
-        # or there is remaining stdout output.
+        # so it's never observed by the tracer. Take one final snapshot if any element
+        # is dirty (covers plain attribute mutations, drag handlers, etc.) or there is
+        # remaining stdout output.
         final_scope = {k: v for k, v in _namespace.items() if not k.startswith('_')}
         _engine.V.params = final_scope
-        final_visual = _serialize_visual_builder()
-        if capture.getvalue()[last_stdout_pos[0]:] or final_visual != last_visual_snap[0]:
+        has_dirty = any(
+            object.__getattribute__(e, '_dirty')
+            for e in _engine.VisualElem._registry
+        )
+        if capture.getvalue()[last_stdout_pos[0]:] or has_dirty:
             # If last_line is None, no non-viz line was ever traced — all executed code
             # was inside viz blocks (e.g. a click handler defined in a viz block).
             snap(final_scope, last_line[0], is_viz=last_line[0] is None)
