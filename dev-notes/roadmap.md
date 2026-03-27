@@ -44,14 +44,13 @@ The **interactive mode** (`on_click`, click-traced sub-runs) is the core differe
 - **API reference completeness:** Audit all classes and functions in `user_api.py` and builder imports (e.g. `graphs.py`). Every public symbol should appear in `ApiReferencePanel.tsx` (`visualBuilder.ts` / `functionsSchema.ts`) with accurate types, defaults, and descriptions.
 - **Examples overhaul:** ~~Split existing samples into two categories~~ ✓ — samples are now grouped as *Algorithms* / *Features* in the dropdown (prefix-based: `feature-*.json`). Remaining: add missing feature examples so the full API surface has coverage.
 
-- **About page redesign:** Rewrite `src/pages/PlanPage.tsx` to be user-facing (not dev notes). Add link to `https://prove-me-wrong.com`.
 - ~~**Feedback widget:** Floating button visible in the editor. Opens a modal with a text area for feedback and a checkbox to include the current code (combined JSON). Submits to a placeholder endpoint — backend wiring deferred; UI ships first.~~
-- **Tutorial pages:** In-app React Router pages (like the current About page), one per major feature area (arrays, interactive mode, text boxes, libraries, etc.). Interactive walkthrough layer can be added later.
+- ~~**Tutorial pages:** In-app React Router pages (like the current About page), one per major feature area (arrays, interactive mode, text boxes, libraries, etc.). Interactive walkthrough layer can be added later.~~
 - ~~**Error display:** Improve error viewing to show line numbers relative to user code (not the engine). In the combined editor, show the line within the combined file and mark whether it was in a viz block or algorithm section. Auto-jump to the offending line in the editor.~~
 
 ### Nice to Have
 
-- **Shareable links:** Encode the current editor state (JSON) into a URL hash or query param. Lets users share their work and makes it easy to report bugs with a repro link.
+- ~~**Shareable links:** Encode the current editor state (JSON) into a URL hash or query param. Lets users share their work and makes it easy to report bugs with a repro link.~~
 - **Welcome / first-time experience:** A brief dismissible banner or modal for first-time visitors explaining what the app is and pointing to tutorials and samples.
 - **Pyodide loading state:** Show a visible loading indicator while Pyodide initializes so the app doesn't appear broken on first load.
 - **Tool libraries:** Add more library tools like the given `graphs.py` file. For example `charts.py` builder-import library with a `BarChart` component: takes an array of values and renders a labeled bar graph above a matching array element display. Each should come with a schema describing what it is in general, and what are its functions, and it should appear in the API reference.
