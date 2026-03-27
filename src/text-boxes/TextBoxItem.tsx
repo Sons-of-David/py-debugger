@@ -36,6 +36,7 @@ const handlePositions: Record<ResizeHandle, React.CSSProperties> = {
 export function TextBoxItem({ box, zoom, selected, autoEdit, onSelect, onChange, onDelete }: TextBoxItemProps) {
   const { darkMode } = useTheme();
   const [editing, setEditing] = useState(() => autoEdit ?? false);
+  const [, setSelectionVersion] = useState(0);
   const prevBoxId = useRef(box.id);
   // Refs keep onUpdate closure fresh without recreating the editor
   const boxRef = useRef(box);
@@ -53,6 +54,9 @@ export function TextBoxItem({ box, zoom, selected, autoEdit, onSelect, onChange,
     immediatelyRender: false,
     onUpdate: ({ editor }) => {
       onChangeRef.current({ ...boxRef.current, content: editor.getJSON() });
+    },
+    onSelectionUpdate: () => {
+      setSelectionVersion(v => v + 1);
     },
   });
 
