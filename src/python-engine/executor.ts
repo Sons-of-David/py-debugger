@@ -139,6 +139,7 @@ type RawResult = {
     is_viz?: boolean;
   }>;
   handlers: Record<string, string[]>;
+  console?: string;
 };
 
 /**
@@ -153,6 +154,7 @@ export async function executeCode(code: string): Promise<TraceStageInfo> {
       `_exec_code('''${escapeTripleQuote(preprocessed)}''')`
     );
     const result = JSON.parse(resultJson) as RawResult;
+    if (result.console) console.log(result.console);
     return { timeline: parseRawTimeline(result.timeline), handlers: result.handlers };
   } catch (error) {
     return { timeline: [], handlers: {}, error: cleanPythonError(error instanceof Error ? error.message : String(error)) };

@@ -183,20 +183,20 @@ def _exec_traced(execute_fn):
     any V() changes or stdout output the tracer couldn't see, and appends a final snapshot
     if so. Returns steps (list of snapshot dicts).
     """
-    import sys as _sys, io as _io
+    import sys as _sys, io as _io, time as _time
     _reset_snap_state()
     last_stdout_pos = [0]
-    last_v_snap = {}
     steps = []
+    _t_snap = [0.0]   # cumulative time inside snap()
+    _t_exec = [0.0]   # time inside execute_fn() under settrace
 
     def snap(_, line, is_viz=False):
+        _t0 = _time.perf_counter()
         if is_viz and not _engine.VisualElem._registry:
             return
         all_out = _sys.stdout.getvalue()
         delta = all_out[last_stdout_pos[0]:]
         last_stdout_pos[0] = len(all_out)
-        last_v_snap.clear()
-        last_v_snap.update(_collect_v_values())
         visual_json = _serialize_visual_builder()
         steps.append({
             'visual': _json.loads(visual_json),
@@ -205,17 +205,20 @@ def _exec_traced(execute_fn):
             'output': delta,
             'is_viz': is_viz,
         })
+        _t_snap[0] += _time.perf_counter() - _t0
 
     old_stdout = _sys.stdout
     capture = _io.StringIO()
     _sys.stdout = capture
     tracer, last_line = _make_tracer(_viz_ranges, snap)
     try:
+        _t0 = _time.perf_counter()
         _sys.settrace(tracer)
         try:
             execute_fn()
         finally:
             _sys.settrace(None)
+        _t_exec[0] = _time.perf_counter() - _t0
         # Post-exec flush: the last line runs after the last 'line' event fires,
         # so it's never observed by the tracer. Take one final snapshot if any element
         # is dirty (covers plain attribute mutations, drag handlers, etc.) or there is
@@ -232,6 +235,15 @@ def _exec_traced(execute_fn):
             snap(final_scope, last_line[0], is_viz=last_line[0] is None)
     finally:
         _sys.stdout = old_stdout
+
+    global _last_console
+    t_other = _t_exec[0] - _t_snap[0]
+    _last_console = (
+        f"[profile] steps={len(steps)} | "
+        f"exec(+tracer)={_t_exec[0]:.3f}s | "
+        f"snap(serialize)={_t_snap[0]:.3f}s | "
+        f"pure_tracer={t_other:.3f}s"
+    )
     return steps
 
 
@@ -309,12 +321,20 @@ def _find_element(elem_id: int):
     return None
 
 
+_last_console: str = ''   # set by _exec_traced; cleared after each _handler_result
+
+
 def _handler_result(steps):
     """Assemble the JSON result returned by click/input handler dispatchers."""
-    return _json.dumps({
+    global _last_console
+    result: dict = {
         'timeline': steps,
         'handlers': _json.loads(_serialize_handlers()),
-    })
+    }
+    if _last_console:
+        result['console'] = _last_console
+        _last_console = ''
+    return _json.dumps(result)
 
 
 def _exec_click_traced(elem_id: int, row: int, col: int) -> str:
