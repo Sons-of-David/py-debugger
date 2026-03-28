@@ -142,6 +142,25 @@ The **interactive mode** (`on_click`, click-traced sub-runs) is the core differe
 
 ---
 
+## Performance — Suggestions for Future Improvement
+
+These were identified while profiling the A* sample (`perf-delta-snapshots` branch, March 2026).
+
+### Snapshot serialization
+
+- **Skip `sys.settrace` entirely when no V() or viz blocks exist.** Currently, even when `V._count == 0`, `sys.settrace` is active to intercept `__viz_end__` calls. If the code has no `# @viz` blocks, no tracing is needed at all. Detect this by parsing the code for `# @viz` before execution (already available from `getVizRanges`).
+
+- **Smarter deltas for V() samples.** Currently, `V._count > 0` forces full snapshots on every step because V() values change without triggering `__setattr__`. A more precise fix: when a V() change is detected, identify which `elem_id.attr` pairs changed (the tracer already computes this in `_collect_v_values`), mark only those elements dirty, and use deltas. This would bring the delta benefit to V()-based samples too.
+
+- **Fast-path serialization bypassing `_get_v_attr`.** `_serialize_from_fields` calls `getattr(self, name)` for every property, going through the `_get_v_attr` `__getattribute__` override (two `isinstance` checks per attribute). When `V._count == 0`, serialization could read `object.__getattribute__` directly, skipping the V/R checks.
+
+### Testing
+
+- **Python-level sample tests.** Use `profiler.py` as a base: load each sample JSON, run `_exec_code`, and assert on step count, final board state, and key variable values. This catches engine regressions without needing a browser.
+- **Performance regression tests.** Add a test that runs each sample and asserts the exec time stays below a threshold (e.g. 2× the current baseline). Run with `python3 profiler.py <sample>` in CI.
+
+---
+
 ## Open Architectural Questions
 
 - **No-copy variable passing:** Instead of `deepcopy` + `R` wrappers, pass raw live Python objects directly to `update(params)`. Builder is responsible for not mutating params. Drop-in swap: remove deepcopy from `_capture_variables`, remove `TrackedDict` wrapper from `trace_fn`. Tradeoff: simpler for read-only builder code; risk of silent state corruption if builder mutates params.

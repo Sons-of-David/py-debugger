@@ -25,7 +25,11 @@ def _serialize_visual_builder():
     registry = _engine.VisualElem._registry
     current_ids = {e._elem_id for e in registry}
 
-    if not _snap_state['initialized']:
+    # Deltas are only safe when no V() bindings exist. V() values can change between
+    # snaps without triggering __setattr__, so dirty flags would miss those updates.
+    use_delta = _snap_state['initialized'] and _engine.V._count == 0
+
+    if not use_delta:
         result = [e._serialize() for e in registry]
         _snap_state['initialized'] = True
     else:
