@@ -128,10 +128,11 @@ def _make_tracer(viz_ranges, on_snap):
         if event == 'call' and frame.f_code is _VIZ_END_CODE:
             caller = frame.f_back
             if caller:
-                _engine.V.params = _build_scope(caller)
-                current = _collect_v_values()
-                last_v.clear()
-                last_v.update(current)
+                if _engine.V._count > 0:
+                    _engine.V.params = _build_scope(caller)
+                    current = _collect_v_values()
+                    last_v.clear()
+                    last_v.update(current)
                 on_snap(caller, caller.f_lineno, is_viz=True)
             return None
         if frame.f_code.co_filename != '<user_code>':
