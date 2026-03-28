@@ -6,10 +6,48 @@ import inspect as _inspect
 
 # ── Snapshot helpers ──────────────────────────────────────────────────────────
 
+# Tracks state between snapshots for delta serialization.
+# 'initialized': False means the next call produces a full snapshot.
+# 'prev_ids': set of elem_ids present at the last snapshot (to detect deletions).
+_snap_state: dict = {'initialized': False, 'prev_ids': set()}
+
 
 def _serialize_visual_builder():
-    """Walk VisualElem._registry and return list of serialized elements."""
-    return _json.dumps([elem._serialize() for elem in _engine.VisualElem._registry])
+    """Serialize visual elements as a full snapshot or a delta since the last call.
+
+    First call (or after reset): returns a list of all serialized elements.
+    Subsequent calls: returns a delta dict {is_delta, changed, deleted} where
+      - changed: elements whose _dirty flag is True
+      - deleted: elem_ids present at the last snapshot but now gone
+    Returns a Python object (not JSON) — callers store it directly in steps[].
+    Dirty flags are cleared after each call.
+    """
+    registry = _engine.VisualElem._registry
+    current_ids = {e._elem_id for e in registry}
+
+    # Deltas are only safe when no V() bindings exist. V() values can change between
+    # snaps without triggering __setattr__, so dirty flags would miss those updates.
+    use_delta = _snap_state['initialized'] and _engine.V._count == 0
+
+    if not use_delta:
+        result = [e._serialize() for e in registry]
+        _snap_state['initialized'] = True
+    else:
+        deleted = list(_snap_state['prev_ids'] - current_ids)
+        changed = [e._serialize() for e in registry
+                   if object.__getattribute__(e, '_dirty')]
+        result = {'is_delta': True, 'changed': changed, 'deleted': deleted}
+
+    for e in registry:
+        object.__setattr__(e, '_dirty', False)
+    _snap_state['prev_ids'] = current_ids
+    return result
+
+
+def _reset_snap_state():
+    """Reset delta tracking. Call at the start of each traced execution."""
+    _snap_state['initialized'] = False
+    _snap_state['prev_ids'] = set()
 
 
 def _build_scope(frame):
@@ -95,10 +133,11 @@ def _make_tracer(viz_ranges, on_snap):
         if event == 'call' and frame.f_code is _VIZ_END_CODE:
             caller = frame.f_back
             if caller:
-                _engine.V.params = _build_scope(caller)
-                current = _collect_v_values()
-                last_v.clear()
-                last_v.update(current)
+                if _engine.V._count > 0:
+                    _engine.V.params = _build_scope(caller)
+                    current = _collect_v_values()
+                    last_v.clear()
+                    last_v.update(current)
                 on_snap(caller, caller.f_lineno, is_viz=True)
             return None
         if frame.f_code.co_filename != '<user_code>':
@@ -150,53 +189,66 @@ def _exec_traced(execute_fn):
     any V() changes or stdout output the tracer couldn't see, and appends a final snapshot
     if so. Returns steps (list of snapshot dicts).
     """
-    import sys as _sys, io as _io
+    import sys as _sys, io as _io, time as _time
+    _reset_snap_state()
     last_stdout_pos = [0]
-    last_v_snap = {}
-    last_visual_snap = [_serialize_visual_builder()]  # track visual state at last snap
     steps = []
+    _t_snap = [0.0]   # cumulative time inside snap()
+    _t_exec = [0.0]   # time inside execute_fn() under settrace
 
     def snap(_, line, is_viz=False):
+        _t0 = _time.perf_counter()
         if is_viz and not _engine.VisualElem._registry:
             return
         all_out = _sys.stdout.getvalue()
         delta = all_out[last_stdout_pos[0]:]
         last_stdout_pos[0] = len(all_out)
-        last_v_snap.clear()
-        last_v_snap.update(_collect_v_values())
-        visual_json = _serialize_visual_builder()
-        last_visual_snap[0] = visual_json
         steps.append({
-            'visual': _json.loads(visual_json),
+            'visual': _serialize_visual_builder(),
             'variables': {},  # TODO: separate user-algorithm variables from viz-block variables before re-enabling _collect_variables
             'line': line,
             'output': delta,
             'is_viz': is_viz,
         })
+        _t_snap[0] += _time.perf_counter() - _t0
 
     old_stdout = _sys.stdout
     capture = _io.StringIO()
     _sys.stdout = capture
     tracer, last_line = _make_tracer(_viz_ranges, snap)
     try:
+        _t0 = _time.perf_counter()
         _sys.settrace(tracer)
         try:
             execute_fn()
         finally:
             _sys.settrace(None)
+        _t_exec[0] = _time.perf_counter() - _t0
         # Post-exec flush: the last line runs after the last 'line' event fires,
-        # so it's never observed by the tracer. Take one final snapshot if the visual
-        # state changed (covers V() bindings, plain attribute mutations, drag handlers, etc.)
-        # or there is remaining stdout output.
+        # so it's never observed by the tracer. Take one final snapshot if any element
+        # is dirty (covers plain attribute mutations, drag handlers, etc.) or there is
+        # remaining stdout output.
         final_scope = {k: v for k, v in _namespace.items() if not k.startswith('_')}
         _engine.V.params = final_scope
-        final_visual = _serialize_visual_builder()
-        if capture.getvalue()[last_stdout_pos[0]:] or final_visual != last_visual_snap[0]:
+        has_dirty = any(
+            object.__getattribute__(e, '_dirty')
+            for e in _engine.VisualElem._registry
+        )
+        if capture.getvalue()[last_stdout_pos[0]:] or has_dirty:
             # If last_line is None, no non-viz line was ever traced — all executed code
             # was inside viz blocks (e.g. a click handler defined in a viz block).
             snap(final_scope, last_line[0], is_viz=last_line[0] is None)
     finally:
         _sys.stdout = old_stdout
+
+    global _last_console
+    t_other = _t_exec[0] - _t_snap[0]
+    _last_console = (
+        f"[profile] steps={len(steps)} | "
+        f"exec(+tracer)={_t_exec[0]:.3f}s | "
+        f"snap(serialize)={_t_snap[0]:.3f}s | "
+        f"pure_tracer={t_other:.3f}s"
+    )
     return steps
 
 
@@ -274,12 +326,20 @@ def _find_element(elem_id: int):
     return None
 
 
+_last_console: str = ''   # set by _exec_traced; cleared after each _handler_result
+
+
 def _handler_result(steps):
     """Assemble the JSON result returned by click/input handler dispatchers."""
-    return _json.dumps({
+    global _last_console
+    result: dict = {
         'timeline': steps,
         'handlers': _json.loads(_serialize_handlers()),
-    })
+    }
+    if _last_console:
+        result['console'] = _last_console
+        _last_console = ''
+    return _json.dumps(result)
 
 
 def _exec_click_traced(elem_id: int, row: int, col: int) -> str:

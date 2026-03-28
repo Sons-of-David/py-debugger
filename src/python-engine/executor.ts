@@ -12,8 +12,18 @@ export interface TraceVariable {
   value: unknown;
 }
 
+/** Delta snapshot emitted by _serialize_visual_builder after the first call. */
+export interface VisualDelta {
+  is_delta: true;
+  changed: VisualBuilderElementBase[];
+  deleted: number[];
+}
+
+/** A visual field is either a full element array or a delta. */
+export type RawVisual = VisualBuilderElementBase[] | VisualDelta;
+
 export interface TraceStep {
-  visual: VisualBuilderElementBase[];
+  visual: RawVisual;
   variables: Record<string, TraceVariable>;
   line?: number;
   output?: string;   // stdout delta since previous snapshot
@@ -76,7 +86,7 @@ function cleanPythonError(rawError: string): string {
 }
 
 function parseRawTimeline(raw: Array<{
-  visual: VisualBuilderElementBase[];
+  visual: RawVisual;
   variables: Record<string, TraceVariable>;
   line?: number;
   output?: string;
@@ -122,13 +132,14 @@ for _m in ('user_api', '_vb_engine'):
 
 type RawResult = {
   timeline: Array<{
-    visual: VisualBuilderElementBase[];
+    visual: RawVisual;
     variables: Record<string, TraceVariable>;
     line?: number;
     output?: string;
     is_viz?: boolean;
   }>;
   handlers: Record<string, string[]>;
+  console?: string;
 };
 
 /**
@@ -143,6 +154,7 @@ export async function executeCode(code: string): Promise<TraceStageInfo> {
       `_exec_code('''${escapeTripleQuote(preprocessed)}''')`
     );
     const result = JSON.parse(resultJson) as RawResult;
+    if (result.console) console.log(result.console);
     return { timeline: parseRawTimeline(result.timeline), handlers: result.handlers };
   } catch (error) {
     return { timeline: [], handlers: {}, error: cleanPythonError(error instanceof Error ? error.message : String(error)) };

@@ -320,7 +320,14 @@ def _get_v_attr(self, name):
     return value
 
 
+def _set_v_attr(self, name, value):
+    object.__setattr__(self, name, value)
+    if not name.startswith('_'):
+        object.__setattr__(self, '_dirty', True)
+
+
 VisualElem.__getattribute__ = _get_v_attr
+VisualElem.__setattr__ = _set_v_attr
 
 
 class _ShapeBase(VisualElem):

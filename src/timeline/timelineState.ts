@@ -1,4 +1,5 @@
 import type { VisualBuilderElementBase } from '../api/visualBuilder';
+import type { RawVisual } from '../python-engine/executor';
 import { hydrateElement } from '../visual-panel/types/elementRegistry';
 
 let timeline: VisualBuilderElementBase[][] = [];
@@ -20,12 +21,40 @@ export function hydrateTimelineFromJson(timelineJson: string): VisualBuilderElem
   return timeline[0] ?? [];
 }
 
+/**
+ * Build the hydrated timeline from raw visual snapshots.
+ *
+ * Each entry in rawTimeline is either a full element array (first step) or a
+ * delta {is_delta, changed, deleted}. We maintain a running Map so only changed
+ * elements are hydrated — unchanged elements are shared references across steps.
+ */
 export function setVisualTimeline(
-  rawTimeline: VisualBuilderElementBase[][],
+  rawTimeline: RawVisual[],
 ): VisualBuilderElementBase[] {
-  timeline = rawTimeline.map((snapshot) =>
-    snapshot.map((el) => hydrateElement(el)),
-  );
+  const steps: VisualBuilderElementBase[][] = [];
+  // elem_id → hydrated element; entries are reused across steps when not in a delta
+  const current = new Map<number, VisualBuilderElementBase>();
+
+  for (const raw of rawTimeline) {
+    if (Array.isArray(raw)) {
+      // Full snapshot — rebuild map entirely
+      current.clear();
+      for (const el of raw) {
+        const hydrated = hydrateElement(el);
+        current.set(hydrated._elemId ?? -1, hydrated);
+      }
+    } else {
+      // Delta — apply deletions then update changed elements
+      for (const id of raw.deleted) current.delete(id);
+      for (const el of raw.changed) {
+        const hydrated = hydrateElement(el);
+        current.set(hydrated._elemId ?? -1, hydrated);
+      }
+    }
+    steps.push(Array.from(current.values()));
+  }
+
+  timeline = steps;
   maxTime = timeline.length > 0 ? timeline.length - 1 : 0;
   return timeline[0] ?? [];
 }
