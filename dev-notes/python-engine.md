@@ -31,11 +31,13 @@ The Python side is split into three layers, each in a separate file — all unde
 
 `_vb_engine.py` and `user_api.py` are **Python VFS modules** — written to `/home/pyodide/` at startup and imported via standard `import`. `vb_serializer.py` is exec'd into Pyodide globals.
 
-### Persistent Namespace: `_combined_ns`
+Optional import files in `src/python-engine/imports/` (`array_utils.py`, `graphs.py`, `list_helpers.py`) are also written to the Pyodide VFS at startup — they are all auto-loaded from the directory at init time, no individual registration needed.
 
-`_combined_ns` is a Python dict that serves as the execution namespace for combined code. It persists across interactions:
-- Re-created at the start of each Analyze (fresh namespace seeded from `user_api` exports)
-- Preserved between `_exec_combined_click_traced` calls — handlers see all variables from the last run
+### Persistent Namespace: `_namespace`
+
+`_namespace` is a Python dict that serves as the execution namespace. It persists across interactions:
+- Re-created at the start of each Analyze via `_init_namespace()` (fresh namespace seeded from `user_api` exports)
+- Preserved between `_exec_click_traced` calls — handlers see all variables from the last run
 - Only destroyed on page reload or next Analyze
 
 ### Python ↔ TypeScript Bridge
@@ -65,7 +67,9 @@ class VisualElem:
 
 **`_elem_id`** — assigned at construction, stable for the lifetime of the element. This is the identity that bridges Python and TypeScript for click dispatch.
 
-**`_clear_registry()`** — called at the start of every Analyze. Clears `_registry` and resets the `_vis_elem_id` counter.
+**`_clear_registry()`** — called at the start of every Analyze. Clears `_registry`, resets `_vis_elem_id` counter, and resets `V._count` to 0.
+
+**`_dirty` flag** — every `VisualElem` instance carries a `_dirty` boolean. The `__setattr__` patch on `VisualElem` sets `_dirty = True` whenever any non-private attribute is written. Used by the delta snapshot system (see Snapshot Triggers below).
 
 **`_serialize_base()`** — fields every element emits:
 ```python
@@ -79,7 +83,9 @@ class VisualElem:
 }
 ```
 
-**`__getattribute__` patch** — `_vb_engine.py` replaces `VisualElem.__getattribute__` with `get_v_attr`. Any property access on a `VisualElem` subclass automatically calls `.eval()` on `V()` objects and `.resolve()` on `R` objects. This is what makes V() and R bindings work during serialization.
+**`__getattribute__` patch** — `_vb_engine.py` replaces `VisualElem.__getattribute__` with `_get_v_attr`. Any property access on a `VisualElem` subclass automatically calls `.eval()` on `V()` objects and `.resolve()` on `R` objects. This is what makes V() and R bindings work during serialization.
+
+**`__setattr__` patch** — `_vb_engine.py` also replaces `VisualElem.__setattr__` with `_set_v_attr`, which sets `_dirty = True` on any non-private write. This feeds the delta snapshot system.
 
 ### Shape Classes (`user_api.py`)
 
@@ -118,9 +124,15 @@ Marks a function so the viz-aware interactive tracer skips local tracing for it.
 
 ### Serialization
 
-**`_serialize_visual_builder()`** — walks `VisualElem._registry` and returns JSON array of all serialized elements.
+**`_serialize_visual_builder()`** — walks `VisualElem._registry` and returns either a **full snapshot** (Python list) or a **delta** (dict `{is_delta: True, changed, deleted}`).
 
-**`_serialize_combined_handlers() → str`** — returns `json.dumps({elem_id: ["on_click"]})` for elements that have an `on_click` method or are an `Input` instance.
+- **First call per trace run**: always returns a full list (all elements serialized).
+- **Subsequent calls when `V._count == 0`**: returns a delta — only elements with `_dirty=True` appear in `changed`; element IDs that disappeared appear in `deleted`. Dirty flags are cleared after each call.
+- **When `V._count > 0`**: always returns a full snapshot (V() bindings can change values without triggering `__setattr__`, so dirty flags would miss updates).
+
+`_reset_snap_state()` resets the delta tracker; called at the start of each traced execution.
+
+**`_serialize_handlers() → str`** — returns `json.dumps({elem_id: ["on_click", ...]})` for elements that have interactive handlers.
 
 ---
 
@@ -132,30 +144,35 @@ Marks a function so the viz-aware interactive tracer skips local tracing for it.
 |------|---------|
 | `src/python-engine/vb_serializer.py` | Combined execution, V() tracer, snapshot recording, interactive dispatch |
 
-### `_exec_combined_code(code)` — Main Entry Point
+### `_exec_code(code)` — Main Entry Point
 
-Called by TypeScript for each Analyze run.
+Called by TypeScript for each Analyze run (TypeScript calls `_init_namespace()` first, then `_exec_code()`).
 
 ```
-1. Reset combined timeline and namespace
-2. Preprocess code (# @viz → __viz_begin__(), # @end → __viz_end__(dict(locals())))
-3. Seed namespace: user_api exports + __viz_begin__ (no-op) + __viz_end__
-4. sys.settrace(_make_v_aware_tracer(_viz_ranges))
-5. exec(compile(code, '<combined_code>', 'exec'), _combined_ns)
-6. sys.settrace(None)
-7. _combined_ns = ns  # persist for interactive mode
-8. Return json.dumps({ timeline: _combined_timeline, handlers, error? })
+1. _init_namespace(viz_ranges_json)  ← called by TypeScript first
+2. _exec_code(preprocessed_code):
+   a. _reset_snap_state()  ← reset delta tracking
+   b. sys.settrace(tracer)
+   c. exec(compile(code, '<user_code>', 'exec'), _namespace)
+   d. sys.settrace(None)
+   e. Post-exec flush: check for unseen V() changes or output
+   f. _namespace = ns  # persist for interactive mode
+   g. Return json.dumps({ steps, handlers, error?, console? })
 ```
 
 ### Snapshot Triggers
 
-Two conditions cause a snapshot to be recorded into `_combined_timeline`:
+Two conditions cause a snapshot to be recorded into the timeline:
 
 1. **Viz block exit** — `__viz_end__(dict(locals()))` is called. Snapshot includes the visual state, current locals, and the line number. `is_viz=True` in the step.
 
-2. **V() value change** — `_make_v_aware_tracer(_viz_ranges)` sets up a `sys.settrace` tracer that fires on every `'line'` event. If the line is outside all viz block ranges (`in_viz()` returns false) and any V() expression has changed value since the last check, a snapshot is recorded.
+2. **V() value change** — the tracer fires on every `'line'` event outside viz blocks. If `V._count > 0` and any V() expression has changed value since the last check, a snapshot is recorded.
 
 `__viz_begin__()` is a no-op — viz block lines are skipped by the tracer itself via `in_viz()`. `__viz_end__()` records the snapshot at the block boundary.
+
+When `V._count == 0` (no V() bindings), scope evaluation and V() comparisons are skipped entirely in the tracer — each snapshot is produced only by viz-block exits.
+
+The **`visual` field** of each step is the raw return value of `_serialize_visual_builder()` — either a full element array or a delta dict. TypeScript's `setVisualTimeline` processes these to build the hydrated timeline.
 
 ### `_collect_variables(frame_locals)`
 
@@ -172,8 +189,10 @@ Note: simpler than the old `_serialize_variables_for_ts` — no `R`-object unwra
 ```python
 class V:
     params = {}    # class variable: current frame locals (see sharp-edges.md)
+    _count = 0     # class variable: number of V() instances created since last registry reset
 
     def __init__(self, expr: str, default=None):
+        V._count += 1
         self.expr = expr
         self.default = default
 
@@ -184,24 +203,24 @@ class V:
 
 `V.params` is set from `frame.f_locals` at each line event by the V() change detection tracer. The `__getattribute__` patch on `VisualElem` triggers `.eval()` automatically whenever a property is accessed during serialization.
 
+**`V._count`** — incremented on each `V()` construction; reset to 0 by `_clear_registry()`. Used by the snapshot system to skip V()-related work (scope building, dirty-flag bypass) when no V() instances exist — a key performance optimization.
+
 ### `R` — Stable Object Reference Across Steps
 
 Same as before: `R` stores the `id` of the original Python object and resolves to the current step's copy via `R.registry`. See the original description in the old [python-engine.md history] for details. Still documented fully in `_vb_engine.py`.
 
 ### Interactive Tracing
 
-When an element is clicked, `_exec_combined_click_traced(elem_id, row, col)` runs:
+When an element is clicked, `_exec_click_traced(elem_id, row, col)` runs:
 
-1. Finds the element by `_elem_id` in `_combined_ns` namespace (not re-exec'd)
-2. Sets up `_make_interactive_tracer(_viz_ranges)`:
-   - Same V() change-detection logic as the initial trace
-   - **Per-frame skipping**: if a function's `co_firstlineno` falls inside a viz block range, returns `None` on the `'call'` event — skipping local tracing for that frame only. Algorithm functions called from within that frame still get traced (their `co_firstlineno` is outside viz ranges).
+1. Finds the element by `_elem_id` in `_namespace` (not re-exec'd)
+2. Sets up the tracer with the same V() change-detection and viz-block skipping logic
 3. Calls `target.on_click(row, col)` with the tracer active
-4. Returns `{ interactive_timeline, final_snapshot, handlers, output }`
+4. Returns `{ steps, handlers, console? }`
 
-Input changes use `_exec_combined_input_changed(elem_id, text)` — same pattern, calls `target.input_changed(text)`.
+Input changes use `_exec_input_changed(elem_id, text)` — same pattern. Drag events use `_exec_drag_traced(elem_id, row, col, drag_type)`.
 
-`_viz_ranges` is a module-level Python list set by `_exec_combined_code` at execution time (sourced from `getVizRanges` on the TS side). Click and input handlers read it directly — viz ranges don't change between execution and interaction.
+`_viz_ranges` is a module-level Python list set by `_init_namespace()` at execution time. Click and input handlers read it directly — viz ranges don't change between execution and interaction.
 
 ---
 
@@ -211,30 +230,33 @@ All calls go through `src/python-engine/executor.ts`.
 
 | TypeScript function | Python call | Returns |
 |--------------------|-------------|---------|
-| `executeCode(code)` | `_exec_combined_code(preprocessedCode)` | `TraceStageInfo: { timeline, handlers, error? }` |
-| `executeClickHandler(elemId, row, col)` | `_exec_combined_click_traced(...)` | `TraceStageInfo` |
-| `executeDragHandler(elemId, row, col, dragType)` | `_exec_combined_drag_traced(...)` | `TraceStageInfo` |
-| `executeInputChanged(elemId, text)` | `_exec_combined_input_changed(...)` | `TraceStageInfo` |
+| `executeCode(code)` | `_init_namespace(...)` then `_exec_code(preprocessedCode)` | `TraceStageInfo: { steps, handlers, error? }` |
+| `executeClickHandler(elemId, row, col)` | `_exec_click_traced(...)` | `TraceStageInfo` |
+| `executeDragHandler(elemId, row, col, dragType)` | `_exec_drag_traced(...)` | `TraceStageInfo` |
+| `executeInputChanged(elemId, text)` | `_exec_input_changed(...)` | `TraceStageInfo` |
 
 Pyodide initialization (`loadPyodide()`) lives in `src/python-engine/pyodide-runtime.ts` — singleton, loaded once per session. `executor.ts` calls it before any Python execution.
 
 ### Output Capture
 
-Python `print()` output is captured by redirecting `sys.stdout` before execution. The combined editor captures output incrementally: each snapshot records the stdout delta since the previous snapshot (`output` field in `CombinedStep`). The `OutputTerminal` displays the accumulated output from the current step.
+Python `print()` output is captured by redirecting `sys.stdout` before execution. Each snapshot records the stdout delta since the previous snapshot (`output` field in the step). The `OutputTerminal` displays the accumulated output from the current step.
+
+A `console` field (optional) may appear in the result for dev-mode profiling output — TypeScript logs it to the browser console and does not display it to the user.
 
 ### Import Files
 
-Optional import files live in `src/python-engine/imports/` (`array_utils.py`, `graphs.py`, `list_helpers.py`). They are bundled at build time and written to the Pyodide VFS during `loadPyodide()`. They are importable from user code with standard `import`.
+Optional import files live in `src/python-engine/imports/` (`array_utils.py`, `graphs.py`, `list_helpers.py`). They are bundled at build time via `import.meta.glob('./imports/*.py')` and all written to the Pyodide VFS during `loadPyodide()`. No per-file registration is needed — any new `.py` file added to `imports/` is automatically loaded.
 
-**Tracer behavior:** The V() tracer only records steps for frames where `co_filename == '<combined_code>'`. Functions from import files have a real filepath and are silently skipped — they execute normally but produce no trace steps.
+**Tracer behavior:** The V() tracer only records steps for frames where `co_filename == '<user_code>'`. Functions from import files have a real filepath and are silently skipped — they execute normally but produce no trace steps.
 
 ### Key Files Summary
 
 | File | Type | Purpose |
 |------|------|---------|
-| `src/python-engine/_vb_engine.py` | VFS module | Hidden engine types: VisualElem, V, R, TrackedDict, PopupException |
-| `src/python-engine/user_api.py` | VFS module | User-facing API: Panel, shapes, Input, no_debug |
-| `src/python-engine/vb_serializer.py` | exec'd | Execution, snapshot recording, interactive dispatch |
-| `src/python-engine/executor.ts` | TypeScript | All TypeScript↔Pyodide calls; code preprocessing |
+| `src/python-engine/_vb_engine.py` | VFS module | Hidden engine types: `VisualElem` (+ `_dirty`/`_set_v_attr`), `V` (+ `_count`), `R`, `TrackedDict`, `PopupException` |
+| `src/python-engine/user_api.py` | VFS module | User-facing API: `Panel`, shapes, `Input`, `no_debug` |
+| `src/python-engine/vb_serializer.py` | exec'd | Execution, delta snapshot recording, interactive dispatch; `_namespace`, `_init_namespace`, `_exec_code`, `_reset_snap_state` |
+| `src/python-engine/executor.ts` | TypeScript | All TypeScript↔Pyodide calls; code preprocessing; exports `RawVisual`, `VisualDelta` types |
 | `src/python-engine/viz-block-parser.ts` | TypeScript | Parse & validate # @viz / # @end blocks |
 | `src/python-engine/pyodide-runtime.ts` | TypeScript | Pyodide singleton: `loadPyodide()`, `isPyodideLoaded()`, `resetPythonState()` |
+| `src/python-engine/profiler.py` | dev tool | Python-side performance profiling (not loaded in production) |

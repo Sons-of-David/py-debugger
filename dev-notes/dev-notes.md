@@ -144,34 +144,37 @@ src/
 │   └── ExtrasMenu.tsx              # Header extras dropdown (dark mode, etc.)
 │
 ├── components/
-│   └── editor/                     # Code editor UI
-│       ├── Editor.tsx              # Monaco editor: viz block decorations, line highlight, autocomplete
-│       └── sample.py               # Default sample shown on first load
+│   ├── editor/                     # Code editor UI
+│   │   ├── Editor.tsx              # Monaco editor: viz block decorations, line highlight, autocomplete
+│   │   └── sample.py               # Default sample shown on first load
+│   └── FeedbackModal.tsx           # In-app feedback form (posts to /api/feedback)
 │
 ├── python-engine/                  # Active execution services + Python files
-│   ├── executor.ts                 # TypeScript ↔ Pyodide bridge (all Pyodide calls)
+│   ├── executor.ts                 # TypeScript ↔ Pyodide bridge; exports RawVisual, VisualDelta
 │   ├── pyodide-runtime.ts          # Pyodide singleton: loadPyodide(), isPyodideLoaded(), resetPythonState()
 │   ├── viz-block-parser.ts         # Parse & validate # @viz / # @end blocks
-│   ├── _vb_engine.py               # VFS module: VisualElem, V, R, TrackedDict, PopupException
+│   ├── _vb_engine.py               # VFS module: VisualElem (_dirty, __setattr__), V (_count), R, TrackedDict
 │   ├── user_api.py                 # VFS module: user-facing API (Panel, shapes, Input, no_debug)
-│   ├── vb_serializer.py            # Engine: execution, snapshot recording, interactive dispatch
-│   └── imports/                    # Optional Python modules importable from user code
+│   ├── vb_serializer.py            # Engine: _namespace, _exec_code, delta snapshots, interactive dispatch
+│   ├── profiler.py                 # Dev-only performance profiler
+│   └── imports/                    # Python modules auto-loaded into Pyodide VFS (all .py files)
 │       ├── array_utils.py / .schema.ts
 │       ├── graphs.py / .schema.ts
 │       └── list_helpers.py / .schema.ts
 │
 ├── samples/                        # Bundled sample JSON files (*.json)
+│                                   # Prefixes: feature-* → Features category, local-* → local-dev only
 │
 ├── old-code/                       # Archived legacy code — excluded from TypeScript; pending deletion
 │
 ├── timeline/
 │   ├── TimelineControls.tsx        # Prev/next navigation (rendered in header)
-│   ├── timelineState.ts            # Store for visual snapshots; hydrateTimelineFromArray()
+│   ├── timelineState.ts            # Store; setVisualTimeline() (delta-aware); hydrateTimelineFromArray()
 │   └── discreteTimelineSchema.ts   # Timeline data types
 │
 ├── visual-panel/
 │   ├── handlersState.ts            # Registry: elem_id → ["on_click"]
-│   ├── hooks/useGridState.ts       # loadVisualBuilderObjects(); grid cell map; occupancy
+│   ├── hooks/useGridState.ts       # loadVisualBuilderObjects(); single-pass (absolute positions)
 │   ├── components/
 │   │   ├── Grid.tsx                # 50×50 cell renderer; zoom, screenshots
 │   │   └── GridCell.tsx            # Individual cell with shape renderer
@@ -198,8 +201,19 @@ src/
 ├── animation/
 │   └── animationContext.tsx         # AnimationContext (boolean); Animated/Jump toggle state
 ├── contexts/ThemeContext.tsx        # Dark/light mode context
-├── pages/PlanPage.tsx              # About/info page (/plan route)
-└── main.tsx                        # App entry point; BrowserRouter; routes: / → App, /embed → EmbedPage
+├── pages/
+│   └── tutorials/                  # Tutorial pages (route: /tutorials/*)
+│       ├── TutorialsHub.tsx        # Tutorial index page
+│       ├── TutorialLayout.tsx      # Shared sidebar + nav layout
+│       ├── GettingStarted.tsx      # /tutorials (index)
+│       ├── EmbedPreview.tsx        # Shared embed iframe component
+│       ├── CodeBlock.tsx           # Shared syntax-highlighted code block
+│       ├── theme.ts                # Shared token constants (colors, spacing)
+│       ├── features/               # /tutorials/visual-elements, /tracing, /interactive-mode
+│       └── algorithms/             # /tutorials/algorithms/* (selection-sort, bubble-sort, trapping-rain, bfs-maze)
+├── api/
+│   └── feedback.ts                 # Vercel Lambda: receives feedback form POST, creates GitHub issue
+└── main.tsx                        # Routes: / → App, /embed → EmbedPage, /tutorials/* → TutorialLayout
 ```
 
 ---
@@ -218,10 +232,10 @@ See diagram in Part 1. Derived values:
 | Variable | Type | Purpose |
 |----------|------|---------|
 | `appMode` | `'idle'\|'trace'\|'interactive'` | Drives all UI mode logic |
-| `combinedCode` | `string` | Code editor content |
+| `code` | `string` | Code editor content (formerly `combinedCode`) |
 | `timeline` | `TraceStep[]` | Timeline from last Analyze |
-| `isCombinedEditable` | `boolean` | Whether editor is unlocked |
-| `isAnalyzingCombined` | `boolean` | Disables Analyze button while Python runs |
+| `isEditable` | `boolean` | Whether editor is unlocked |
+| `isAnalyzing` | `boolean` | Disables Analyze button while Python runs |
 | `analyzeStatus` | `'idle'\|'success'\|'error'` | Controls Analyze/Edit button appearance |
 | `projectName` | `string` | Current project name; used as filename for Save |
 | `currentStep` | `number` | Current timeline index |
@@ -229,6 +243,7 @@ See diagram in Part 1. Derived values:
 | `hasInteractiveElements` | `boolean` | Whether any element has a click handler |
 | `textBoxes` | `TextBox[]` | Grid annotation boxes (owned here for save/load) |
 | `pyodideReady` | `boolean` | Whether Pyodide has finished loading |
+| `feedbackOpen` | `boolean` | Whether the FeedbackModal is open |
 
 ---
 
@@ -236,13 +251,13 @@ See diagram in Part 1. Derived values:
 
 #### Initial Trace (Analyze)
 
-1. `handleAnalyzeCombined()` calls `executeCode(combinedCode)`
+1. `handleAnalyze()` calls `executeCode(code)`
 2. `python-engine/executor.ts`:
    - Preprocesses code: `# @viz` → `__viz_begin__()`, `# @end` → `__viz_end__(dict(locals()))`
    - Loads Pyodide (once per session via `pyodide-runtime.ts`)
-   - Calls `py.runPythonAsync(_exec_combined_code(preprocessedCode))`
-   - Returns `TraceStageInfo: { timeline: TraceStep[], handlers, error? }`
-3. `setHandlers()`, `hydrateTimelineFromArray()` populate stores
+   - Calls `_init_namespace(vizRangesJson)` then `_exec_code(preprocessedCode)`
+   - Returns `TraceStageInfo: { steps: TraceStep[], handlers, error? }`
+3. `setHandlers()`, `setVisualTimeline(steps.map(s => s.visual))` populate stores
 4. `loadVisualBuilderObjects(timeline[0])` renders first snapshot
 5. `appMode = 'trace'`
 
@@ -254,12 +269,11 @@ See diagram in Part 1. Derived values:
 
 #### Click Handler
 
-1. Grid fires `onCombinedTrace(result)` after handler completes
-2. `executeClickHandler(elemId, row, col)` in `python-engine/executor.ts`:
-   - Calls `_exec_combined_click_traced(elemId, row, col)` in Python
-   - Returns `TraceStageInfo: { timeline, handlers }`
-3. Mini-timeline loaded; `appMode = 'trace'`
-4. User steps through mini-timeline; "Finish & Interact" returns to `interactive`
+1. Grid fires click → `executeClickHandler(elemId, row, col)` in `python-engine/executor.ts`
+2. Calls `_exec_click_traced(elemId, row, col)` in Python
+3. Returns `TraceStageInfo: { steps, handlers }`
+4. Mini-timeline loaded; `appMode = 'trace'`
+5. User steps through mini-timeline; "Finish & Interact" returns to `interactive`
 
 #### Input Changed
 

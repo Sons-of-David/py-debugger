@@ -176,19 +176,23 @@ The app header always shows a project name input (`projectName` state in `App.ts
 
 ### Samples
 
-Bundled sample projects live in `src/samples/*.json`. They are loaded at build time via Vite's `import.meta.glob`:
+Bundled sample projects live in `src/samples/*.json`. They are loaded and registered by `src/app/sampleRegistry.ts`:
 
 ```typescript
-const modules = import.meta.glob('../samples/*.json', { eager: true });
+// Naming conventions:
+// feature-* → Features category
+// local-*   → only visible in DEV mode (localhost)
+// anything else → Algorithms category
 ```
 
-The filename (without `.json`) becomes the sample name. Files prefixed with `feature-` appear in the *Features* category in the dropdown; others appear in *Algorithms*.
+`SAMPLES` is exported from `sampleRegistry.ts` and used by App.tsx to populate the sample dropdown.
 
 ### Key Files
 
 | File | Purpose |
 |------|---------|
 | `src/app/App.tsx` | `handleSave`, `handleLoad` — JSON serialization/deserialization |
+| `src/app/sampleRegistry.ts` | `SAMPLES` export: loads all `src/samples/*.json`, applies category/localOnly logic |
 | `src/text-boxes/types.ts` | `TextBox` interface + `migrateTextBox()` |
 | `src/samples/*.json` | Bundled sample projects |
 

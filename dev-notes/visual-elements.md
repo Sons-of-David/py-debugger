@@ -6,10 +6,10 @@ The pipeline that takes a Python element object to a rendered, clickable cell on
 
 ```
 Python VisualElem
-  → _serialize_visual_builder() → JSON array
-    → hydrateTimelineFromArray() → TypeScript class instances
+  → _serialize_visual_builder() → full array OR delta {is_delta, changed, deleted}
+    → setVisualTimeline() → hydrated timeline (Map-based, delta-aware)
       → loadVisualBuilderObjects() → grid cell map
-        → user click → executeClickHandler() → Python _handle_click()
+        → user click → executeClickHandler() → Python _exec_click_traced()
 ```
 
 ---
@@ -21,7 +21,7 @@ Python VisualElem
 Every visual element has one stable ID:
 - **`_elem_id`** — stable integer assigned at construction. The only identity that holds across serialization calls, Python/TS boundary, and timeline steps.
 
-At each traced line, `_serialize_visual_builder()` produces a JSON snapshot of the full element registry. All `V()` property bindings are evaluated against that step's variables before serialization.
+At each traced line, `_serialize_visual_builder()` produces either a **full snapshot** (first call, or when V() bindings are present) or a **delta** (subsequent calls when `V._count == 0`). See [python-engine.md](./python-engine.md) for details on the delta system.
 
 ### Renderers
 
@@ -46,36 +46,19 @@ Each TypeScript shape class registers itself by type string: `registerVisualElem
 
 ### Python Side
 
-**File:** `src/python-engine/code-builder/services/visualBuilder.py`
+**File:** `src/python-engine/vb_serializer.py`
 
 #### `_serialize_visual_builder()`
 
-```python
-# Serialize each element via _serialize() → JSON array
-# (panels first so children can reference parent _elem_id via panelId)
-```
+Serializes the element registry as a full snapshot or delta. Positions are resolved to **absolute grid coordinates** by the Python DFS traversal before serialization. TypeScript never needs to add panel offsets.
 
-Children store positions **relative to their parent panel's top-left corner**. TypeScript resolves these to absolute grid coordinates.
+#### `_exec_click_traced(elem_id, row, col)` / `_exec_drag_traced(...)` / `_exec_input_changed(...)`
 
-#### `_handle_event_with_output(event_name, elem_id, row, col)`
+Unified interactive dispatch functions in `vb_serializer.py`. Each looks up the element by `_elem_id` in `_namespace`, calls the appropriate handler under a tracer, and returns `json.dumps({steps, handlers, console?})`.
 
-**File:** `src/python-engine/code-builder/services/event_handling.py`
+#### `_serialize_handlers() → str`
 
-Single unified dispatcher for all interactive events. Looks up the element by `_elem_id`, calls `getattr(elem, event_name)`, captures stdout, and returns `JSON {debugCall, runCall, output}`. Handles `on_click`, `on_drag_start`, `on_drag`, `on_drag_end`.
-
-`_handle_click_with_output(elem_id, row, col)` is a thin wrapper kept for backward compatibility (TypeScript still calls it by that name for clicks).
-
-#### `_serialize_handlers()` vs `_serialize_handlers_json()`
-
-```python
-_serialize_handlers()      → Python dict { int: ["on_click", "on_drag_start", ...] }
-                             Used ONLY inside _visual_code_trace (embedded in outer json.dumps)
-
-_serialize_handlers_json() → JSON string of the same dict
-                             Used by TypeScript direct calls (executeEventHandler)
-```
-
-**Never swap them** — embedding the JSON string version inside `json.dumps` double-encodes it.
+Returns `json.dumps({elem_id: ["on_click", "on_drag_start", ...]})` for all elements with handlers. Called after every interactive event (handlers can be created dynamically inside handlers).
 
 ---
 
@@ -83,20 +66,19 @@ _serialize_handlers_json() → JSON string of the same dict
 
 **File:** `src/timeline/timelineState.ts`
 
-#### `hydrateTimelineFromArray(rawTimeline)`
+#### `setVisualTimeline(rawTimeline: RawVisual[])`
 
-Converts a raw JSON timeline (arrays of plain objects) into a timeline of TypeScript class instances:
+Builds the hydrated timeline from raw visual snapshots. Each entry is either a full element array or a delta `{is_delta, changed, deleted}`. Maintains a running `Map<elemId, hydratedElement>` so only changed elements are re-hydrated — unchanged elements are shared references across steps:
 
 ```typescript
-timeline = rawTimeline.map(snapshot =>
-    snapshot.map(el => {
-        const Ctor = getConstructor(el.type);
-        return Ctor ? new Ctor(el) : el;  // falls back to plain object if unknown type
-    })
-);
+// Full snapshot: rebuild map entirely
+current.clear(); raw.forEach(el => current.set(id, hydrateElement(el)));
+// Delta: apply deletions, update changed
+raw.deleted.forEach(id => current.delete(id));
+raw.changed.forEach(el => current.set(id, hydrateElement(el)));
 ```
 
-Also `hydrateTimelineFromJson(jsonStr)` — parses string first, then calls the array version.
+Also `hydrateTimelineFromJson(jsonStr)` / `hydrateTimelineFromArray(raw)` — older full-snapshot-only paths, still present for the interactive mini-timeline (which always gets a full snapshot).
 
 #### Element Registry
 
@@ -131,28 +113,19 @@ This is the **only place** the Python `_elem_id` is transferred to TypeScript. S
 
 Takes an array of hydrated TypeScript element instances and populates the grid cell map.
 
-#### Two-Pass Algorithm
+**All positions are now absolute.** The Python side (DFS traversal in `vb_serializer.py`) resolves panel-relative coordinates to absolute grid coordinates before serialization. TypeScript no longer needs to add panel offsets — `element.position` in every hydrated instance is already an absolute grid coordinate.
 
-**Pass 1 — Panels:**
-```
-For each Panel element:
-  → Place at element.position in grid
-  → Record in panelIdMap: panelId (_elem_id string) → { absolutePosition }
-```
+#### Algorithm (single pass)
 
-**Pass 2 — Non-panels:**
 ```
-For each non-Panel element:
-  → If element.panelId exists:
-      absolutePosition = panelIdMap[panelId].absolutePosition + element.position
-  → Else:
-      absolutePosition = element.position
+For each element (sorted by z-order):
+  → element.position is already absolute
   → Call element.draw() → RenderableObjectData
-  → Assemble clickData (see below)
+  → Assemble clickData / dragData (see below)
   → Store in objects map
 ```
 
-Note: `element.position` in a hydrated TypeScript instance is the **absolute position** after `BasicShape` construction — but for children of panels, the raw JSON position was relative; TypeScript adds the panel offset here.
+Panels still appear as elements in the list (for occupancy/auto-sizing), but children do not need a parent lookup for position resolution.
 
 #### Interaction Data Assembly
 
@@ -186,27 +159,23 @@ Cells with `clickData` get `cursor-pointer`; cells with `dragData` get `cursor-g
 
 ### Click Dispatch Chain
 
-**Files:** `Grid.tsx` → `GridArea.tsx` → `pythonExecutor.ts` → `event_handling.py`
+**Files:** `Grid.tsx` → `GridArea.tsx` → `executor.ts` → `vb_serializer.py`
 
 ```
 Grid.tsx (GridSingleObject):
   onClick → onElementClick(clickData.elemId, [row, col])
 
 GridArea.tsx (handleElementClick → applyEventResult):
-  result = await executeClickHandler(elemId, row, col)   // thin wrapper
-  hydrate snapshot → loadVisualBuilderObjects(hydrated)
-  if result.debugCall: onDebugCall?.(result.debugCall)
+  result = await executeClickHandler(elemId, row, col)
+  hydrate steps → setVisualTimeline(result.steps.map(s => s.visual))
+  enter trace mode with mini-timeline
 
-pythonExecutor.ts (executeEventHandler 'on_click'):
-  1. _handle_event_with_output('on_click', elemId, row, col)
-  2. _serialize_visual_builder()          → snapshot JSON
-  3. _serialize_handlers_json()           → handlers JSON (always re-fetched)
-  return { snapshot, debugCall?: string }
+executor.ts (executeClickHandler):
+  1. _exec_click_traced(elemId, row, col)  ← single Python call returns full result
+  return { steps, handlers }
 ```
 
-**Why snapshot hydration happens in GridArea, not the executor:** The executor returns raw JSON (plain objects). GridArea calls `getConstructor` to instantiate proper TypeScript class instances before passing to `loadVisualBuilderObjects`. This is the same hydration as `hydrateTimelineFromArray` but for a single snapshot.
-
-**Why handlers are re-fetched on every event:** Elements created inside handlers accumulate in `_registry` and may have their own handlers. Re-fetching ensures they are immediately interactive without a full re-analyze. Cost: one extra Pyodide call per event. See [sharp-edges.md](./sharp-edges.md).
+**Why handlers are re-fetched on every event:** Elements created inside handlers accumulate in `_registry` and may have their own handlers. `_serialize_handlers()` is called inside `_exec_click_traced` — re-fetching ensures dynamically created elements are immediately interactive. See [sharp-edges.md](./sharp-edges.md).
 
 ---
 
@@ -288,11 +257,11 @@ In Jump mode (animation off), all transitions are disabled for instant updates.
 
 1. `_elem_id` (Python `int`) === `_elemId` (TypeScript `number`) — the only stable identity
 2. `BasicShape` subclasses (`Rect`, `Circle`, `Arrow`) are clickable/draggable; `Line`, `Label`, `Array` are not
-4. `_serialize_handlers()` → dict (embed in outer json.dumps); `_serialize_handlers_json()` → string (for TS calls)
+3. All positions in the serialized JSON are **absolute grid coordinates** — Python resolves panel-relative offsets before serialization
+4. `_serialize_handlers()` returns a JSON string — called inside `_exec_click_traced` and returned as part of the result
 5. Handlers are re-fetched after every event to support dynamically created elements
-6. Panel children have panel-relative positions in Python JSON; absolute positions in TypeScript instances
-7. Lower `z` = closer to viewer = rendered on top
-8. All event handlers (`on_click`, `on_drag_*`) receive absolute grid `(row, col)` — same type, same coordinate space
+6. Lower `z` = closer to viewer = rendered on top
+7. All event handlers (`on_click`, `on_drag_*`) receive absolute grid `(row, col)` — same type, same coordinate space
 
 ---
 
@@ -300,14 +269,15 @@ In Jump mode (animation off), all transitions are disabled for instant updates.
 
 | File | Purpose |
 |------|---------|
-| `src/python-engine/code-builder/services/event_handling.py` | `_handle_event_with_output` (unified dispatcher); `_handle_click_with_output` (thin wrapper); `_serialize_handlers`/`_serialize_handlers_json` |
-| `src/python-engine/code-builder/services/visualBuilder.py` | Python serialization, `_get_event_handlers`, `_execute_run_call` |
-| `src/python-engine/code-builder/services/user_api.py` | `Rect`, `Circle`, `Arrow`, `Line`, `Label`, `Array`, `Array2D` shape classes |
+| `src/python-engine/_vb_engine.py` | `VisualElem` (`_dirty`, `__setattr__` patch), `V` (`_count`), `R`, shapes |
+| `src/python-engine/user_api.py` | User-facing shapes: `Rect`, `Circle`, `Arrow`, `Line`, `Label`, `Array`, `Array2D`, `Input` |
+| `src/python-engine/vb_serializer.py` | `_serialize_visual_builder` (delta/full), `_serialize_handlers`, `_exec_click_traced`, etc. |
+| `src/python-engine/executor.ts` | `executeClickHandler`/`executeDragHandler`/`executeInputChanged`; exports `RawVisual`, `VisualDelta` |
 | `src/visual-panel/render-objects/BasicShape.ts` | `_elemId` bridge; clickable base class |
 | `src/visual-panel/render-objects/line/Line.ts` | `Line` TypeScript class (implements `VisualBuilderElementBase`, not `BasicShape`) |
 | `src/visual-panel/types/elementRegistry.ts` | Constructor registry by type string |
-| `src/timeline/timelineState.ts` | `hydrateTimelineFromArray` / `hydrateTimelineFromJson` |
-| `src/visual-panel/hooks/useGridState.ts` | `loadVisualBuilderObjects`; two-pass algorithm; `clickData`/`dragData` assembly; z-sort |
+| `src/timeline/timelineState.ts` | `setVisualTimeline` (delta-aware Map-based hydration); `hydrateTimelineFromArray` / `hydrateTimelineFromJson` |
+| `src/visual-panel/hooks/useGridState.ts` | `loadVisualBuilderObjects`; single-pass (positions are absolute); `clickData`/`dragData` assembly; z-sort |
 | `src/visual-panel/handlersState.ts` | `setHandlers`; `hasHandler` |
 | `src/app/GridArea.tsx` | Click + drag dispatch; `applyEventResult` snapshot re-hydration helper |
 | `src/animation/animationContext.tsx` | `AnimationContext` boolean; Animated/Jump toggle |

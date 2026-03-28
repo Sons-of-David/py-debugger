@@ -12,12 +12,12 @@ These are imperfections worth fixing at some point.
 
 ### Persistent Namespace Not Reset Between Analyze Runs
 
-Running Analyze twice in the same page session does **not** clear `_combined_ns`. Variables and functions from the previous run remain until overwritten by the new run. `VisualElem._clear_registry()` resets the visual elements, but not the Python variable namespace.
+Running Analyze twice in the same page session does **not** clear `_namespace`. Variables and functions from the previous run remain until overwritten by the new run. `VisualElem._clear_registry()` resets the visual elements, but not the Python variable namespace.
 
-In practice this is usually harmless because `exec(combinedCode)` re-defines most variables. The risk is with **functions removed from the code** — if you had `def temp(): ...` in a previous run and deleted it, `temp` is still callable in the new session. Also any module-level side effects from the previous run persist.
+In practice this is usually harmless because `exec(code)` re-defines most variables. The risk is with **functions removed from the code** — if you had `def temp(): ...` in a previous run and deleted it, `temp` is still callable in the new session. Also any module-level side effects from the previous run persist.
 
 **Workaround:** Reload the page for a completely clean state.
-**Fix direction:** Reset `_combined_ns` at the start of `_exec_combined_code` each Analyze. The namespace is re-seeded from `user_api` exports anyway, so this is safe.
+**Fix direction:** Reset `_namespace` at the start of `_exec_code` each Analyze. The namespace is re-seeded from `user_api` exports anyway, so this is safe.
 
 ---
 
@@ -41,6 +41,14 @@ Outside active tracing — e.g., when `_serialize_visual_builder()` is called fr
 
 ---
 
+### Delta Snapshots Are Disabled When V() Bindings Exist
+
+`_serialize_visual_builder()` falls back to full snapshots whenever `V._count > 0`. This is intentional: V() expressions are evaluated at read time (via `__getattribute__`) and do not trigger `__setattr__`, so the `_dirty` flag would miss updates to V()-bound properties. The delta system is only safe when all properties are set via plain assignment.
+
+If you add a new way to update element state that doesn't go through `__setattr__` (e.g., mutating a list in-place that a V() reads), delta snapshots will silently produce incorrect results. Always verify that `V._count == 0` is the right guard.
+
+---
+
 ### `_elem_id` (Python) vs `_elemId` (TypeScript)
 
 Python serializes `"_elem_id": self._elem_id` (snake_case). TypeScript's `BasicShape` constructor translates it: `this._elemId = el._elem_id` (camelCase). This translation happens in **one place only**: `src/visual-panel/render-objects/BasicShape.ts`.
@@ -57,23 +65,23 @@ Even if you define `on_click` on a `Label` in Python, it will appear in `_serial
 
 ---
 
-### Panel-Relative vs Absolute Positions
+### Positions Are Always Absolute in Serialized JSON
 
-Child elements of a `Panel` store positions **relative to the panel's top-left corner** in Python serialization. The raw JSON `position` field for a panel child is a relative offset, not an absolute grid coordinate.
+Panel-relative coordinates are resolved to absolute grid coordinates **by the Python DFS traversal** before serialization. The raw JSON `position` field for every element (including panel children) is an absolute grid coordinate.
 
-`loadVisualBuilderObjects()` (two-pass algorithm in `useGridState.ts`) resolves relative positions to absolute grid coordinates during hydration. After hydration, `element.position` in a TypeScript instance is always absolute. Never compare raw JSON positions of children with absolute grid positions directly.
+TypeScript's `loadVisualBuilderObjects()` no longer needs a two-pass algorithm to resolve parent offsets — all positions are absolute in the hydrated instances too. Do not add panel-offset resolution logic in TypeScript; it would double-apply the offset.
 
 ---
 
 ### Handlers Re-Fetched on Every Click
 
-After every click, `_exec_combined_click_traced` calls `_serialize_combined_handlers()` to re-fetch the full handler registry. This allows `on_click` handlers that create new visual elements (with their own `on_click`) to make those elements immediately clickable — without requiring a full re-analyze.
+After every click, `_exec_click_traced` calls `_serialize_handlers()` to re-fetch the full handler registry. This allows `on_click` handlers that create new visual elements (with their own `on_click`) to make those elements immediately clickable — without requiring a full re-analyze.
 
 ---
 
 ### Viz Block Preprocessing Happens in TypeScript, Not Python
 
-`combinedExecutor.ts` replaces `# @viz` and `# @end` markers before passing code to Python. This means:
+`executor.ts` replaces `# @viz` and `# @end` markers before passing code to Python. This means:
 - The original user code is never exec'd directly — Python always sees the preprocessed version with `__viz_begin__()` / `__viz_end__()` calls
 - The line numbers in the preprocessed code match the original exactly (the replacement is in-place with no line count change)
 - If a `# @viz` or `# @end` appears inside a string literal, it will still be replaced — a known limitation
@@ -88,4 +96,4 @@ After every click, `_exec_combined_click_traced` calls `_serialize_combined_hand
 
 ### Pyodide State Persists for the Full Page Session
 
-All Python module globals — `VisualElem._registry`, `_combined_ns`, Pyodide's module namespace, the loaded Python files — persist for the lifetime of the page. Only a page reload clears everything. Multiple Analyze runs in the same session share this global state (mitigated by `_clear_registry()` and `_combined_ns` re-seeding, but see the namespace note above).
+All Python module globals — `VisualElem._registry`, `_namespace`, Pyodide's module namespace, the loaded Python files — persist for the lifetime of the page. Only a page reload clears everything. Multiple Analyze runs in the same session share this global state (mitigated by `_clear_registry()` and `_namespace` re-seeding via `_init_namespace()`, but see the namespace note above).
