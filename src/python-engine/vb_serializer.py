@@ -12,26 +12,27 @@ import inspect as _inspect
 _snap_state: dict = {'initialized': False, 'prev_ids': set()}
 
 
-def _serialize_visual_builder() -> str:
+def _serialize_visual_builder():
     """Serialize visual elements as a full snapshot or a delta since the last call.
 
-    First call (or after reset): returns a JSON array of all elements.
-    Subsequent calls: returns a delta object {is_delta, changed, deleted} where
+    First call (or after reset): returns a list of all serialized elements.
+    Subsequent calls: returns a delta dict {is_delta, changed, deleted} where
       - changed: elements whose _dirty flag is True
-      - deleted: elem_ids that were in _registry at the last snapshot but are gone now
+      - deleted: elem_ids present at the last snapshot but now gone
+    Returns a Python object (not JSON) — callers store it directly in steps[].
     Dirty flags are cleared after each call.
     """
     registry = _engine.VisualElem._registry
     current_ids = {e._elem_id for e in registry}
 
     if not _snap_state['initialized']:
-        result = _json.dumps([e._serialize() for e in registry])
+        result = [e._serialize() for e in registry]
         _snap_state['initialized'] = True
     else:
         deleted = list(_snap_state['prev_ids'] - current_ids)
         changed = [e._serialize() for e in registry
                    if object.__getattribute__(e, '_dirty')]
-        result = _json.dumps({'is_delta': True, 'changed': changed, 'deleted': deleted})
+        result = {'is_delta': True, 'changed': changed, 'deleted': deleted}
 
     for e in registry:
         object.__setattr__(e, '_dirty', False)
@@ -198,9 +199,8 @@ def _exec_traced(execute_fn):
         all_out = _sys.stdout.getvalue()
         delta = all_out[last_stdout_pos[0]:]
         last_stdout_pos[0] = len(all_out)
-        visual_json = _serialize_visual_builder()
         steps.append({
-            'visual': _json.loads(visual_json),
+            'visual': _serialize_visual_builder(),
             'variables': {},  # TODO: separate user-algorithm variables from viz-block variables before re-enabling _collect_variables
             'line': line,
             'output': delta,
