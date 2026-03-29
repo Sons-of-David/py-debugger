@@ -161,7 +161,14 @@ const GridSingleObject = memo(function GridSingleObject({
   };
 
   const cursorClass = isDraggable ? ' cursor-grab pointer-events-auto' : (isClickable || isInput) ? ' cursor-pointer pointer-events-auto' : '';
-  const transition = animationsEnabled
+
+  // Skip animation for elements that didn't change this step.
+  // objectId encodes the elem id: "elem-42" or "panel-e42" → 42.
+  const oidMatch = obj.cellData.objectId ? /(\d+)$/.exec(obj.cellData.objectId) : null;
+  const elemId = oidMatch ? parseInt(oidMatch[1]) : null;
+  const didChange = changedIds == null || elemId === null || changedIds.has(elemId);
+
+  const transition = animationsEnabled && didChange
     ? { duration: animationDuration / 1000, ease: 'easeOut' as const }
     : { duration: 0 };
 
