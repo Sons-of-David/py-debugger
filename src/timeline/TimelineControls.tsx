@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { MousePointerClick, Play, Pause } from 'lucide-react';
 import { useAnimationDuration } from '../animation/animationContext';
 
@@ -32,16 +32,23 @@ export function TimelineControls({
   const [isPlaying, setIsPlaying] = useState(false);
   const animDuration = useAnimationDuration();
 
+  // Refs so the interval callback always sees the latest values without
+  // restarting the timer (and resetting its countdown) on every step advance.
+  const currentStepRef = useRef(currentStep);
+  const maxStepRef = useRef(maxStep);
+  useLayoutEffect(() => { currentStepRef.current = currentStep; });
+  useLayoutEffect(() => { maxStepRef.current = maxStep; });
+
   // Auto-advance when playing
   useEffect(() => {
-    if (!isPlaying) return;
-    if (isInactive || isPhoto || !hasSteps) { setIsPlaying(false); return; }
-    if (currentStep >= maxStep) { setIsPlaying(false); return; }
+    if (!isPlaying || isInactive || isPhoto || !hasSteps) return;
+    if (currentStepRef.current >= maxStepRef.current) return;
     const id = setInterval(() => {
-      onGoToStep(currentStep + 1);
+      if (currentStepRef.current >= maxStepRef.current) { setIsPlaying(false); return; }
+      onGoToStep(currentStepRef.current + 1);
     }, animDuration);
     return () => clearInterval(id);
-  }, [isPlaying, isInactive, isPhoto, hasSteps, currentStep, maxStep, animDuration, onGoToStep]);
+  }, [isPlaying, isInactive, isPhoto, hasSteps, animDuration, onGoToStep]);
 
   const scrubBarRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
