@@ -4,7 +4,7 @@ import { CodeBlock } from './CodeBlock';
 import { EmbedPreview } from './EmbedPreview';
 import { MousePointerClick } from 'lucide-react';
 
-const combinedCode = `arr = [1,5,4,7,9,3,5,2]
+const userCode = `arr = [1,5,4,7,9,3,5,2]
 index_max = 0
 
 # @viz
@@ -95,7 +95,7 @@ export function GettingStarted() {
           <code className={t.inlineCode}># @end</code> blocks to declare visual elements and
           mark snapshot points. You can place as many blocks as you like anywhere in the file.
         </p>
-        <CodeBlock code={combinedCode} />
+        <CodeBlock code={userCode} />
 
         <div className="mt-4 space-y-3 mb-2">
           <div className={`${t.card} p-4`}>
