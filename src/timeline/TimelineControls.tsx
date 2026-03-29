@@ -39,15 +39,28 @@ export function TimelineControls({
   useLayoutEffect(() => { currentStepRef.current = currentStep; });
   useLayoutEffect(() => { maxStepRef.current = maxStep; });
 
-  // Auto-advance when playing
+  // Auto-advance when playing — self-correcting timer.
+  // Each tick records targetTime = now + animDuration. The next timeout is
+  // scheduled as max(0, targetTime - now) so a late tick is compensated by a
+  // shorter wait on the following one, keeping the long-term cadence on target.
   useEffect(() => {
     if (!isPlaying || isInactive || isPhoto || !hasSteps) return;
     if (currentStepRef.current >= maxStepRef.current) return;
-    const id = setInterval(() => {
+
+    let timeoutId: ReturnType<typeof setTimeout>;
+    let cancelled = false;
+    let targetTime = performance.now() + animDuration;
+
+    const tick = () => {
+      if (cancelled) return;
       if (currentStepRef.current >= maxStepRef.current) { setIsPlaying(false); return; }
       onGoToStep(currentStepRef.current + 1);
-    }, animDuration);
-    return () => clearInterval(id);
+      targetTime += animDuration;
+      timeoutId = setTimeout(tick, Math.max(0, targetTime - performance.now()));
+    };
+
+    timeoutId = setTimeout(tick, animDuration);
+    return () => { cancelled = true; clearTimeout(timeoutId); };
   }, [isPlaying, isInactive, isPhoto, hasSteps, animDuration, onGoToStep]);
 
   const scrubBarRef = useRef<HTMLDivElement>(null);
