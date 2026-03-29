@@ -14,7 +14,7 @@ import { TimelineControls } from '../timeline/TimelineControls';
 import { ExtrasMenu } from './ExtrasMenu';
 import { FeedbackModal } from '../components/FeedbackModal';
 import { GridArea, type GridAreaHandle } from './GridArea';
-import { getStateAt, getMaxTime, clearTimeline, setVisualTimeline } from '../timeline/timelineState';
+import { getStateAt, getMaxTime, getChangedIdsAt, clearTimeline, setVisualTimeline } from '../timeline/timelineState';
 import { executeCode, type TraceStep, type TraceStageInfo } from '../python-engine/executor';
 import { setHandlers, hasAnyClickHandler } from '../visual-panel/handlersState';
 import { getVizRanges } from '../python-engine/viz-block-parser';
@@ -102,6 +102,8 @@ function App() {
   // even if currentStep stays at 0 between analyses.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const currentElements = useMemo(() => getStateAt(currentStep) ?? [], [currentStep, timeline]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const changedIds = useMemo(() => getChangedIdsAt(currentStep), [currentStep, timeline]);
 
   const goToStep = useCallback((step: number) => {
     setCurrentStep(Math.max(0, Math.min(getMaxTime(), step)));
@@ -590,6 +592,7 @@ function App() {
                 textBoxes={textBoxes}
                 onTextBoxesChange={setTextBoxes}
                 elements={currentElements}
+                changedIds={changedIds}
                 vizRanges={vizRanges}
                 onTrace={startTrace}
                 appMode={appMode}

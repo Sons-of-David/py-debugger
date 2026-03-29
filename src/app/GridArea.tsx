@@ -39,6 +39,8 @@ interface GridAreaProps {
   hideToolbar?: boolean;
   /** Visual elements to display; updated reactively when currentStep changes. */
   elements?: VisualBuilderElementBase[];
+  /** Elem IDs that changed at this step; null = full snapshot (animate all). */
+  changedIds?: Set<number> | null;
   /** editor: viz block ranges for the current code, used for auto-tracing clicks. */
   vizRanges?: VizRange[];
   /** editor: called when a click produces a traced mini-timeline. */
@@ -51,7 +53,7 @@ interface GridAreaProps {
 }
 
 export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
-  function GridArea({ darkMode, mouseEnabled, textBoxes, onTextBoxesChange, hideToolbar = false, elements, vizRanges: vizRanges, onTrace: onTrace, appMode = 'idle', projectName = 'visual-panel', onCreateGif, isCreatingGif = false, allowGif = false }, ref) {
+  function GridArea({ darkMode, mouseEnabled, textBoxes, onTextBoxesChange, hideToolbar = false, elements, changedIds, vizRanges: vizRanges, onTrace: onTrace, appMode = 'idle', projectName = 'visual-panel', onCreateGif, isCreatingGif = false, allowGif = false }, ref) {
     const {
       cells,
       overlayCells,
@@ -286,6 +288,7 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
           <Grid
             ref={gridRef}
             cells={cells}
+            changedIds={changedIds}
             overlayCells={overlayCells}
             occupancyMap={occupancyMap}
             panels={panels}

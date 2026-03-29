@@ -21,6 +21,8 @@ interface GridProps {
   overlayCells?: Map<string, RenderableObjectData>;
   occupancyMap?: Map<string, unknown>; // kept for API compat
   panels: Array<PanelInfo>;
+  /** Elem IDs that changed at this step; null = full snapshot (animate all). */
+  changedIds?: Set<number> | null;
   zoom: number;
   onZoom: (delta: number) => void;
   darkMode?: boolean;
@@ -92,12 +94,14 @@ const GridSingleObject = memo(function GridSingleObject({
   onElementClick,
   onElementDragStart,
   onElementInput,
+  changedIds,
 }: {
   obj: RenderableObject;
   mouseEnabled: boolean;
   onElementClick?: (elemId: number, x: number, y: number) => void;
   onElementDragStart?: (elemId: number, x: number, y: number, panelOriginCol: number, panelOriginRow: number) => void;
   onElementInput?: (elemId: number, text: string) => void;
+  changedIds?: Set<number> | null;
 }) {
   const { widthCells, heightCells } = obj;
   const [flashing, setFlashing] = useState(false);
@@ -210,6 +214,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
   overlayCells = new Map(),
   occupancyMap: _occupancyMap = new Map(),
   panels,
+  changedIds,
   zoom,
   onZoom,
   darkMode = false,
@@ -370,9 +375,10 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
         onElementClick={onElementClick}
         onElementDragStart={handleDragStart}
         onElementInput={onElementInput}
+        changedIds={changedIds}
       />
     ));
-  }, [objectsToRender, mouseEnabled, onElementClick, handleDragStart, onElementInput]);
+  }, [objectsToRender, mouseEnabled, onElementClick, handleDragStart, onElementInput, changedIds]);
 
   const getPanelClasses = (panel: PanelInfo): string => {
     const base = 'absolute transition-all ease-out';
