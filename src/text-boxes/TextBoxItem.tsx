@@ -52,6 +52,17 @@ export function TextBoxItem({ box, zoom, selected, autoEdit, onSelect, onChange,
     // view.updateState twice in one cycle for list-content boxes, which crashes.
     editable: true,
     immediatelyRender: false,
+    editorProps: {
+      attributes: {
+        autocorrect: 'off',
+        autocapitalize: 'off',
+        spellcheck: 'false',
+      },
+    },
+    // Disable markdown-style input rules (e.g. *text* → italic, # → heading)
+    // so that typing patterns like [i] don't accidentally reformat text.
+    enableInputRules: false,
+    enablePasteRules: false,
     onUpdate: ({ editor }) => {
       onChangeRef.current({ ...boxRef.current, content: editor.getJSON() });
     },
