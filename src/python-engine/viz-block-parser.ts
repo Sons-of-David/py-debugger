@@ -25,29 +25,26 @@ export function computeFoldingRanges(code: string, vizRanges: VizRange[]): Foldi
   const indents = lines.map((line) => {
     const trimmed = line.trimStart();
     if (trimmed === '') return -1;
-    if (trimmed.startsWith('#') && !trimmed.startsWith('# @viz') && !trimmed.startsWith('# @end'))
-      return -1;
+    if (trimmed.startsWith('#') && !trimmed.startsWith('# @viz') && !trimmed.startsWith('# @end')) return -1;
     return line.length - trimmed.length;
   });
-  console.log(indents);
-  const lastContentLine = indents.reduce((last, d, i) => (d !== -1 ? i + 1 : last), 0);
+
+  // Only the indices of content lines (not blank/comment), in order
+  const contentIndices = indents.map((_, i) => i).filter((i) => indents[i] !== -1);
+
   const stack: { indent: number; startLine: number }[] = [];
-  for (let i = 0; i < lines.length; i++) {
+  for (let ci = 0; ci < contentIndices.length; ci++) {
+    const i = contentIndices[ci];
     const indent = indents[i];
-    if (indent === -1) continue;
     while (stack.length > 0 && indent <= stack[stack.length - 1].indent) {
       const closed = stack.pop()!;
-      let endIdx = i - 1;
-      while (endIdx >= 0 && (lines[endIdx].trim() === '' || (lines[endIdx].trimStart().startsWith('#') && !lines[endIdx].trimStart().startsWith('# @viz') && !lines[endIdx].trimStart().startsWith('# @end')))) endIdx--;
-      const endLine = endIdx + 1;
+      const endLine = contentIndices[ci - 1] + 1; // last content line before current, 1-indexed
       if (endLine > closed.startLine) ranges.push({ start: closed.startLine, end: endLine });
     }
-    let nextIndent = -1;
-    for (let j = i + 1; j < lines.length; j++) {
-      if (indents[j] !== -1) { nextIndent = indents[j]; break; }
-    }
+    const nextIndent = ci + 1 < contentIndices.length ? indents[contentIndices[ci + 1]] : -1;
     if (nextIndent > indent) stack.push({ indent, startLine: i + 1 });
   }
+  const lastContentLine = contentIndices.length > 0 ? contentIndices[contentIndices.length - 1] + 1 : 0;
   while (stack.length > 0) {
     const closed = stack.pop()!;
     if (lastContentLine > closed.startLine) ranges.push({ start: closed.startLine, end: lastContentLine });

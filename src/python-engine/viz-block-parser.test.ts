@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeFoldingRanges, getVizRanges } from './viz-block-parser';
+import { computeFoldingRanges } from './viz-block-parser';
 import type { VizRange } from './viz-block-parser';
 
 // Helper: build a VizRange array from raw start/end pairs
