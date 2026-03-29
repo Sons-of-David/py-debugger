@@ -1,4 +1,4 @@
 {
-  "userCode": "if a > 0:\n    print('hello')\nelse:\n    print('goodbye')\n    # @viz\n    print('viz')\n    # @end",
+  "userCode": "n = 0\n\nif n <= 0:\n    pass\n\n# comment\nif n <= 0:\n    pass\n\n# comment\n# @viz\na = 1\n# @end\n\n#comment",
   "textBoxes": []
 }
