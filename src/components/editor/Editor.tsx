@@ -5,7 +5,7 @@ import type * as MonacoTypes from 'monaco-editor';
 import { VISUAL_ELEM_SCHEMA } from '../../api/visualBuilder';
 import { OutputTerminal } from '../../output-terminal/OutputTerminal';
 import { useTheme } from '../../contexts/ThemeContext';
-import { getVizRanges, getVizBadRanges } from '../../python-engine/viz-block-parser';
+import { getVizRanges, getVizBadRanges, computeFoldingRanges } from '../../python-engine/viz-block-parser';
 import sampleCode from './sample.py?raw';
 
 export const DEFAULT_SAMPLE = sampleCode;
@@ -131,46 +131,11 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
     const foldingDisposable = monaco.languages.registerFoldingRangeProvider('python', {
       provideFoldingRanges: (model: MonacoTypes.editor.ITextModel) => {
         const code = model.getValue();
-        const ranges: MonacoTypes.languages.FoldingRange[] = [];
-
-        // Viz block ranges
-        for (const r of getVizRanges(code)) {
-          ranges.push({ start: r.startLine, end: r.endLine, kind: monaco.languages.FoldingRangeKind.Region });
-        }
-
-        // Indentation-based ranges for standard Python blocks
-        const lines = model.getLinesContent();
-        // Precompute indent levels (-1 for blank/comment lines)
-        const indents = lines.map((line) => {
-          const trimmed = line.trimStart();
-          return trimmed === '' || trimmed.startsWith('#') ? -1 : line.length - trimmed.length;
-        });
-        const lastContentLine = indents.reduce((last, d, i) => (d !== -1 ? i + 1 : last), 0);
-        const stack: { indent: number; startLine: number }[] = [];
-        for (let i = 0; i < lines.length; i++) {
-          const indent = indents[i];
-          if (indent === -1) continue;
-          // Close ranges whose indent is >= current
-          while (stack.length > 0 && indent <= stack[stack.length - 1].indent) {
-            const closed = stack.pop()!;
-            let endIdx = i - 1;
-            while (endIdx >= 0 && lines[endIdx].trim() === '') endIdx--;
-            const endLine = endIdx + 1; // convert to 1-indexed
-            if (endLine > closed.startLine) ranges.push({ start: closed.startLine, end: endLine });
-          }
-          // Only start a fold here if the next non-blank line has greater indentation
-          let nextIndent = -1;
-          for (let j = i + 1; j < lines.length; j++) {
-            if (indents[j] !== -1) { nextIndent = indents[j]; break; }
-          }
-          if (nextIndent > indent) stack.push({ indent, startLine: i + 1 }); // 1-indexed
-        }
-        while (stack.length > 0) {
-          const closed = stack.pop()!;
-          if (lastContentLine > closed.startLine) ranges.push({ start: closed.startLine, end: lastContentLine });
-        }
-
-        return ranges;
+        return computeFoldingRanges(code, getVizRanges(code)).map((r) => ({
+          start: r.start,
+          end: r.end,
+          kind: r.isVizBlock ? monaco.languages.FoldingRangeKind.Region : undefined,
+        }));
       },
     });
     disposablesRef.current.push(foldingDisposable);
