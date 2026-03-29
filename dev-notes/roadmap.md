@@ -154,6 +154,18 @@ These were identified while profiling the A* sample (`perf-delta-snapshots` bran
 
 - **Fast-path serialization bypassing `_get_v_attr`.** `_serialize_from_fields` calls `getattr(self, name)` for every property, going through the `_get_v_attr` `__getattribute__` override (two `isinstance` checks per attribute). When `V._count == 0`, serialization could read `object.__getattribute__` directly, skipping the V/R checks.
 
+### Playback rendering
+
+These were identified while working on A* playback speed (March 2026). The timer and animation-skip improvements helped, but the per-frame render cost is still the dominant bottleneck.
+
+- **Incremental `loadVisualBuilderObjects`.** Today the entire `objects` Map is rebuilt from scratch on every step, even though most elements are unchanged. `getChangedIdsAt()` now tells us exactly which elem IDs changed. An incremental path would clone the previous Map and only update/delete entries for changed elements, leaving all other entries with their existing JS object references.
+
+- **Stable `RenderableObjectData` references unblock React.memo.** `GridSingleObject` is wrapped in `memo`, but it always receives a new `obj` (the `cells` Map is rebuilt). If unchanged elements kept the same `RenderableObjectData` reference across steps, `memo` would bail out entirely — skipping not just Framer Motion but the entire React reconciliation for those components.
+
+- **Stable `cells` Map unblocks downstream memos.** `panelAutoSizes`, `cells`/`overlayCells`, and `occupancyMap` are all re-derived via `useMemo` because `objects` is always a new Map. Stable references in `objects` would let these memos short-circuit on unchanged steps.
+
+- **Cache `objectsToRender` sort order.** The `O(n log n)` sort in `Grid.tsx` runs every frame. For most steps in A* the z-order doesn't change. Could track a dirty flag on `userZ`/`zOrder` and skip the sort when neither changed.
+
 ### Testing
 
 - **Python-level sample tests.** Use `profiler.py` as a base: load each sample JSON, run `_exec_code`, and assert on step count, final board state, and key variable values. This catches engine regressions without needing a browser.
