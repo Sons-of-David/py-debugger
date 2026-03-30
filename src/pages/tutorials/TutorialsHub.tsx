@@ -22,7 +22,7 @@ const cards = [
   },
   {
     title: 'Algorithm Walkthroughs',
-    description: 'Full worked examples — Selection Sort walks through viz blocks, panels, and V() step by step.',
+    description: 'Using actual algorithms to get familiar with the tracing, visualization and interaction features.',
     to: '/tutorials/algorithms/selection-sort',
     accent: 'border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-900/20',
     titleColor: 'text-violet-800 dark:text-violet-300',
