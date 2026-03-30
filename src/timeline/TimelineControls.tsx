@@ -10,6 +10,8 @@ interface TimelineControlsProps {
   onEnterInteractive?: () => void;
   /** False = show the Go-Interactive button disabled (no interactive elements exist) */
   hasInteractiveElements?: boolean;
+  /** When true, briefly flash the enter-interactive button to draw attention. */
+  flashInteractive?: boolean;
 }
 
 export function TimelineControls({
@@ -19,6 +21,7 @@ export function TimelineControls({
   appMode,
   onEnterInteractive,
   hasInteractiveElements,
+  flashInteractive,
 }: TimelineControlsProps) {
   const hasSteps = stepCount > 0;
   const maxStep = hasSteps ? stepCount - 1 : 0;
@@ -154,9 +157,18 @@ export function TimelineControls({
             disabled={appMode !== 'trace' || !canEnterInteractive || !onEnterInteractive}
             className={appMode === 'trace' && canEnterInteractive && onEnterInteractive ? btnActive : btnDisabled}
             title={appMode === 'trace' && canEnterInteractive ? "Finish trace and enter interactive mode" : "No interactive elements"}
+            style={flashInteractive ? { animation: 'interactivePulse 0.65s ease-in-out' } : undefined}
           >
             <MousePointerClick size={14} />
           </button>
+          <style>{`
+            @keyframes interactivePulse {
+              0%   { transform: scale(1); }
+              30%  { transform: scale(1.4); background-color: #f59e0b; color: #000; border-color: #f59e0b; }
+              70%  { transform: scale(1.4); background-color: #f59e0b; color: #000; border-color: #f59e0b; }
+              100% { transform: scale(1); }
+            }
+          `}</style>
         </>
 
       </div>

@@ -50,10 +50,12 @@ interface GridAreaProps {
   onCreateGif?: (region: CaptureRegion | null) => void;
   isCreatingGif?: boolean;
   allowGif?: boolean;
+  /** Called when the user clicks the visual panel while in trace mode. */
+  onTraceClickAttempt?: () => void;
 }
 
 export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
-  function GridArea({ darkMode, mouseEnabled, textBoxes, onTextBoxesChange, hideToolbar = false, elements, changedIds, vizRanges: vizRanges, onTrace: onTrace, appMode = 'idle', projectName = 'visual-panel', onCreateGif, isCreatingGif = false, allowGif = false }, ref) {
+  function GridArea({ darkMode, mouseEnabled, textBoxes, onTextBoxesChange, hideToolbar = false, elements, changedIds, vizRanges: vizRanges, onTrace: onTrace, appMode = 'idle', projectName = 'visual-panel', onCreateGif, isCreatingGif = false, allowGif = false, onTraceClickAttempt }, ref) {
     const {
       cells,
       overlayCells,
@@ -284,7 +286,13 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
           </div>
         )}
 
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden relative">
+          {appMode === 'trace' && (
+            <div
+              className="absolute inset-0 z-10 cursor-pointer"
+              onClick={onTraceClickAttempt}
+            />
+          )}
           <Grid
             ref={gridRef}
             cells={cells}

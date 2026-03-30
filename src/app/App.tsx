@@ -75,6 +75,13 @@ function App() {
 
   const [isCreatingGif, setIsCreatingGif] = useState(false);
   const [hasInteractiveElements, setHasInteractiveElements] = useState(false);
+  const [flashInteractive, setFlashInteractive] = useState(false);
+
+  const handleTraceClickAttempt = useCallback(() => {
+    if (!hasInteractiveElements) return;
+    setFlashInteractive(true);
+    setTimeout(() => setFlashInteractive(false), 700);
+  }, [hasInteractiveElements]);
   // Preload Pyodide on mount
   useEffect(() => {
     if (!isPyodideLoaded()) {
@@ -522,6 +529,7 @@ function App() {
           <TimelineControls
             currentStep={currentStep}
             stepCount={stepCount}
+            flashInteractive={flashInteractive}
             onGoToStep={goToStep}
             appMode={appMode}
             onEnterInteractive={handleEnterInteractive}
@@ -600,6 +608,7 @@ function App() {
                 onCreateGif={handleCreateGif}
                 isCreatingGif={isCreatingGif}
                 allowGif={IS_LOCAL}
+                onTraceClickAttempt={handleTraceClickAttempt}
               />
 
               {apiReferenceOpen && (
