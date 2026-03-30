@@ -57,7 +57,7 @@ function App() {
 
   const [textBoxes, setTextBoxes] = useState<TextBox[]>([]);
   const [animationsEnabled, setAnimationsEnabled] = useState(true);
-  const [animationDuration, setAnimationDuration] = useState(500); // ms
+  const [animationDuration, setAnimationDuration] = useState(200); // ms
 
   // editor state
   const [userCode, setUserCode] = useState(DEFAULT_SAMPLE);

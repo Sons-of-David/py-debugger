@@ -150,7 +150,7 @@ export function ExtrasMenu({
               <div className="px-4 py-2 flex items-center gap-2">
                 <input
                   type="range"
-                  min={100} max={2000} step={100}
+                  min={100} max={1000} step={100}
                   value={animationDuration}
                   onChange={(e) => onAnimationDurationChange(Number(e.target.value))}
                   className="flex-1 accent-blue-500"
