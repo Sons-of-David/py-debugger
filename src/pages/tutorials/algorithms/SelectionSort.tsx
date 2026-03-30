@@ -165,7 +165,7 @@ export function SelectionSort() {
       </div>
 
       {/* Embedded preview */}
-      <EmbedPreview sample="1-selection-sort" vx={0} vy={0} vw={10} vh={4} />
+      <EmbedPreview sample="5-selection-sort" vx={0} vy={0} vw={10} vh={4} />
 
       {/* CTA */}
       <div className={t.ctaBanner}>
@@ -175,7 +175,7 @@ export function SelectionSort() {
             Open the final version in the editor and step through it live.
           </p>
         </div>
-        <Link to="/?sample=1-selection-sort" className={`shrink-0 ${t.btnPrimary}`}>
+        <Link to="/?sample=5-selection-sort" className={`shrink-0 ${t.btnPrimary}`}>
           Open in Editor →
         </Link>
       </div>
