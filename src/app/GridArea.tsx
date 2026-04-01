@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, forwardRef, useImperativeHandle, useEffect } from 'react';
-import { toCanvas } from 'html-to-image';
+import { renderFrameToCanvas } from './canvasRenderer';
 import { Grid, type GridHandle, CELL_SIZE } from '../visual-panel/components/Grid';
 import { useGridState } from '../visual-panel/hooks/useGridState';
 import type { VisualBuilderElementBase } from '../api/visualBuilder';
@@ -25,8 +25,6 @@ const panelHeader =
 
 export interface GridAreaHandle {
   loadVisualBuilderObjects: (elements: VisualBuilderElementBase[]) => void;
-  captureFrameData: (region: CaptureRegion | null) => Promise<string | null>;
-  captureFrameCanvas: (region: CaptureRegion | null) => Promise<HTMLCanvasElement | null>;
   scrollViewport: (x: number, y: number) => void;
   clipViewport: (w: number, h: number) => void;
 }
@@ -73,7 +71,6 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
     }, [elements, loadVisualBuilderObjects]);
 
     const gridRef = useRef<GridHandle>(null);
-    const [isCapturing, setIsCapturing] = useState(false);
     const [addingTextBox, setAddingTextBox] = useState(false);
     const [selectedTextBoxId, setSelectedTextBoxId] = useState<string | null>(null);
 
@@ -132,45 +129,19 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
       setSelectedTextBoxId(null);
     }, [textBoxes, onTextBoxesChange]);
 
-    /** Render the grid element to a cropped canvas (shared by screenshot and GIF paths). */
-    const captureFrameCanvas = useCallback(async (region: CaptureRegion | null): Promise<HTMLCanvasElement | null> => {
-      const element = gridRef.current?.captureElement();
-      if (!element) return null;
+    /** Render the selected region to a canvas directly from element data. */
+    const captureFrameCanvas = useCallback((region: CaptureRegion | null): HTMLCanvasElement => {
+      const r = region ?? { col: 0, row: 0, widthCells: 50, heightCells: 50 };
+      const canvas = document.createElement('canvas');
+      canvas.width = r.widthCells * CELL_SIZE;
+      canvas.height = r.heightCells * CELL_SIZE;
+      const ctx = canvas.getContext('2d')!;
+      renderFrameToCanvas(elements ?? [], ctx, r, darkMode);
+      return canvas;
+    }, [elements, darkMode]);
 
-      // toCanvas avoids the PNG encode/decode round-trip of toPng
-      const fullCanvas = await toCanvas(element, {
-        pixelRatio: 1,
-        backgroundColor: darkMode ? '#111827' : '#f3f4f6',
-        skipFonts: true,
-        cacheBust: false,
-      });
-
-      let sx: number, sy: number, sw: number, sh: number;
-      if (region) {
-        sx = region.col * CELL_SIZE * zoom;
-        sy = region.row * CELL_SIZE * zoom;
-        sw = region.widthCells * CELL_SIZE * zoom;
-        sh = region.heightCells * CELL_SIZE * zoom;
-      } else {
-        sx = element.scrollLeft;
-        sy = element.scrollTop;
-        sw = element.clientWidth;
-        sh = element.clientHeight;
-      }
-
-      const cropped = document.createElement('canvas');
-      cropped.width = sw;
-      cropped.height = sh;
-      const ctx = cropped.getContext('2d');
-      if (!ctx) return null;
-
-      ctx.drawImage(fullCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
-      return cropped;
-    }, [darkMode, zoom]);
-
-    const captureFrameData = useCallback(async (region: CaptureRegion | null): Promise<string | null> => {
-      const canvas = await captureFrameCanvas(region);
-      return canvas ? canvas.toDataURL('image/png') : null;
+    const captureFrameData = useCallback((region: CaptureRegion | null): string => {
+      return captureFrameCanvas(region).toDataURL('image/png');
     }, [captureFrameCanvas]);
 
     useImperativeHandle(ref, () => ({
@@ -191,7 +162,7 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
     };
 
     /** Called when a region is drawn — either triggers screenshot or GIF depending on pendingGifRef. */
-    const handleCaptureRegionDrawn = useCallback(async (region: CaptureRegion) => {
+    const handleCaptureRegionDrawn = useCallback((region: CaptureRegion) => {
       setCapturingRegionMode(false);
 
       if (pendingGifRef.current) {
@@ -201,28 +172,17 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
         return;
       }
 
-      // Screenshot path
-      if (isCapturing) return;
-      setIsCapturing(true);
-      try {
-        const dataUrl = await captureFrameData(region);
-        if (dataUrl) {
-          const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-          downloadDataUrl(dataUrl, `${projectName}-${timestamp}.png`);
-        }
-      } catch (err) {
-        console.error('Screenshot failed:', err);
-      } finally {
-        setIsCapturing(false);
-        setCaptureRegion(null);
-      }
-    }, [isCapturing, captureFrameData, onCreateGif, projectName]);
+      // Screenshot path — synchronous, no spinner needed
+      const dataUrl = captureFrameData(region);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      downloadDataUrl(dataUrl, `${projectName}-${timestamp}.png`);
+      setCaptureRegion(null);
+    }, [captureFrameData, onCreateGif, projectName]);
 
     const handleScreenshotClick = useCallback(() => {
-      if (isCapturing) return;
       pendingGifRef.current = false;
       setCapturingRegionMode(true);
-    }, [isCapturing]);
+    }, []);
 
     const handleGifClick = useCallback(() => {
       if (captureRegion) {
@@ -259,11 +219,10 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
               </button>
               <button
                 onClick={handleScreenshotClick}
-                disabled={isCapturing}
                 className={`${buttonDisabled}${capturingRegionMode && !pendingGifRef.current ? ' ring-2 ring-inset ring-orange-500' : ''}`}
                 title="Screenshot: click then draw a region on the grid"
               >
-                {isCapturing ? '⏳' : '📷'}
+                📷
               </button>
               {appMode === 'trace' && allowGif && (
                 <button

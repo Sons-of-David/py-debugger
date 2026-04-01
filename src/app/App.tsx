@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { GIFEncoder, quantize, applyPalette } from 'gifenc';
 import type { CaptureRegion } from '../visual-panel/components/CaptureRegionLayer';
+import { renderFrameToCanvas } from './canvasRenderer';
 
 import { Group, Panel, Separator } from 'react-resizable-panels';
 import { Editor, DEFAULT_SAMPLE, type EditorHandle } from '../components/editor/Editor';
@@ -300,45 +300,43 @@ function App() {
     if (maxStep < 1) return;
 
     setIsCreatingGif(true);
-    setAnimationsEnabled(false);
-
-    const savedStep = currentStep;
     try {
-      type GifFrame = { indexed: Uint8Array; width: number; height: number };
-      const frames: GifFrame[] = [];
-      let sharedPalette: number[][] | null = null;
+      const worker = new Worker(new URL('./gifWorker.ts', import.meta.url), { type: 'module' });
 
+      const gifDone = new Promise<ArrayBuffer>((resolve, reject) => {
+        worker.onmessage = (e) => {
+          if (e.data.type === 'done') { resolve(e.data.bytes); worker.terminate(); }
+        };
+        worker.onerror = (err) => { reject(err); worker.terminate(); };
+      });
+
+      worker.postMessage({ type: 'init' });
+
+      const gifRegion = region ?? { col: 0, row: 0, widthCells: 50, heightCells: 50 };
+      const offscreen = document.createElement('canvas');
+      offscreen.width = gifRegion.widthCells * 40;
+      offscreen.height = gifRegion.heightCells * 40;
+      const ctx = offscreen.getContext('2d')!;
+
+      let hasFrames = false;
       for (let i = 0; i <= maxStep; i++) {
-        const state = getStateAt(i);
-        if (state) gridAreaRef.current?.loadVisualBuilderObjects(state);
-        // Two rAF cycles so React flushes + browser paints before we capture
-        await new Promise<void>((res) => requestAnimationFrame(() => requestAnimationFrame(() => res())));
-
-        // captureFrameCanvas avoids the PNG encode/decode round-trip of captureFrameData
-        const canvas = await gridAreaRef.current?.captureFrameCanvas(region);
-        if (!canvas) continue;
-
-        const { data } = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height);
-        // Compute palette once from the first frame and reuse — much faster than per-frame quantization
-        if (!sharedPalette) sharedPalette = quantize(data, 256);
-        frames.push({ indexed: applyPalette(data, sharedPalette), width: canvas.width, height: canvas.height });
+        const elements = getStateAt(i);
+        if (!elements) continue;
+        renderFrameToCanvas(elements, ctx, gifRegion, darkMode);
+        hasFrames = true;
+        const imageData = ctx.getImageData(0, 0, offscreen.width, offscreen.height);
+        worker.postMessage(
+          { type: 'frame', data: imageData.data.buffer, width: offscreen.width, height: offscreen.height },
+          [imageData.data.buffer],
+        );
       }
 
-      if (frames.length === 0 || !sharedPalette) return;
+      if (!hasFrames) { worker.terminate(); return; }
 
-      // GIFEncoder auto mode writes the GIF header on the first writeFrame — do NOT call writeHeader() manually
-      const encoder = GIFEncoder();
-      for (const frame of frames) {
-        encoder.writeFrame(frame.indexed, frame.width, frame.height, {
-          palette: sharedPalette,
-          delay: 100, // ms — gifenc divides by 10 → 10 centiseconds = 100ms/frame
-          repeat: 0,  // loop forever (only written on the first frame by gifenc auto mode)
-        });
-      }
-      encoder.finish();
+      worker.postMessage({ type: 'finish' });
+      const gifBytes = await gifDone;
 
-      const bytes = encoder.bytes(); // correctly-sized Uint8Array copy — pass directly to Blob
-      const blob = new Blob([bytes.buffer as ArrayBuffer], { type: 'image/gif' });
+      const blob = new Blob([gifBytes], { type: 'image/gif' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -351,12 +349,9 @@ function App() {
     } catch (err) {
       console.error('GIF export failed:', err);
     } finally {
-      setAnimationsEnabled(true);
       setIsCreatingGif(false);
-      // Restore the step the user was on
-      goToStep(savedStep);
     }
-  }, [isCreatingGif, currentStep, goToStep]);
+  }, [isCreatingGif, darkMode]);
 
   // ---------------------------------------------------------------------------
   // Keyboard shortcuts
