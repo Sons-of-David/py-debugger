@@ -9,7 +9,7 @@ self.onmessage = (e: MessageEvent) => {
   switch (msg.type) {
     case 'init': {
       encoder = GIFEncoder();
-      sharedPalette = null;
+      sharedPalette = msg.palette ?? null;  // use pre-computed palette from main thread
       break;
     }
 
@@ -18,7 +18,7 @@ self.onmessage = (e: MessageEvent) => {
       const rgba = new Uint8ClampedArray(msg.data);
 
       if (!sharedPalette) {
-        sharedPalette = quantize(rgba, 256);
+        sharedPalette = quantize(rgba, 256);  // fallback if no palette provided
       }
 
       const indexed = applyPalette(rgba, sharedPalette);

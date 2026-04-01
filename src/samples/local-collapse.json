@@ -1,4 +1,4 @@
 {
-  "userCode": "n = 0\n\nif n <= 0:\n    pass\n\n# comment\nif n <= 0:\n    pass\n\n# comment\n# @viz\na = 1\n# @end\n\n#comment",
+  "userCode": "\n\n# @viz\n\narr = Array2D(cells=[[1,2],[3,4]], show_index=False, z=-1)\nrect = Rect()\n\n# @end\n",
   "textBoxes": []
 }

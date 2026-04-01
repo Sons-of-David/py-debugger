@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { CaptureRegion } from '../visual-panel/components/CaptureRegionLayer';
 import { renderFrameToCanvas } from './canvasRenderer';
+import { quantize } from 'gifenc';
 
 import { Group, Panel, Separator } from 'react-resizable-panels';
 import { Editor, DEFAULT_SAMPLE, type EditorHandle } from '../components/editor/Editor';
@@ -310,13 +311,33 @@ function App() {
         worker.onerror = (err) => { reject(err); worker.terminate(); };
       });
 
-      worker.postMessage({ type: 'init' });
-
       const gifRegion = region ?? { col: 0, row: 0, widthCells: 50, heightCells: 50 };
       const offscreen = document.createElement('canvas');
       offscreen.width = gifRegion.widthCells * 40;
       offscreen.height = gifRegion.heightCells * 40;
       const ctx = offscreen.getContext('2d')!;
+
+      // Build palette from a spread of frames so colors that only appear mid-animation
+      // (e.g. A* explored/frontier blue/green) are included.
+      // TODO: could also pre-scan all element colors across all steps directly from the
+      // data model instead of rendering sample frames, which would be even cheaper.
+      const PALETTE_SAMPLES = 5;
+      const sampleIndices = Array.from({ length: PALETTE_SAMPLES }, (_, k) =>
+        Math.round(k * maxStep / (PALETTE_SAMPLES - 1))
+      );
+      const palettePixels: Uint8ClampedArray[] = [];
+      for (const i of sampleIndices) {
+        const els = getStateAt(i);
+        if (!els) continue;
+        renderFrameToCanvas(els, ctx, gifRegion, darkMode);
+        palettePixels.push(new Uint8ClampedArray(ctx.getImageData(0, 0, offscreen.width, offscreen.height).data));
+      }
+      const combined = new Uint8ClampedArray(palettePixels.reduce((n, a) => n + a.length, 0));
+      let off = 0;
+      for (const px of palettePixels) { combined.set(px, off); off += px.length; }
+      const palette = quantize(combined, 256);
+
+      worker.postMessage({ type: 'init', palette });
 
       let hasFrames = false;
       for (let i = 0; i <= maxStep; i++) {
