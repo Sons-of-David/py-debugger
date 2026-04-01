@@ -287,7 +287,7 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
         )}
 
         <div className="flex-1 overflow-hidden relative">
-          {appMode === 'trace' && (
+          {appMode === 'trace' && !capturingRegionMode && (
             <div
               className="absolute inset-0 z-10 cursor-pointer"
               onClick={onTraceClickAttempt}
