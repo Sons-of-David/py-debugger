@@ -158,7 +158,7 @@ export class Array1D implements VisualBuilderElementBase {
       ...drawCells.map(cell => ({
         type: 'array1dcell' as const, _gridId: cell.cellId,
         x: cell.position[1], y: cell.position[0],
-        visible: true, alpha: 1, z: 0, panelId: panelElemId,
+        visible: true, alpha: 1, z: this.z, panelId: panelElemId,
         draw: () => cell.data,
       })),
     ];
@@ -299,7 +299,7 @@ export class Array2D implements VisualBuilderElementBase {
       ...drawCells.map(cell => ({
         type: 'array2dcell' as const, _gridId: cell.cellId,
         x: cell.position[1], y: cell.position[0],
-        visible: true, alpha: 1, z: 0, panelId: panelElemId,
+        visible: true, alpha: 1, z: this.z, panelId: panelElemId,
         draw: () => cell.data,
       })),
     ];
