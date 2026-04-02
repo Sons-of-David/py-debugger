@@ -8,7 +8,7 @@ import type {
 } from '../types/grid';
 import type { VisualBuilderElementBase } from '../../api/visualBuilder';
 import { cellKey } from '../types/grid';
-import { PanelCell } from '../render-objects';
+import { PanelElement } from '../render-objects';
 import { hasHandler } from '../handlersState';
 
 const MIN_ZOOM = 0.5;
@@ -257,7 +257,7 @@ export function useGridState() {
         const { gridId } = node;
         const width = elAny.width ?? 5;
         const height = elAny.height ?? 5;
-        const panelCell = new PanelCell({ id: gridId, title: elAny.name, showBorder: elAny.show_border ?? false });
+        const panelCell = new PanelElement({ id: gridId, title: elAny.name, showBorder: elAny.show_border ?? false });
         next.set(gridId, {
           id: gridId,
           data: {

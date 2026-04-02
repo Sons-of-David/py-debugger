@@ -1,16 +1,16 @@
 import type { ObjDoc } from '../../../api/visualBuilder';
 import { registerRenderer } from '../../views/rendererRegistry';
 import { useTheme } from '../../../contexts/ThemeContext';
-import type { CellStyle } from '../../types/grid';
+import type { ElementStyle } from '../../types/grid';
 
-export class PanelCell {
+export class PanelElement {
   type = 'panel' as const;
   id: string;
   title?: string;
-  style?: CellStyle;
+  style?: ElementStyle;
   showBorder?: boolean;
 
-  constructor(opts: { id: string; title?: string; style?: CellStyle; showBorder?: boolean }) {
+  constructor(opts: { id: string; title?: string; style?: ElementStyle; showBorder?: boolean }) {
     this.id = opts.id;
     this.title = opts.title;
     this.style = opts.style;
@@ -18,12 +18,12 @@ export class PanelCell {
   }
 }
 
-interface PanelCellViewProps {
-  panel: PanelCell;
+interface PanelElementViewProps {
+  panel: PanelElement;
 }
 
 // TODO: add a `color` property for the panel background fill; currently hardcoded as bg-slate-50/50
-export function PanelCellView({ panel }: PanelCellViewProps) {
+export function PanelElementView({ panel }: PanelElementViewProps) {
   const { darkMode } = useTheme();
 
   if (!panel.showBorder) return null;
@@ -44,8 +44,8 @@ export function PanelCellView({ panel }: PanelCellViewProps) {
   );
 }
 
-registerRenderer<PanelCell>('panel', (element) => (
-  <PanelCellView panel={element as PanelCell} />
+registerRenderer<PanelElement>('panel', (element) => (
+  <PanelElementView panel={element as PanelElement} />
 ));
 
 export const PANEL_SCHEMA: ObjDoc = {

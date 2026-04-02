@@ -1,6 +1,6 @@
 import type { VisualBuilderElementBase } from "../../../api/visualBuilder";
 import { rgbToHex } from "../../../api/visualBuilder";
-import type { RenderableObjectData, CellStyle, PanelStyle } from "../../types/grid";
+import type { RenderableObjectData, ElementStyle, PanelStyle } from "../../types/grid";
 import type { ObjDoc } from "../../../api/visualBuilder";
 import { registerVisualElement } from "../../types/elementRegistry";
 import { getArrayOffset } from "../../types/grid";
@@ -41,14 +41,14 @@ export class Array1DCell {
   index: number;
   showIndex: boolean;
   value?: string | number;
-  style?: CellStyle;
+  style?: ElementStyle;
 
   constructor(opts: {
     arrayId: string;
     index: number;
     showIndex: boolean;
     value?: string | number;
-    style?: CellStyle;
+    style?: ElementStyle;
   }) {
     this.arrayId = opts.arrayId;
     this.index = opts.index;
@@ -74,7 +74,7 @@ export class Array2DCell {
   numCols: number;
   showIndices: boolean;
   value?: string | number;
-  style?: CellStyle;
+  style?: ElementStyle;
 
   constructor(opts: {
     arrayId: string;
@@ -84,7 +84,7 @@ export class Array2DCell {
     numCols: number;
     showIndices: boolean;
     value?: string | number;
-    style?: CellStyle;
+    style?: ElementStyle;
   }) {
     this.arrayId = opts.arrayId;
     this.row = opts.row;
@@ -116,7 +116,7 @@ export class Array1D implements VisualBuilderElementBase {
   alpha: number;
   z: number;
   panelId?: string;
-  style?: CellStyle;
+  style?: ElementStyle;
   _elemId?: number;
 
   constructor(el: any) {
@@ -254,7 +254,7 @@ export class Array2D implements VisualBuilderElementBase {
   alpha: number;
   z: number;
   panelId?: string;
-  style?: CellStyle;
+  style?: ElementStyle;
   _elemId?: number;
 
   constructor(el: any) {

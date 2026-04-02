@@ -13,7 +13,7 @@ export interface ArrayInfo {
 }
 
 // Styling properties for cells
-export interface CellStyle {
+export interface ElementStyle {
   color?: string;       // Fill/text color
   lineWidth?: number;   // Border/stroke thickness (1-5)
   opacity?: number;     // 0-1
@@ -67,7 +67,7 @@ export interface RenderableObjectData {
   // Optional panel association for non-panel objects
   panelId?: string;
   // Styling options
-  style?: CellStyle;
+  style?: ElementStyle;
   // Shape-specific props
   shapeProps?: ShapeProps;
   // Invalid computation reason (for grayed-out rendering)

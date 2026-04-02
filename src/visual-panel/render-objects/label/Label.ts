@@ -2,7 +2,7 @@ import { registerVisualElement } from "../../types/elementRegistry";
 import type { ObjDoc, VisualBuilderElementBase } from "../../../api/visualBuilder";
 import { rgbToHex } from "../../../api/visualBuilder";
 
-interface CellStyle {
+interface ElementStyle {
   color?: string;
   opacity?: number;
   fontSize?: number;
@@ -38,7 +38,7 @@ export class Label implements VisualBuilderElementBase {
   }
 
   draw() {
-    const style: CellStyle = { opacity: this.alpha };
+    const style: ElementStyle = { opacity: this.alpha };
     if (this.color) style.color = rgbToHex(this.color);
     if (this.fontSize != null) style.fontSize = this.fontSize;
 
