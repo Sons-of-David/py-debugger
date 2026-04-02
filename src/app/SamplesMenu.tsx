@@ -1,12 +1,12 @@
 import { useState, useCallback } from 'react';
-import type { TextBox } from '../text-boxes/types';
+import type { SaveFile } from './App';
 import { SAMPLES } from './sampleRegistry';
 
 const buttonBase = 'px-3 py-1 rounded text-sm font-medium transition-colors';
 const buttonNeutral = `${buttonBase} bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600`;
 
 interface SamplesMenuProps {
-  onLoad: (data: { userCode?: string; textBoxes?: TextBox[] }, name: string) => void;
+  onLoad: (data: SaveFile, name: string) => void;
   serializeProject: () => { name: string; content: string };
 }
 

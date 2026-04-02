@@ -1,506 +1,508 @@
 {
-  "userCode": "# ── Longest Common Subsequence (LCS) ─────────────────────────────────────────\n# Trace-mode. Click Analyze, then step through the timeline.\n#\n# table[i][j] = LCS length of s1[:i] and s2[:j]\n#   character match  ->  table[i-1][j-1] + 1      (green)\n#   no match         ->  max(table[i-1][j], table[i][j-1])  (blue, inherit best)\n#\n# After filling, the traceback follows diagonal matches backwards (orange).\n# ─────────────────────────────────────────────────────────────────────────────\n\n# ── Algorithm state ───────────────────────────────────────────────────────────\ns1 = \"ABCDE\"\ns2 = \"ACEBD\"\nm, n = len(s1), len(s2)\n\ntable = [[0] * (n + 1) for _ in range(m + 1)]\nlcs_chars = []\n\n# ── Visualization setup ───────────────────────────────────────────────────────\n# @viz\n\nDARK        = (35, 40, 52)\nMATCH_COLOR = (45, 155, 80)\nPATH_COLOR  = (235, 155, 45)\nGOLD        = (255, 185, 65)\nMAX_LCS = min(m, n)   # upper bound on any table value\n\ndef blue_shade(v):\n    if v == 0 or MAX_LCS == 0:\n        return DARK\n    t = v / MAX_LCS\n    return (int(35 + t*55), int(40 + t*120), int(52 + t*173))\n\nGX, GY = 2, 2   # absolute position of table[0][0]\n\n# Panel contains all visual elements; children use panel-relative coords\npanel = Panel(x=GX-1, y=GY-1)\n\n# String headers along axes\nfor j, c in enumerate(s2):\n    panel.add(Label(label=c, x=j+2, y=0, font_size=15, color=GOLD, z=3))\nfor i, c in enumerate(s1):\n    panel.add(Label(label=c, x=0, y=i+2, font_size=15, color=GOLD, z=3))\n\n# Grid cells: one Rect (background) + one Label (value) per cell\nbg  = [[None] * (n + 1) for _ in range(m + 1)]\ntxt = [[None] * (n + 1) for _ in range(m + 1)]\nfor i in range(m + 1):\n    for j in range(n + 1):\n        bg[i][j]  = Rect( x=j+1, y=i+1, color=DARK, z=5)\n        txt[i][j] = Label(label='0', x=j+1, y=i+1, font_size=13, z=4)\n        panel.add(bg[i][j], txt[i][j])\n\n# Moving cursor highlights the cell currently being computed\ncursor = Rect(x=2, y=2, color=(255, 250, 100), alpha=0.35, z=2, animate=False)\n\n# Result label shown after traceback\nresult_lbl = Label(label='', x=0, y=m+3, width=n+2, font_size=14, color=PATH_COLOR, z=3)\n\npanel.add(cursor, result_lbl)\n\n# @end\n\n# ── Fill the table ────────────────────────────────────────────────────────────\nfor i in range(1, m + 1):\n    for j in range(1, n + 1):\n        if s1[i-1] == s2[j-1]:\n            table[i][j] = table[i-1][j-1] + 1\n        else:\n            table[i][j] = max(table[i-1][j], table[i][j-1])\n        # @viz\n        v = table[i][j]\n        bg[i][j].color  = MATCH_COLOR if (s1[i-1] == s2[j-1]) else blue_shade(v)\n        txt[i][j].label = str(v)\n        cursor.x = j + 1\n        cursor.y = i + 1\n        # @end\n\n# ── Traceback ─────────────────────────────────────────────────────────────────\n\nti, tj = m, n\nwhile ti > 0 and tj > 0:\n    if s1[ti-1] == s2[tj-1]:\n        lcs_chars.append(s1[ti-1])\n        # @viz\n        cursor.alpha = 0\n        bg[ti][tj].color = PATH_COLOR\n        panel.add(\n            Line(start=(ti+1, tj+1), end=(ti, tj),\n                color=(255, 210, 90), stroke_weight=3, end_cap='arrow')\n        )\n        # @end\n        ti -= 1\n        tj -= 1\n    elif table[ti-1][tj] >= table[ti][tj-1]:\n        ti -= 1\n    else:\n        tj -= 1\n\nlcs = ''.join(reversed(lcs_chars))\n# @viz\nresult_lbl.label = f'LCS: \"{lcs}\"'\n# @end\nprint(f'LCS(\"{s1}\", \"{s2}\") = \"{lcs}\"  (length {len(lcs)})')",
-  "textBoxes": [
-    {
-      "id": "text-lcs-explain",
-      "row": 1,
-      "col": 9,
-      "widthCells": 13,
-      "heightCells": 11,
-      "content": {
-        "type": "doc",
-        "content": [
-          {
-            "type": "paragraph",
-            "content": [
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#ffb43f",
-                      "fontSize": "24px"
+  "userCode": "# \u2500\u2500 Longest Common Subsequence (LCS) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n# Trace-mode. Click Analyze, then step through the timeline.\n#\n# table[i][j] = LCS length of s1[:i] and s2[:j]\n#   character match  ->  table[i-1][j-1] + 1      (green)\n#   no match         ->  max(table[i-1][j], table[i][j-1])  (blue, inherit best)\n#\n# After filling, the traceback follows diagonal matches backwards (orange).\n# \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\n# \u2500\u2500 Algorithm state \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\ns1 = \"ABCDE\"\ns2 = \"ACEBD\"\nm, n = len(s1), len(s2)\n\ntable = [[0] * (n + 1) for _ in range(m + 1)]\nlcs_chars = []\n\n# \u2500\u2500 Visualization setup \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n# @viz\n\nDARK        = (35, 40, 52)\nMATCH_COLOR = (45, 155, 80)\nPATH_COLOR  = (235, 155, 45)\nGOLD        = (255, 185, 65)\nMAX_LCS = min(m, n)   # upper bound on any table value\n\ndef blue_shade(v):\n    if v == 0 or MAX_LCS == 0:\n        return DARK\n    t = v / MAX_LCS\n    return (int(35 + t*55), int(40 + t*120), int(52 + t*173))\n\nGX, GY = 2, 2   # absolute position of table[0][0]\n\n# Panel contains all visual elements; children use panel-relative coords\npanel = Panel(x=GX-1, y=GY-1)\n\n# String headers along axes\nfor j, c in enumerate(s2):\n    panel.add(Label(label=c, x=j+2, y=0, font_size=15, color=GOLD, z=3))\nfor i, c in enumerate(s1):\n    panel.add(Label(label=c, x=0, y=i+2, font_size=15, color=GOLD, z=3))\n\n# Grid cells: one Rect (background) + one Label (value) per cell\nbg  = [[None] * (n + 1) for _ in range(m + 1)]\ntxt = [[None] * (n + 1) for _ in range(m + 1)]\nfor i in range(m + 1):\n    for j in range(n + 1):\n        bg[i][j]  = Rect( x=j+1, y=i+1, color=DARK, z=5)\n        txt[i][j] = Label(label='0', x=j+1, y=i+1, font_size=13, z=4)\n        panel.add(bg[i][j], txt[i][j])\n\n# Moving cursor highlights the cell currently being computed\ncursor = Rect(x=2, y=2, color=(255, 250, 100), alpha=0.35, z=2, animate=False)\n\n# Result label shown after traceback\nresult_lbl = Label(label='', x=0, y=m+3, width=n+2, font_size=14, color=PATH_COLOR, z=3)\n\npanel.add(cursor, result_lbl)\n\n# @end\n\n# \u2500\u2500 Fill the table \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nfor i in range(1, m + 1):\n    for j in range(1, n + 1):\n        if s1[i-1] == s2[j-1]:\n            table[i][j] = table[i-1][j-1] + 1\n        else:\n            table[i][j] = max(table[i-1][j], table[i][j-1])\n        # @viz\n        v = table[i][j]\n        bg[i][j].color  = MATCH_COLOR if (s1[i-1] == s2[j-1]) else blue_shade(v)\n        txt[i][j].label = str(v)\n        cursor.x = j + 1\n        cursor.y = i + 1\n        # @end\n\n# \u2500\u2500 Traceback \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\nti, tj = m, n\nwhile ti > 0 and tj > 0:\n    if s1[ti-1] == s2[tj-1]:\n        lcs_chars.append(s1[ti-1])\n        # @viz\n        cursor.alpha = 0\n        bg[ti][tj].color = PATH_COLOR\n        panel.add(\n            Line(start=(ti+1, tj+1), end=(ti, tj),\n                color=(255, 210, 90), stroke_weight=3, end_cap='arrow')\n        )\n        # @end\n        ti -= 1\n        tj -= 1\n    elif table[ti-1][tj] >= table[ti][tj-1]:\n        ti -= 1\n    else:\n        tj -= 1\n\nlcs = ''.join(reversed(lcs_chars))\n# @viz\nresult_lbl.label = f'LCS: \"{lcs}\"'\n# @end\nprint(f'LCS(\"{s1}\", \"{s2}\") = \"{lcs}\"  (length {len(lcs)})')",
+  "visualPanel": {
+    "textBoxes": [
+      {
+        "id": "text-lcs-explain",
+        "row": 1,
+        "col": 9,
+        "widthCells": 13,
+        "heightCells": 11,
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#ffb43f",
+                        "fontSize": "24px"
+                      }
+                    },
+                    {
+                      "type": "bold"
                     }
-                  },
-                  {
-                    "type": "bold"
-                  }
-                ],
-                "text": "Longest Common Subsequence"
-              }
-            ]
-          },
-          {
-            "type": "paragraph",
-            "content": [
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#ff8c82",
-                      "fontSize": "18px"
+                  ],
+                  "text": "Longest Common Subsequence"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#ff8c82",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
                     }
-                  },
-                  {
-                    "type": "bold"
-                  }
-                ],
-                "text": "Problem"
-              },
-              {
-                "type": "text",
-                "text": ":"
-              }
-            ]
-          },
-          {
-            "type": "paragraph",
-            "content": [
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#d6d6d6",
-                      "fontSize": "16px"
+                  ],
+                  "text": "Problem"
+                },
+                {
+                  "type": "text",
+                  "text": ":"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": "Given two strings, find the longest subsequence common to both."
-              }
-            ]
-          },
-          {
-            "type": "paragraph",
-            "content": [
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#d6d6d6",
-                      "fontSize": "16px"
+                  ],
+                  "text": "Given two strings, find the longest subsequence common to both."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": "For example: A"
-              },
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#d357fe",
-                      "fontSize": "16px"
+                  ],
+                  "text": "For example: A"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d357fe",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": "B"
-              },
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#d6d6d6",
-                      "fontSize": "16px"
+                  ],
+                  "text": "B"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": "C"
-              },
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#d357fe",
-                      "fontSize": "16px"
+                  ],
+                  "text": "C"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d357fe",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": "D"
-              },
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#d6d6d6",
-                      "fontSize": "16px"
+                  ],
+                  "text": "D"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": " and "
-              },
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#d357fe",
-                      "fontSize": "16px"
+                  ],
+                  "text": " and "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d357fe",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": "BD"
-              },
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#d6d6d6",
-                      "fontSize": "16px"
+                  ],
+                  "text": "BD"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": "E have "
-              },
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#d357fe",
-                      "fontSize": "16px"
+                  ],
+                  "text": "E have "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d357fe",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": "BD"
-              },
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#d6d6d6",
-                      "fontSize": "16px"
+                  ],
+                  "text": "BD"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": " as LCS."
-              }
-            ]
-          },
-          {
-            "type": "paragraph"
-          },
-          {
-            "type": "paragraph",
-            "content": [
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#74a7fe",
-                      "fontSize": "18px"
+                  ],
+                  "text": " as LCS."
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
                     }
-                  },
-                  {
-                    "type": "bold"
-                  }
-                ],
-                "text": "Idea"
-              },
-              {
-                "type": "text",
-                "text": ":"
-              }
-            ]
-          },
-          {
-            "type": "paragraph",
-            "content": [
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "rgb(214, 214, 214)",
-                      "fontSize": "16px"
+                  ],
+                  "text": "Idea"
+                },
+                {
+                  "type": "text",
+                  "text": ":"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "rgb(214, 214, 214)",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": "Consider the LCS of the subwords s1[:i] and s2[:j]. It increases compared to smaller subwords, only if s1[i] == s2[j], which is a simple update rule."
-              }
-            ]
-          },
-          {
-            "type": "paragraph"
-          },
-          {
-            "type": "paragraph",
-            "content": [
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#96d35f",
-                      "fontSize": "18px"
+                  ],
+                  "text": "Consider the LCS of the subwords s1[:i] and s2[:j]. It increases compared to smaller subwords, only if s1[i] == s2[j], which is a simple update rule."
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#96d35f",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
                     }
-                  },
-                  {
-                    "type": "bold"
-                  }
-                ],
-                "text": "Algorithm"
-              },
-              {
-                "type": "text",
-                "text": ":"
-              }
-            ]
-          },
-          {
-            "type": "paragraph",
-            "content": [
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#d6d6d6",
-                      "fontSize": "16px"
+                  ],
+                  "text": "Algorithm"
+                },
+                {
+                  "type": "text",
+                  "text": ":"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": "Set "
-              },
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#74a7fe",
-                      "fontSize": "16px"
+                  ],
+                  "text": "Set "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": "table[i][j]"
-              },
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#d6d6d6",
-                      "fontSize": "16px"
+                  ],
+                  "text": "table[i][j]"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": " = LCS of "
-              },
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#74a7fe",
-                      "fontSize": "16px"
+                  ],
+                  "text": " = LCS of "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": "s1[:i]"
-              },
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#d6d6d6",
-                      "fontSize": "16px"
+                  ],
+                  "text": "s1[:i]"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": " and "
-              },
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#74a7fe",
-                      "fontSize": "16px"
+                  ],
+                  "text": " and "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": "s2[:j]"
-              },
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#d6d6d6",
-                      "fontSize": "16px"
+                  ],
+                  "text": "s2[:j]"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": ". "
-              }
-            ]
-          },
-          {
-            "type": "paragraph",
-            "content": [
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#d6d6d6",
-                      "fontSize": "16px"
+                  ],
+                  "text": ". "
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": "Match ("
-              },
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#4bcd76",
-                      "fontSize": "16px"
+                  ],
+                  "text": "Match ("
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#4bcd76",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": "green"
-              },
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#d6d6d6",
-                      "fontSize": "16px"
+                  ],
+                  "text": "green"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": "): table[i-1][j-1] + 1. "
-              }
-            ]
-          },
-          {
-            "type": "paragraph",
-            "content": [
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#d6d6d6",
-                      "fontSize": "16px"
+                  ],
+                  "text": "): table[i-1][j-1] + 1. "
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": "No match ("
-              },
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#74a7fe",
-                      "fontSize": "16px"
+                  ],
+                  "text": "No match ("
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": "blue"
-              },
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#d6d6d6",
-                      "fontSize": "16px"
+                  ],
+                  "text": "blue"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": "): max(above, left)."
-              }
-            ]
-          },
-          {
-            "type": "paragraph",
-            "content": [
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#d6d6d6",
-                      "fontSize": "16px"
+                  ],
+                  "text": "): max(above, left)."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": "Traceback: follow the "
-              },
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#eb9b2d",
-                      "fontSize": "16px"
+                  ],
+                  "text": "Traceback: follow the "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#eb9b2d",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": "orange diagonal"
-              },
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "#d6d6d6",
-                      "fontSize": "16px"
+                  ],
+                  "text": "orange diagonal"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": " steps from bottom-right — each diagonal is one character of the LCS."
-              }
-            ]
-          }
-        ]
-      },
-      "bgColor": "#444444"
-    }
-  ]
+                  ],
+                  "text": " steps from bottom-right \u2014 each diagonal is one character of the LCS."
+                }
+              ]
+            }
+          ]
+        },
+        "bgColor": "#444444"
+      }
+    ]
+  }
 }

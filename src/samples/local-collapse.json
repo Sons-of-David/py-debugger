@@ -1,4 +1,6 @@
 {
   "userCode": "\n\n# @viz\n\narr = Array2D(cells=[[1,2],[3,4]], show_index=False, z=-1)\nrect = Rect()\n\n# @end\n",
-  "textBoxes": []
+  "visualPanel": {
+    "textBoxes": []
+  }
 }

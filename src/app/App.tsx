@@ -14,6 +14,9 @@
 //
 // TODO:
 //   - Move textBoxes state into GridArea (they are a visual-panel concern)
+//   - Serialization should be per component:
+//     - Editor handles userCode and exposes serialize/deserialize methods for its state
+//     - GridArea handles textBoxes and any future visual state
 //   - Investigate why vizRanges (viz block presence) is used to gate interactive
 //     handlers — should the Python engine expose an explicit boolean instead?
 // =============================================================================
@@ -42,6 +45,11 @@ import { setHandlers, hasAnyClickHandler } from '../visual-panel/handlersState';
 import { getVizRanges } from '../python-engine/viz-block-parser';
 import type { TextBox } from '../text-boxes/types';
 import { migrateTextBox } from '../text-boxes/types';
+
+export interface SaveFile {
+  userCode: string;
+  visualPanel?: unknown;
+}
 
 const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 const AUTO_ANALYZE_ON_LOAD = true; // set to false to disable auto-analyze when loading a file
@@ -173,7 +181,7 @@ function App() {
 
   const serializeProject = useCallback(() => {
     const name = projectName.trim() || 'untitled';
-    const content = JSON.stringify({ userCode, textBoxes }, null, 2);
+    const content = JSON.stringify({ userCode, visualPanel: { textBoxes } } satisfies SaveFile, null, 2);
     return { name, content };
   }, [userCode, textBoxes, projectName]);
 
@@ -190,7 +198,7 @@ function App() {
     URL.revokeObjectURL(url);
   }, [serializeProject]);
 
-  const handleLoad = useCallback((data: { userCode?: string; textBoxes?: TextBox[] }, name: string) => {
+  const handleLoad = useCallback((data: SaveFile, name: string) => {
     if (!data.userCode) {
       appendError('Invalid file: missing userCode field');
       return;
@@ -198,7 +206,8 @@ function App() {
     handleReset();
     setProjectName(name);
     setUserCode(data.userCode);
-    setTextBoxes((data.textBoxes ?? [] as unknown[]).map((raw) => migrateTextBox(raw as Record<string, unknown>)));
+    const vp = data.visualPanel as { textBoxes?: unknown[] } | undefined;
+    setTextBoxes((vp?.textBoxes ?? []).map((raw) => migrateTextBox(raw as Record<string, unknown>)));
     pendingPostLoadRef.current = true;
   }, [handleReset]);
 

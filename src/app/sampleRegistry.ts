@@ -1,8 +1,8 @@
-import type { TextBox } from '../text-boxes/types';
+import type { SaveFile } from './App';
 
 const SAMPLE_MODULES = import.meta.glob('../samples/*.json', { eager: true }) as Record<
   string,
-  { userCode?: string; textBoxes?: TextBox[] }
+  SaveFile
 >;
 
 export const SAMPLES = Object.entries(SAMPLE_MODULES)

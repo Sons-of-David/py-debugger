@@ -1,146 +1,148 @@
 {
-  "userCode": "# ── Selection Sort ───────────────────────────────────────────────────────────\n# Trace-mode algorithm. Click Analyze, then step through the timeline.\n#\n# The green Rect shows how many positions are already sorted (left of pointer).\n# min_index arrow marks the current minimum; j arrow marks the scan position.\n# ─────────────────────────────────────────────────────────────────────────────\narr = [5, 7, 2, 6, 3, 1]\nmin_index = 0\nj = 0\n\n# @viz\nclass LabeledArrow(Panel):\n    def __init__(self, label: str, color: tuple[int, int, int], **kwargs):\n        super().__init__(**kwargs)\n        self.add(\n            Arrow(angle=Arrow.DOWN, color=color, x=0, y=1),\n            Label(label=label, color=color)\n        )\n\npanel = Panel(x=2, y=2)\npanel.add(\n    Array(cells=arr),\n    Rect(width=V(\"i\", default=0), alpha=0.7),\n    LabeledArrow(label='index min', color=(220, 70, 120), x=V('min_index'), y=-2),\n    LabeledArrow(label='j', color=(120, 70, 220), x=V('j'), y=-2)\n)\n# @end\n\nn = len(arr)\n\nfor i in range(n):\n    min_index = i\n\n    for j in range(i + 1, n):\n        if arr[j] < arr[min_index]:\n            min_index = j\n\n    arr[i], arr[min_index] = arr[min_index], arr[i]\n",
-  "textBoxes": [
-    {
-      "id": "text-1773909084786",
-      "row": 4,
-      "col": 2,
-      "widthCells": 14,
-      "heightCells": 9,
-      "content": {
-        "type": "doc",
-        "content": [
-          {
-            "type": "paragraph",
-            "content": [
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "rgb(255, 180, 63)",
-                      "fontSize": "24px"
+  "userCode": "# \u2500\u2500 Selection Sort \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n# Trace-mode algorithm. Click Analyze, then step through the timeline.\n#\n# The green Rect shows how many positions are already sorted (left of pointer).\n# min_index arrow marks the current minimum; j arrow marks the scan position.\n# \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\narr = [5, 7, 2, 6, 3, 1]\nmin_index = 0\nj = 0\n\n# @viz\nclass LabeledArrow(Panel):\n    def __init__(self, label: str, color: tuple[int, int, int], **kwargs):\n        super().__init__(**kwargs)\n        self.add(\n            Arrow(angle=Arrow.DOWN, color=color, x=0, y=1),\n            Label(label=label, color=color)\n        )\n\npanel = Panel(x=2, y=2)\npanel.add(\n    Array(cells=arr),\n    Rect(width=V(\"i\", default=0), alpha=0.7),\n    LabeledArrow(label='index min', color=(220, 70, 120), x=V('min_index'), y=-2),\n    LabeledArrow(label='j', color=(120, 70, 220), x=V('j'), y=-2)\n)\n# @end\n\nn = len(arr)\n\nfor i in range(n):\n    min_index = i\n\n    for j in range(i + 1, n):\n        if arr[j] < arr[min_index]:\n            min_index = j\n\n    arr[i], arr[min_index] = arr[min_index], arr[i]\n",
+  "visualPanel": {
+    "textBoxes": [
+      {
+        "id": "text-1773909084786",
+        "row": 4,
+        "col": 2,
+        "widthCells": 14,
+        "heightCells": 9,
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "rgb(255, 180, 63)",
+                        "fontSize": "24px"
+                      }
+                    },
+                    {
+                      "type": "bold"
                     }
-                  },
-                  {
-                    "type": "bold"
-                  }
-                ],
-                "text": "Selection Sort Algorithm:"
-              }
-            ]
-          },
-          {
-            "type": "paragraph",
-            "content": [
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "rgb(255, 140, 130)",
-                      "fontSize": "18px"
+                  ],
+                  "text": "Selection Sort Algorithm:"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "rgb(255, 140, 130)",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
                     }
-                  },
-                  {
-                    "type": "bold"
-                  }
-                ],
-                "text": "Problem"
-              },
-              {
-                "type": "text",
-                "text": ":"
-              }
-            ]
-          },
-          {
-            "type": "paragraph",
-            "content": [
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "rgb(214, 214, 214)",
-                      "fontSize": "16px"
+                  ],
+                  "text": "Problem"
+                },
+                {
+                  "type": "text",
+                  "text": ":"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "rgb(214, 214, 214)",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": "Sort a given array."
-              }
-            ]
-          },
-          {
-            "type": "paragraph",
-            "content": [
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "rgb(150, 211, 95)",
-                      "fontSize": "18px"
+                  ],
+                  "text": "Sort a given array."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "rgb(150, 211, 95)",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
                     }
-                  },
-                  {
-                    "type": "bold"
-                  }
-                ],
-                "text": "Algorithm"
-              },
-              {
-                "type": "text",
-                "text": ":"
-              }
-            ]
-          },
-          {
-            "type": "paragraph",
-            "content": [
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "rgb(214, 214, 214)",
-                      "fontSize": "16px"
+                  ],
+                  "text": "Algorithm"
+                },
+                {
+                  "type": "text",
+                  "text": ":"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "rgb(214, 214, 214)",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": "Run over all indices, keeping the one with the minimal value. Once found, switch it with the first element, then repeat the process from the second element, etc. After k such scans, the first k numbers in the array are already in their final sorted place."
-              }
-            ]
-          },
-          {
-            "type": "paragraph"
-          },
-          {
-            "type": "paragraph",
-            "content": [
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "color": "rgb(214, 214, 214)",
-                      "fontSize": "16px"
+                  ],
+                  "text": "Run over all indices, keeping the one with the minimal value. Once found, switch it with the first element, then repeat the process from the second element, etc. After k such scans, the first k numbers in the array are already in their final sorted place."
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "rgb(214, 214, 214)",
+                        "fontSize": "16px"
+                      }
                     }
-                  }
-                ],
-                "text": "Scanning to find the k-th element in the array takes n-k steps scan, so in total it takes 1+2+3+...+(n-1) = O(n^2) steps."
-              }
-            ]
-          }
-        ]
-      },
-      "bgColor": "#444444"
-    }
-  ]
+                  ],
+                  "text": "Scanning to find the k-th element in the array takes n-k steps scan, so in total it takes 1+2+3+...+(n-1) = O(n^2) steps."
+                }
+              ]
+            }
+          ]
+        },
+        "bgColor": "#444444"
+      }
+    ]
+  }
 }
