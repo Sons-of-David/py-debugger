@@ -1,3 +1,25 @@
+// =============================================================================
+// App.tsx — top-level orchestrator for the full editor experience
+//
+// Responsibilities:
+//   - Pyodide lifecycle: loading, ready state, reset between runs
+//   - App mode state machine: idle → trace → interactive (and back to idle via Edit)
+//   - Run analysis: execute user code, receive TraceStageInfo, transition to trace mode
+//   - Timeline navigation: currentStep, stepCount, goToStep, changedIds
+//   - File I/O: save/load project JSON, auto-load sample on mount
+//   - Save to samples: POST to /api/save-sample (dev only)
+//   - Keyboard shortcuts: Ctrl+Enter (analyze), Ctrl+S (save)
+//   - Animation settings: enabled toggle, duration
+//   - Layout: resizable split between Editor panel (left) and Visual Panel (right)
+//
+//
+// TODO:
+//   - Move textBoxes state into GridArea (they are a visual-panel concern)
+//   - Move "Save to Samples" button + handleSaveToSamples into SamplesMenu
+//   - Investigate why vizRanges (viz block presence) is used to gate interactive
+//     handlers — should the Python engine expose an explicit boolean instead?
+// =============================================================================
+
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useGifExport } from '../capture/useGifExport';
@@ -216,6 +238,8 @@ function App() {
     URL.revokeObjectURL(url);
   }, [userCode, textBoxes, projectName]);
 
+  // TODO: Move "saves to samples button" into the SamplesMenu
+  //       and move this function there.
   const handleSaveToSamples = useCallback(async () => {
     const name = projectName.trim() || 'untitled';
     const data = { userCode: userCode, textBoxes };
