@@ -4,12 +4,13 @@ import { AnimationContext } from '../animation/animationContext';
 import { usePyodideLoader } from '../python-engine/usePyodideLoader';
 import { TimelineControls } from '../timeline/TimelineControls';
 import { GridArea, type GridAreaHandle } from './GridArea';
-import { getStateAt, getMaxTime, clearTimeline, setVisualTimeline } from '../timeline/timelineState';
-import { executeCode, type TraceStep, type TraceStageInfo } from '../python-engine/executor';
+import { getMaxTime } from '../timeline/timelineState';
+import { executeCode, type TraceStageInfo } from '../python-engine/executor';
 import { setHandlers, hasAnyClickHandler } from '../visual-panel/handlersState';
 import { getVizRanges } from '../python-engine/viz-block-parser';
 import { migrateTextBox, type TextBox } from '../text-boxes/types';
 import { SAMPLES } from './sampleRegistry';
+import { useTimelineNavigation, type AppMode } from '../timeline/useTimelineNavigation';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -23,8 +24,6 @@ export const EMBED_CHROME_HEIGHT = EMBED_HEADER_HEIGHT + EMBED_FOOTER_HEIGHT;
 // ---------------------------------------------------------------------------
 // EmbedPage
 // ---------------------------------------------------------------------------
-
-type AppMode = 'idle' | 'trace' | 'interactive';
 
 export function EmbedPage() {
   const [searchParams] = useSearchParams();
@@ -64,18 +63,15 @@ export function EmbedPage() {
   // Pyodide state
   const { pyodideReady, pyodideLoading } = usePyodideLoader({ onError: setAnalysisError });
 
-  // Timeline + mode state
   const [appMode, setAppMode] = useState<AppMode>('idle');
-  const [currentStep, setCurrentStep] = useState(0);
-  const [stepCount, setStepCount] = useState(0);
-  const [hasInteractiveElements, setHasInteractiveElements] = useState(false);
-  const [timeline, setTimeline] = useState<TraceStep[]>([]);
-  const [textBoxes, setTextBoxes] = useState<TextBox[]>([]);
-
-  // Derive elements from currentStep — re-evaluates whenever step or timeline changes
-  const currentElements = useMemo(() => getStateAt(currentStep) ?? [], [currentStep, timeline]);
-
   const mouseEnabled = appMode === 'interactive';
+
+  const {
+    currentStep, stepCount, hasInteractiveElements,
+    currentElements, changedIds, goToStep, setTimelineData, resetTimeline,
+  } = useTimelineNavigation(appMode);
+
+  const [textBoxes, setTextBoxes] = useState<TextBox[]>([]);
 
   // Whether the sample has viz blocks — gates interactive element handlers
   const interactiveEnabled = useMemo(
@@ -84,37 +80,20 @@ export function EmbedPage() {
   );
 
   // ---------------------------------------------------------------------------
-  // Timeline navigation
-  // ---------------------------------------------------------------------------
-
-  const goToStep = useCallback((step: number) => {
-    setCurrentStep(Math.max(0, Math.min(getMaxTime(), step)));
-  }, []);
-
-  // Whenever appMode becomes 'interactive', jump to the last step
-  useEffect(() => {
-    if (appMode === 'interactive') goToStep(getMaxTime());
-  }, [appMode, goToStep]);
-
-  // ---------------------------------------------------------------------------
-  // startTrace — shared post-analysis state transition
+  // startTrace
   // ---------------------------------------------------------------------------
 
   const startTrace = useCallback((result: TraceStageInfo) => {
-    setTimeline(result.timeline);
-    setVisualTimeline(result.timeline.map((s) => s.visual));
-    setStepCount(getMaxTime() + 1);
-    goToStep(0);
     setHandlers(result.handlers ?? {});
     const hasInteractive = hasAnyClickHandler();
-    setHasInteractiveElements(hasInteractive);
+    setTimelineData(result.timeline, hasInteractive);
     const isOneFrame = getMaxTime() === 0;
     if (isOneFrame && hasInteractive) {
       setAppMode('interactive');
     } else {
       setAppMode('trace');
     }
-  }, [goToStep]);
+  }, [setTimelineData]);
 
   // ---------------------------------------------------------------------------
   // Analysis
@@ -123,11 +102,8 @@ export function EmbedPage() {
   const runAnalysis = useCallback(async (code: string, initialTextBoxes: TextBox[]) => {
     setIsAnalyzing(true);
     setAnalysisError(null);
-    clearTimeline();
-    setTimeline([]);
+    resetTimeline();
     setHandlers({});
-    setCurrentStep(0);
-    setStepCount(0);
     setTextBoxes(initialTextBoxes);
 
     try {
@@ -144,7 +120,7 @@ export function EmbedPage() {
     } finally {
       setIsAnalyzing(false);
     }
-  }, [startTrace, vx, vy, vw, vh]);
+  }, [startTrace, resetTimeline, vx, vy, vw, vh]);
 
   // Auto-analyze when Pyodide is ready
   useEffect(() => {
@@ -219,6 +195,7 @@ export function EmbedPage() {
             textBoxes={textBoxes}
             onTextBoxesChange={setTextBoxes}
             elements={currentElements}
+            changedIds={changedIds}
             interactiveEnabled={interactiveEnabled}
             onTrace={startTrace}
           />

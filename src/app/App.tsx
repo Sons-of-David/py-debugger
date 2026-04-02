@@ -28,15 +28,16 @@ import { useTheme } from '../contexts/ThemeContext';
 import { AnimationContext } from '../animation/animationContext';
 import { resetPythonState } from '../python-engine/pyodide-runtime';
 import { usePyodideLoader } from '../python-engine/usePyodideLoader';
-import { clearAll as clearTerminal, commitSegment as commitSegment, appendError, setOutputTimeline } from '../output-terminal/terminalState';
+import { clearAll as clearTerminal, commitSegment, appendError, setOutputTimeline } from '../output-terminal/terminalState';
 import { ApiReferencePanel } from '../api/ApiReferencePanel';
 import { TimelineControls } from '../timeline/TimelineControls';
 import { ExtrasMenu } from './ExtrasMenu';
 import { SamplesMenu } from './SamplesMenu';
 import { FeedbackModal } from '../components/FeedbackModal';
 import { GridArea, type GridAreaHandle } from './GridArea';
-import { getStateAt, getMaxTime, getChangedIdsAt, clearTimeline, setVisualTimeline } from '../timeline/timelineState';
-import { executeCode, type TraceStep, type TraceStageInfo } from '../python-engine/executor';
+import { getMaxTime } from '../timeline/timelineState';
+import { useTimelineNavigation, type AppMode } from '../timeline/useTimelineNavigation';
+import { executeCode, type TraceStageInfo } from '../python-engine/executor';
 import { setHandlers, hasAnyClickHandler } from '../visual-panel/handlersState';
 import { getVizRanges } from '../python-engine/viz-block-parser';
 import type { TextBox } from '../text-boxes/types';
@@ -81,17 +82,15 @@ function App() {
   const [isEditable, setIsEditable] = useState(true);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  type AppMode = 'idle' | 'trace' | 'interactive';
   const [appMode, setAppMode] = useState<AppMode>('idle');
   const mouseEnabled = appMode === 'interactive';
 
-  // Timeline state
-  const [currentStep, setCurrentStep] = useState(0);
-  const [stepCount, setStepCount] = useState(0);
-  const [timeline, setTimeline] = useState<TraceStep[]>([]);
+  const {
+    currentStep, stepCount, timeline, hasInteractiveElements, setHasInteractiveElements,
+    currentElements, changedIds, goToStep, setTimelineData, resetTimeline,
+  } = useTimelineNavigation(appMode);
 
   const { handleCreateGif, isCreatingGif } = useGifExport({ darkMode });
-  const [hasInteractiveElements, setHasInteractiveElements] = useState(false);
   const [flashInteractive, setFlashInteractive] = useState(false);
 
   const handleTraceClickAttempt = useCallback(() => {
@@ -100,29 +99,6 @@ function App() {
     setTimeout(() => setFlashInteractive(false), 700);
   }, [hasInteractiveElements]);
 
-  // ---------------------------------------------------------------------------
-  // Timeline
-  // ---------------------------------------------------------------------------
-
-
-  // timeline is a required dep: forces recompute when a new trace loads,
-  // even if currentStep stays at 0 between analyses.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const currentElements = useMemo(() => getStateAt(currentStep) ?? [], [currentStep, timeline]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const changedIds = useMemo(() => getChangedIdsAt(currentStep), [currentStep, timeline]);
-
-  const goToStep = useCallback((step: number) => {
-    setCurrentStep(Math.max(0, Math.min(getMaxTime(), step)));
-  }, []);
-
-  const setFullTimeline = useCallback((newTimeline: TraceStep[]) => {
-    setTimeline(newTimeline);
-    setVisualTimeline(newTimeline.map(s => s.visual));
-    setOutputTimeline(newTimeline.map(s => ({ text: s.output ?? '', isViz: s.isViz ?? false })));
-    setStepCount(getMaxTime() + 1);
-    goToStep(0);
-  }, [goToStep]);
 
   // ---------------------------------------------------------------------------
   // Main Flow
@@ -137,26 +113,18 @@ function App() {
 
   const handleReset = useCallback(() => {
     resetPythonState();
-
-    clearTimeline();
-    setTimeline([]);
-    goToStep(0);
-    setStepCount(0);
-    
+    resetTimeline();
     setProjectName('untitled');
     setUserCode('');
-
     setTextBoxes([]);
-
     handleEdit();
-  }, [goToStep, handleEdit]);
+  }, [resetTimeline, handleEdit]);
 
   const startTrace = useCallback((result: TraceStageInfo) => {
-    setFullTimeline(result.timeline);
-
     setHandlers(result.handlers ?? {});
     const interactive = hasAnyClickHandler();
-    setHasInteractiveElements(interactive);
+    setTimelineData(result.timeline, interactive);
+    setOutputTimeline(result.timeline.map(s => ({ text: s.output ?? '', isViz: s.isViz ?? false })));
     const isOneFrame = (getMaxTime() === 0);
 
     if (isOneFrame && interactive) {
@@ -165,7 +133,7 @@ function App() {
     } else {
       setAppMode('trace');
     }
-  }, [setFullTimeline]);
+  }, [setTimelineData]);
 
   const handleAnalyze = useCallback(async () => {
     if (!userCode.trim()) return;
