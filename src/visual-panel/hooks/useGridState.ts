@@ -88,12 +88,12 @@ export function useGridState() {
     return sizes;
   }, [objects]);
 
-  const { cells, overlayCells, occupancyMap } = useMemo((): {
-    cells: Map<string, RenderableObjectData>;
-    overlayCells: Map<string, RenderableObjectData>;
+  const { objects: positionedObjects, overlayObjects, occupancyMap } = useMemo((): {
+    objects: Map<string, RenderableObjectData>;
+    overlayObjects: Map<string, RenderableObjectData>;
     occupancyMap: Map<string, OccupantInfo[]>;
   } => {
-    const cellMap = new Map<string, RenderableObjectData>();
+    const objectMap = new Map<string, RenderableObjectData>();
     const overlayMap = new Map<string, RenderableObjectData>();
     const occMap = new Map<string, OccupantInfo[]>();
     const sortedObjects = Array.from(objects.values()).sort((a, b) => (a.zOrder ?? 0) - (b.zOrder ?? 0));
@@ -115,7 +115,7 @@ export function useGridState() {
       for (let r = 0; r < ph; r++) {
         for (let c = 0; c < pw; c++) {
           addOccupant(row + r, col + c, {
-            cellData: obj.data,
+            objectData: obj.data,
             originRow: row,
             originCol: col,
             isPanel: true,
@@ -125,13 +125,13 @@ export function useGridState() {
       }
     }
 
-    const setOrOverlay = (key: string, cellData: RenderableObjectData) => {
-      if (!cellMap.has(key)) {
-        cellMap.set(key, cellData);
+    const setOrOverlay = (key: string, objectData: RenderableObjectData) => {
+      if (!objectMap.has(key)) {
+        objectMap.set(key, objectData);
       } else {
         let n = 0;
         while (overlayMap.has(`${key},${n}`)) n++;
-        overlayMap.set(`${key},${n}`, cellData);
+        overlayMap.set(`${key},${n}`, objectData);
       }
     };
 
@@ -151,7 +151,7 @@ export function useGridState() {
       for (let r = 0; r < objH; r++) {
         for (let c = 0; c < objW; c++) {
           addOccupant(position.row + r, position.col + c, {
-            cellData: resolvedRenderableObjectData,
+            objectData: resolvedRenderableObjectData,
             originRow: position.row,
             originCol: position.col,
             isPanel: false,
@@ -165,7 +165,7 @@ export function useGridState() {
       if (list.length > 1) list.sort((a, b) => a.zOrder - b.zOrder);
     }
 
-    return { cells: cellMap, overlayCells: overlayMap, occupancyMap: occMap };
+    return { objects: objectMap, overlayObjects: overlayMap, occupancyMap: occMap };
   }, [objects, panelAutoSizes]);
 
   const panels = useMemo(() => {
@@ -330,8 +330,8 @@ export function useGridState() {
   }, []);
 
   return {
-    cells,
-    overlayCells,
+    objects: positionedObjects,
+    overlayObjects,
     zoom,
     occupancyMap,
     zoomIn,

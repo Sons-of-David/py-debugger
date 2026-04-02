@@ -3,7 +3,7 @@
 //
 // Responsibilities:
 //   - Canvas: 50×50 cell grid with zoom, scroll, and optional clip dimensions
-//   - Object rendering: positions RenderableObjectData cells as animated
+//   - Object rendering: positions RenderableObjectData objects as animated
 //     motion.div elements; skips animation for unchanged elements (changedIds)
 //   - Z-ordering: sorts objects by userZ then zOrder before painting
 //   - Panel rendering: backgrounds and title handles as separate pointer-events-none layers
@@ -33,8 +33,8 @@ const GRID_ROWS = 50;
 // ── Types ──────────────────────────────────────────────────────────────────
 
 interface GridProps {
-  cells: Map<string, RenderableObjectData>;
-  overlayCells?: Map<string, RenderableObjectData>;
+  objects: Map<string, RenderableObjectData>;
+  overlayObjects?: Map<string, RenderableObjectData>;
   occupancyMap?: Map<string, unknown>; // kept for API compat
   panels: Array<PanelInfo>;
   /** Elem IDs that changed at this step; null = full snapshot (animate all). */
@@ -82,8 +82,8 @@ export interface PanelInfo {
 // ── Main Grid component ────────────────────────────────────────────────────
 
 export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
-  cells,
-  overlayCells = new Map(),
+  objects,
+  overlayObjects = new Map(),
   occupancyMap: _occupancyMap = new Map(),
   panels,
   changedIds,
@@ -204,39 +204,39 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
   const gridBgColor = darkMode ? '#1f2937' : '#ffffff';
 
   const objectsToRender = useMemo((): RenderableObject[] => {
-    const objects: RenderableObject[] = [];
+    const result: RenderableObject[] = [];
 
-    for (const [posKey, cellData] of cells) {
-      if (cellData.panel) continue;
+    for (const [posKey, objectData] of objects) {
+      if (objectData.panel) continue;
       const [row, col] = posKey.split(',').map(Number);
-      const baseWidth = cellData.shapeProps?.width ?? 1;
-      const baseHeight = cellData.shapeProps?.height ?? 1;
-      objects.push({
-        key: cellData.objectId ?? posKey,
-        row, col, cellData,
+      const baseWidth = objectData.shapeProps?.width ?? 1;
+      const baseHeight = objectData.shapeProps?.height ?? 1;
+      result.push({
+        key: objectData.objectId ?? posKey,
+        row, col, objectData,
         widthCells: baseWidth,
         heightCells: baseHeight,
       });
     }
 
-    for (const [posKey, cellData] of overlayCells) {
+    for (const [posKey, objectData] of overlayObjects) {
       const [row, col] = posKey.split(',').map(Number);
-      const baseWidth = cellData.shapeProps?.width ?? 1;
-      const baseHeight = cellData.shapeProps?.height ?? 1;
-      objects.push({
-        key: cellData.objectId ?? ('overlay-' + posKey),
-        row, col, cellData,
+      const baseWidth = objectData.shapeProps?.width ?? 1;
+      const baseHeight = objectData.shapeProps?.height ?? 1;
+      result.push({
+        key: objectData.objectId ?? ('overlay-' + posKey),
+        row, col, objectData,
         widthCells: baseWidth,
         heightCells: baseHeight,
       });
     }
 
-    objects.sort((a, b) =>
-      (b.cellData.userZ ?? 0) - (a.cellData.userZ ?? 0) ||
-      (a.cellData.zOrder ?? 0) - (b.cellData.zOrder ?? 0)
+    result.sort((a, b) =>
+      (b.objectData.userZ ?? 0) - (a.objectData.userZ ?? 0) ||
+      (a.objectData.zOrder ?? 0) - (b.objectData.zOrder ?? 0)
     );
-    return objects;
-  }, [cells, overlayCells]);
+    return result;
+  }, [objects, overlayObjects]);
 
   const renderedObjects = useMemo(() => {
     return objectsToRender.map((obj) => (

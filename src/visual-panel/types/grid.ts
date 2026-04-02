@@ -91,7 +91,7 @@ export interface RenderableObjectData {
 }
 
 export interface OccupantInfo {
-  cellData: RenderableObjectData;
+  objectData: RenderableObjectData;
   originRow: number;
   originCol: number;
   isPanel: boolean;
@@ -99,7 +99,7 @@ export interface OccupantInfo {
 }
 
 export interface GridState {
-  cells: Map<string, RenderableObjectData>;
+  objects: Map<string, RenderableObjectData>;
   zoom: number;
 }
 

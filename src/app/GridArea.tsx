@@ -70,8 +70,8 @@ interface GridAreaProps {
 export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
   function GridArea({ darkMode, mouseEnabled, hideToolbar = false, elements, changedIds, interactiveEnabled = false, onTrace, appMode = 'idle', projectName = 'visual-panel', onCreateGif, isCreatingGif = false, allowGif = false, onTraceClickAttempt }, ref) {
     const {
-      cells,
-      overlayCells,
+      objects,
+      overlayObjects,
       zoom,
       zoomIn,
       zoomOut,
@@ -289,9 +289,9 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
           )}
           <Grid
             ref={gridRef}
-            cells={cells}
+            objects={objects}
             changedIds={changedIds}
-            overlayCells={overlayCells}
+            overlayObjects={overlayObjects}
             occupancyMap={occupancyMap}
             panels={panels}
             zoom={zoom}

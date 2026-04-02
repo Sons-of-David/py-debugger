@@ -21,7 +21,7 @@ export interface RenderableObject {
   key: string;
   row: number;
   col: number;
-  cellData: RenderableObjectData;
+  objectData: RenderableObjectData;
   widthCells: number;
   heightCells: number;
 }
@@ -56,7 +56,7 @@ export const GridSingleObject = memo(function GridSingleObject({
   const globalAnimationsEnabled = useAnimationEnabled();
   const animationDuration = useAnimationDuration();
   // Per-element animate flag: false overrides the global toggle to force jump mode.
-  const animationsEnabled = globalAnimationsEnabled && obj.cellData.animate !== false;
+  const animationsEnabled = globalAnimationsEnabled && obj.objectData.animate !== false;
 
   useEffect(() => {
     if (inputActive && inputRef.current) {
@@ -66,12 +66,12 @@ export const GridSingleObject = memo(function GridSingleObject({
 
   if (widthCells <= 0 || heightCells <= 0) return null;
 
-  const { cellData } = obj;
-  const elemVisible = cellData.elementInfo?.visible !== false;
-  const hasElementInfo = !!cellData.elementInfo;
-  const isInvalid = !!cellData.invalidReason;
+  const { objectData } = obj;
+  const elemVisible = objectData.elementInfo?.visible !== false;
+  const hasElementInfo = !!objectData.elementInfo;
+  const isInvalid = !!objectData.invalidReason;
 
-  const { clickData, dragData, inputData } = cellData;
+  const { clickData, dragData, inputData } = objectData;
   const isClickable = mouseEnabled && !!clickData && !!onElementClick;
   const isDraggable = mouseEnabled && !!dragData && !!onElementDragStart;
   const isInput = mouseEnabled && !!inputData && !!onElementInput;
@@ -112,7 +112,7 @@ export const GridSingleObject = memo(function GridSingleObject({
 
   // Skip animation for elements that didn't change this step.
   // objectId encodes the elem id: "elem-42" or "panel-e42" → 42.
-  const oidMatch = cellData.objectId ? /(\d+)$/.exec(cellData.objectId) : null;
+  const oidMatch = objectData.objectId ? /(\d+)$/.exec(objectData.objectId) : null;
   const elemId = oidMatch ? parseInt(oidMatch[1]) : null;
   const didChange = changedIds == null || elemId === null || changedIds.has(elemId);
 
@@ -129,7 +129,7 @@ export const GridSingleObject = memo(function GridSingleObject({
         top: obj.row * CELL_SIZE,
         width: CELL_SIZE * widthCells,
         height: CELL_SIZE * heightCells,
-        opacity: elemVisible ? (cellData.parentAlpha ?? 1) : 0,
+        opacity: elemVisible ? (objectData.parentAlpha ?? 1) : 0,
       }}
       transition={transition}
       style={{ zIndex: 10, pointerEvents: elemVisible ? undefined : 'none' }}
@@ -149,7 +149,7 @@ export const GridSingleObject = memo(function GridSingleObject({
         `}
         style={{ width: '100%', height: '100%' }}
       >
-        {hasElementInfo && renderElement(cellData.elementInfo!)}
+        {hasElementInfo && renderElement(objectData.elementInfo!)}
       </div>
       {inputActive && (
         <input
