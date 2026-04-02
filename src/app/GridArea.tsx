@@ -105,6 +105,10 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
       gridRef.current?.alignGrid();
     }, []);
 
+    // ---------------------------------------------------------------------------
+    // Element interaction handlers: click, input change, drag (move/resize)
+    // ---------------------------------------------------------------------------
+
     // TODO: Why are these handled in the GridArea instead of the Grid? 
     // Also, these are all very similar — can they be unified into a single handler with a parameter for the type of interaction?
     const handleElementClick = useCallback(async (elemId: number, x: number, y: number) => {
@@ -128,6 +132,10 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
       if (result.timeline.length > 0) onTrace?.(result);
     }, [interactiveEnabled, onTrace]);
 
+    // ---------------------------------------------------------------------------
+    // Text box handlers
+    // ---------------------------------------------------------------------------
+
     const handleTextBoxAdded = useCallback((box: TextBox) => {
       onTextBoxesChange([...textBoxes, box]);
       setSelectedTextBoxId(box.id);
@@ -142,6 +150,10 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
       onTextBoxesChange(textBoxes.filter((b) => b.id !== id));
       setSelectedTextBoxId(null);
     }, [textBoxes, onTextBoxesChange]);
+
+    // ---------------------------------------------------------------------------
+    // Capture handlers
+    // ---------------------------------------------------------------------------
 
     /** Render the selected region to a canvas directly from element data. */
     const captureFrameCanvas = useCallback((region: CaptureRegion | null): HTMLCanvasElement => {
