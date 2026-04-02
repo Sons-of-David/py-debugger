@@ -15,11 +15,10 @@
 //   - Viewport API: scrollTo, clipTo, alignGrid exposed via GridHandle ref
 // =============================================================================
 
-import { useRef, useCallback, useMemo, memo, forwardRef, useImperativeHandle, useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { useAnimationEnabled, useAnimationDuration } from '../../animation/animationContext';
-import { GridCell } from './GridCell';
-import type { RenderableObjectData, PanelStyle, InteractionData } from '../types/grid';
+import { useRef, useCallback, useMemo, forwardRef, useImperativeHandle, useState, useEffect } from 'react';
+import { useAnimationDuration } from '../../animation/animationContext';
+import { GridSingleObject, type RenderableObject } from './GridSingleObject';
+import type { RenderableObjectData, PanelStyle } from '../types/grid';
 import { PANEL_STYLE_DEFAULT } from '../types/grid';
 import type { TextBox } from '../../text-boxes/types';
 import { TextBoxesLayer } from '../../text-boxes/TextBoxesLayer';
@@ -79,157 +78,6 @@ export interface PanelInfo {
   showBorder?: boolean;
   invalidReason?: string;
 }
-
-interface RenderableObject {
-  key: string;
-  row: number;
-  col: number;
-  cellData: RenderableObjectData;
-  widthCells: number;
-  heightCells: number;
-}
-
-// ── Coordinate helpers ─────────────────────────────────────────────────────
-
-/**
- * Panel-relative [col, row] for a mousedown/click event fired on an element div.
- * `data.x/y` are the element's own panel-local origin; offsetX/Y are pixel offsets
- * within the element div, so dividing by CELL_SIZE gives the in-element cell offset.
- */
-function coordsFromElementEvent(e: React.MouseEvent, data: InteractionData): [number, number] {
-  return [
-    data.x + Math.floor(e.nativeEvent.offsetX / CELL_SIZE),
-    data.y + Math.floor(e.nativeEvent.offsetY / CELL_SIZE),
-  ];
-}
-
-// ── Sub-components ─────────────────────────────────────────────────────────
-
-const GridSingleObject = memo(function GridSingleObject({
-  obj,
-  mouseEnabled,
-  onElementClick,
-  onElementDragStart,
-  onElementInput,
-  changedIds,
-}: {
-  obj: RenderableObject;
-  mouseEnabled: boolean;
-  onElementClick?: (elemId: number, x: number, y: number) => void;
-  onElementDragStart?: (elemId: number, x: number, y: number, panelOriginCol: number, panelOriginRow: number) => void;
-  onElementInput?: (elemId: number, text: string) => void;
-  changedIds?: Set<number> | null;
-}) {
-  const { widthCells, heightCells } = obj;
-  const [flashing, setFlashing] = useState(false);
-  const [inputActive, setInputActive] = useState(false);
-  const [inputText, setInputText] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
-  const globalAnimationsEnabled = useAnimationEnabled();
-  const animationDuration = useAnimationDuration();
-  // Per-element animate flag: false overrides the global toggle to force jump mode.
-  const animationsEnabled = globalAnimationsEnabled && obj.cellData.animate !== false;
-
-  useEffect(() => {
-    if (inputActive && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [inputActive]);
-
-  if (widthCells <= 0 || heightCells <= 0) return null;
-
-  const elemVisible = obj.cellData.elementInfo?.visible !== false;
-
-  const { clickData, dragData, inputData } = obj.cellData;
-  const isClickable = mouseEnabled && !!clickData && !!onElementClick;
-  const isDraggable = mouseEnabled && !!dragData && !!onElementDragStart;
-  const isInput = mouseEnabled && !!inputData && !!onElementInput;
-
-  const handleClick = isClickable
-    ? (e: React.MouseEvent<HTMLDivElement>) => {
-        const [x, y] = coordsFromElementEvent(e, clickData!);
-        onElementClick!(clickData!.elemId, x, y);
-        setFlashing(true);
-        setTimeout(() => setFlashing(false), 300);
-      }
-    : isInput
-      ? () => {
-          setInputText('');
-          setInputActive(true);
-        }
-      : undefined;
-
-  const handleMouseDown = isDraggable
-    ? (e: React.MouseEvent<HTMLDivElement>) => {
-        e.preventDefault();
-        const [x, y] = coordsFromElementEvent(e, dragData!);
-        onElementDragStart!(dragData!.elemId, x, y, obj.col - dragData!.x, obj.row - dragData!.y);
-      }
-    : undefined;
-
-  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      setInputActive(false);
-      onElementInput!(inputData!.elemId, inputText);
-    } else if (e.key === 'Escape') {
-      setInputActive(false);
-    }
-  };
-
-  const cursorClass = isDraggable ? ' cursor-grab pointer-events-auto' : (isClickable || isInput) ? ' cursor-pointer pointer-events-auto' : '';
-
-  // Skip animation for elements that didn't change this step.
-  // objectId encodes the elem id: "elem-42" or "panel-e42" → 42.
-  const oidMatch = obj.cellData.objectId ? /(\d+)$/.exec(obj.cellData.objectId) : null;
-  const elemId = oidMatch ? parseInt(oidMatch[1]) : null;
-  const didChange = changedIds == null || elemId === null || changedIds.has(elemId);
-
-  const transition = animationsEnabled && didChange
-    ? { duration: animationDuration / 1000, ease: 'easeOut' as const }
-    : { duration: 0 };
-
-  return (
-    <motion.div
-      className={`absolute${cursorClass}`}
-      initial={{ opacity: 0 }}
-      animate={{
-        left: obj.col * CELL_SIZE,
-        top: obj.row * CELL_SIZE,
-        width: CELL_SIZE * widthCells,
-        height: CELL_SIZE * heightCells,
-        opacity: elemVisible ? (obj.cellData.parentAlpha ?? 1) : 0,
-      }}
-      transition={transition}
-      style={{ zIndex: 10, pointerEvents: elemVisible ? undefined : 'none' }}
-      onClick={handleClick}
-      onMouseDown={handleMouseDown}
-    >
-      <GridCell
-        row={obj.row}
-        col={obj.col}
-        cellData={obj.cellData}
-        size={CELL_SIZE}
-        width={CELL_SIZE * widthCells}
-        height={CELL_SIZE * heightCells}
-      />
-      {inputActive && (
-        <input
-          ref={inputRef}
-          className="absolute inset-0 w-full h-full bg-white/90 dark:bg-gray-900/90 text-gray-900 dark:text-gray-100 font-mono text-sm px-2 rounded outline-none ring-2 ring-white"
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          onKeyDown={handleInputKeyDown}
-          onBlur={() => setInputActive(false)}
-          onClick={(e) => e.stopPropagation()}
-        />
-      )}
-      {flashing && (
-        <div className="absolute inset-0 bg-white/60 rounded pointer-events-none" />
-      )}
-    </motion.div>
-  );
-});
 
 // ── Main Grid component ────────────────────────────────────────────────────
 
