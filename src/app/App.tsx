@@ -26,7 +26,8 @@ import { Group, Panel, Separator } from 'react-resizable-panels';
 import { Editor, DEFAULT_SAMPLE, type EditorHandle } from '../components/editor/Editor';
 import { useTheme } from '../contexts/ThemeContext';
 import { AnimationContext } from '../animation/animationContext';
-import { loadPyodide, isPyodideLoaded, resetPythonState } from '../python-engine/pyodide-runtime';
+import { resetPythonState } from '../python-engine/pyodide-runtime';
+import { usePyodideLoader } from '../python-engine/usePyodideLoader';
 import { clearAll as clearTerminal, commitSegment as commitSegment, appendError, setOutputTimeline } from '../output-terminal/terminalState';
 import { ApiReferencePanel } from '../api/ApiReferencePanel';
 import { TimelineControls } from '../timeline/TimelineControls';
@@ -66,8 +67,7 @@ function App() {
   const [projectName, setProjectName] = useState('untitled');
 
   const autoLoadedRef = useRef(false);
-  const [pyodideLoading, setPyodideLoading] = useState(false);
-  const [pyodideReady, setPyodideReady] = useState(false);
+  const { pyodideReady, pyodideLoading } = usePyodideLoader();
   const [apiReferenceOpen, setApiReferenceOpen] = useState(false);
   const [extrasOpen, setExtrasOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -99,23 +99,6 @@ function App() {
     setFlashInteractive(true);
     setTimeout(() => setFlashInteractive(false), 700);
   }, [hasInteractiveElements]);
-  // Preload Pyodide on mount
-  useEffect(() => {
-    if (!isPyodideLoaded()) {
-      setPyodideLoading(true);
-      loadPyodide()
-        .then(() => {
-          setPyodideReady(true);
-          setPyodideLoading(false);
-        })
-        .catch((err) => {
-          console.error('Failed to load Pyodide:', err);
-          setPyodideLoading(false);
-        });
-    } else {
-      setPyodideReady(true);
-    }
-  }, []);
 
   // ---------------------------------------------------------------------------
   // Timeline
