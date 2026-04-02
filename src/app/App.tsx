@@ -1,8 +1,28 @@
+// =============================================================================
+// App.tsx — top-level orchestrator for the full editor experience
+//
+// Responsibilities:
+//   - Pyodide lifecycle: loading, ready state, reset between runs
+//   - App mode state machine: idle → trace → interactive (and back to idle via Edit)
+//   - Run analysis: execute user code, receive TraceStageInfo, transition to trace mode
+//   - Timeline navigation: currentStep, stepCount, goToStep, changedIds
+//   - File I/O: save/load project JSON, auto-load sample on mount
+//   - Save to samples: POST to /api/save-sample (dev only)
+//   - Keyboard shortcuts: Ctrl+Enter (analyze), Ctrl+S (save)
+//   - Animation settings: enabled toggle, duration
+//   - Layout: resizable split between Editor panel (left) and Visual Panel (right)
+//
+//
+// TODO:
+//   - Move textBoxes state into GridArea (they are a visual-panel concern)
+//   - Move "Save to Samples" button + handleSaveToSamples into SamplesMenu
+//   - Investigate why vizRanges (viz block presence) is used to gate interactive
+//     handlers — should the Python engine expose an explicit boolean instead?
+// =============================================================================
+
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import type { CaptureRegion } from '../visual-panel/components/CaptureRegionLayer';
-import { renderFrameToCanvas } from './canvasRenderer';
-import { quantize } from 'gifenc';
+import { useGifExport } from '../capture/useGifExport';
 
 import { Group, Panel, Separator } from 'react-resizable-panels';
 import { Editor, DEFAULT_SAMPLE, type EditorHandle } from '../components/editor/Editor';
@@ -13,6 +33,7 @@ import { clearAll as clearTerminal, commitSegment as commitSegment, appendError,
 import { ApiReferencePanel } from '../api/ApiReferencePanel';
 import { TimelineControls } from '../timeline/TimelineControls';
 import { ExtrasMenu } from './ExtrasMenu';
+import { SamplesMenu } from './SamplesMenu';
 import { FeedbackModal } from '../components/FeedbackModal';
 import { GridArea, type GridAreaHandle } from './GridArea';
 import { getStateAt, getMaxTime, getChangedIdsAt, clearTimeline, setVisualTimeline } from '../timeline/timelineState';
@@ -44,8 +65,6 @@ function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<EditorHandle>(null);
   const pendingPostLoadRef = useRef(false);
-  const [samplesOpen, setSamplesOpen] = useState(false);
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [projectName, setProjectName] = useState('untitled');
 
   const autoLoadedRef = useRef(false);
@@ -74,7 +93,7 @@ function App() {
   const [stepCount, setStepCount] = useState(0);
   const [timeline, setTimeline] = useState<TraceStep[]>([]);
 
-  const [isCreatingGif, setIsCreatingGif] = useState(false);
+  const { handleCreateGif, isCreatingGif } = useGifExport({ darkMode });
   const [hasInteractiveElements, setHasInteractiveElements] = useState(false);
   const [flashInteractive, setFlashInteractive] = useState(false);
 
@@ -219,6 +238,8 @@ function App() {
     URL.revokeObjectURL(url);
   }, [userCode, textBoxes, projectName]);
 
+  // TODO: Move "saves to samples button" into the SamplesMenu
+  //       and move this function there.
   const handleSaveToSamples = useCallback(async () => {
     const name = projectName.trim() || 'untitled';
     const data = { userCode: userCode, textBoxes };
@@ -236,12 +257,6 @@ function App() {
     }
     setTimeout(() => setSaveSampleStatus('idle'), 2000);
   }, [userCode, textBoxes, projectName]);
-
-  const copyToClipboard = useCallback((text: string, key: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedKey(key);
-    setTimeout(() => setCopiedKey(null), 1500);
-  }, []);
 
   const handleLoad = useCallback((data: { userCode?: string; textBoxes?: TextBox[] }, name: string) => {
     if (!data.userCode) {
@@ -295,85 +310,6 @@ function App() {
 
 
 
-  const handleCreateGif = useCallback(async (region: CaptureRegion | null) => {
-    if (isCreatingGif) return;
-    const maxStep = getMaxTime();
-    if (maxStep < 1) return;
-
-    setIsCreatingGif(true);
-    try {
-      const worker = new Worker(new URL('./gifWorker.ts', import.meta.url), { type: 'module' });
-
-      const gifDone = new Promise<ArrayBuffer>((resolve, reject) => {
-        worker.onmessage = (e) => {
-          if (e.data.type === 'done') { resolve(e.data.bytes); worker.terminate(); }
-        };
-        worker.onerror = (err) => { reject(err); worker.terminate(); };
-      });
-
-      const gifRegion = region ?? { col: 0, row: 0, widthCells: 50, heightCells: 50 };
-      const offscreen = document.createElement('canvas');
-      offscreen.width = gifRegion.widthCells * 40;
-      offscreen.height = gifRegion.heightCells * 40;
-      const ctx = offscreen.getContext('2d')!;
-
-      // Build palette from a spread of frames so colors that only appear mid-animation
-      // (e.g. A* explored/frontier blue/green) are included.
-      // TODO: could also pre-scan all element colors across all steps directly from the
-      // data model instead of rendering sample frames, which would be even cheaper.
-      const PALETTE_SAMPLES = 5;
-      const sampleIndices = Array.from({ length: PALETTE_SAMPLES }, (_, k) =>
-        Math.round(k * maxStep / (PALETTE_SAMPLES - 1))
-      );
-      const palettePixels: Uint8ClampedArray[] = [];
-      for (const i of sampleIndices) {
-        const els = getStateAt(i);
-        if (!els) continue;
-        renderFrameToCanvas(els, ctx, gifRegion, darkMode);
-        palettePixels.push(new Uint8ClampedArray(ctx.getImageData(0, 0, offscreen.width, offscreen.height).data));
-      }
-      const combined = new Uint8ClampedArray(palettePixels.reduce((n, a) => n + a.length, 0));
-      let off = 0;
-      for (const px of palettePixels) { combined.set(px, off); off += px.length; }
-      const palette = quantize(combined, 256);
-
-      worker.postMessage({ type: 'init', palette });
-
-      let hasFrames = false;
-      for (let i = 0; i <= maxStep; i++) {
-        const elements = getStateAt(i);
-        if (!elements) continue;
-        renderFrameToCanvas(elements, ctx, gifRegion, darkMode);
-        hasFrames = true;
-        const imageData = ctx.getImageData(0, 0, offscreen.width, offscreen.height);
-        worker.postMessage(
-          { type: 'frame', data: imageData.data.buffer, width: offscreen.width, height: offscreen.height },
-          [imageData.data.buffer],
-        );
-      }
-
-      if (!hasFrames) { worker.terminate(); return; }
-
-      worker.postMessage({ type: 'finish' });
-      const gifBytes = await gifDone;
-
-      const blob = new Blob([gifBytes], { type: 'image/gif' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-      link.download = `trace-${timestamp}.gif`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('GIF export failed:', err);
-    } finally {
-      setIsCreatingGif(false);
-    }
-  }, [isCreatingGif, darkMode]);
-
   // ---------------------------------------------------------------------------
   // Keyboard shortcuts
   // ---------------------------------------------------------------------------
@@ -415,79 +351,7 @@ function App() {
             className="text-sm border-b border-gray-300 dark:border-gray-600 bg-transparent focus:outline-none focus:border-indigo-500 text-gray-700 dark:text-gray-200 w-36"
           />
           <input ref={fileInputRef} type="file" accept=".json" onChange={handleFileChange} className="hidden" />
-          <div className="relative">
-            <button type="button" onClick={() => setSamplesOpen((o) => !o)} className={buttonNeutral}>
-              Samples
-            </button>
-            {samplesOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setSamplesOpen(false)} />
-                <div className="absolute left-0 top-full mt-1 z-50 min-w-[220px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded shadow-lg py-1">
-                  <div className="px-3 py-1 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Algorithms</div>
-                  {SAMPLES.filter(s => s.category === 'algorithm').map(({ displayName, rawName, data }) => (
-                    <div key={rawName} className="flex items-center px-2 py-0.5 hover:bg-gray-100 dark:hover:bg-gray-700 gap-1">
-                      <button
-                        type="button"
-                        className="flex-1 text-left px-2 py-1.5 text-sm text-gray-700 dark:text-gray-200"
-                        onClick={() => { handleLoad(data, rawName); setSamplesOpen(false); }}
-                      >
-                        {displayName}
-                      </button>
-                      <button
-                        type="button"
-                        title="Copy link"
-                        className="px-2 py-0.5 rounded text-xs font-medium text-gray-400 dark:text-gray-500 hover:bg-indigo-100 dark:hover:bg-indigo-900 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
-                        onClick={() => copyToClipboard(`${window.location.origin}/?sample=${encodeURIComponent(rawName)}`, `${rawName}-link`)}
-                      >
-                        {copiedKey === `${rawName}-link` ? 'Copied!' : '🔗'}
-                      </button>
-                      {import.meta.env.DEV && (
-                        <button
-                          type="button"
-                          title="Copy iframe HTML"
-                          className="px-2 py-0.5 rounded text-xs font-medium text-gray-400 dark:text-gray-500 hover:bg-amber-100 dark:hover:bg-amber-900 hover:text-amber-600 dark:hover:text-amber-300 transition-colors"
-                          onClick={() => copyToClipboard(`<iframe src="${window.location.origin}/embed?sample=${encodeURIComponent(rawName)}&dark=1" width="800" height="500" style="border:none" frameborder="0"></iframe>`, `${rawName}-iframe`)}
-                        >
-                          {copiedKey === `${rawName}-iframe` ? 'Copied!' : '</>'}
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  <div className="my-1 border-t border-gray-200 dark:border-gray-600" />
-                  <div className="px-3 py-1 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Features</div>
-                  {SAMPLES.filter(s => s.category === 'feature').map(({ displayName, rawName, data }) => (
-                    <div key={rawName} className="flex items-center px-2 py-0.5 hover:bg-gray-100 dark:hover:bg-gray-700 gap-1">
-                      <button
-                        type="button"
-                        className="flex-1 text-left px-2 py-1.5 text-sm text-gray-700 dark:text-gray-200"
-                        onClick={() => { handleLoad(data, rawName); setSamplesOpen(false); }}
-                      >
-                        {displayName}
-                      </button>
-                      <button
-                        type="button"
-                        title="Copy link"
-                        className="px-2 py-0.5 rounded text-xs font-medium text-gray-400 dark:text-gray-500 hover:bg-indigo-100 dark:hover:bg-indigo-900 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
-                        onClick={() => copyToClipboard(`${window.location.origin}/?sample=${encodeURIComponent(rawName)}`, `${rawName}-link`)}
-                      >
-                        {copiedKey === `${rawName}-link` ? 'Copied!' : '🔗'}
-                      </button>
-                      {import.meta.env.DEV && (
-                        <button
-                          type="button"
-                          title="Copy iframe HTML"
-                          className="px-2 py-0.5 rounded text-xs font-medium text-gray-400 dark:text-gray-500 hover:bg-amber-100 dark:hover:bg-amber-900 hover:text-amber-600 dark:hover:text-amber-300 transition-colors"
-                          onClick={() => copyToClipboard(`<iframe src="${window.location.origin}/embed?sample=${encodeURIComponent(rawName)}&dark=1" width="800" height="500" style="border:none" frameborder="0"></iframe>`, `${rawName}-iframe`)}
-                        >
-                          {copiedKey === `${rawName}-iframe` ? 'Copied!' : '</>'}
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+          <SamplesMenu onLoad={handleLoad} />
         </div>
 
         {/* Center: pyodide status + timeline controls */}
@@ -617,7 +481,7 @@ function App() {
                 onTextBoxesChange={setTextBoxes}
                 elements={currentElements}
                 changedIds={changedIds}
-                vizRanges={vizRanges}
+                interactiveEnabled={vizRanges.length > 0}
                 onTrace={startTrace}
                 appMode={appMode}
                 projectName={projectName}
