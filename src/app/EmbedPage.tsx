@@ -8,7 +8,6 @@ import { getMaxTime } from '../timeline/timelineState';
 import { executeCode, type TraceStageInfo } from '../python-engine/executor';
 import { setHandlers, hasAnyClickHandler } from '../visual-panel/handlersState';
 import { getVizRanges } from '../python-engine/viz-block-parser';
-import { migrateTextBox, type TextBox } from '../text-boxes/types';
 import { SAMPLES } from './sampleRegistry';
 import { useTimelineNavigation, type AppMode } from '../timeline/useTimelineNavigation';
 
@@ -71,7 +70,6 @@ export function EmbedPage() {
     currentElements, changedIds, goToStep, setTimelineData, resetTimeline,
   } = useTimelineNavigation(appMode);
 
-  const [textBoxes, setTextBoxes] = useState<TextBox[]>([]);
 
   // Whether the sample has viz blocks — gates interactive element handlers
   const interactiveEnabled = useMemo(
@@ -99,12 +97,12 @@ export function EmbedPage() {
   // Analysis
   // ---------------------------------------------------------------------------
 
-  const runAnalysis = useCallback(async (code: string, initialTextBoxes: TextBox[]) => {
+  const runAnalysis = useCallback(async (code: string, visualPanel: unknown) => {
     setIsAnalyzing(true);
     setAnalysisError(null);
     resetTimeline();
     setHandlers({});
-    setTextBoxes(initialTextBoxes);
+    gridAreaRef.current?.load(visualPanel);
 
     try {
       const result = await executeCode(code);
@@ -127,8 +125,7 @@ export function EmbedPage() {
     if (!pyodideReady || !sample) return;
     const code = sample.data.userCode;
     if (!code) return;
-    const boxes = (sample.data.textBoxes ?? []).map((raw) => migrateTextBox(raw as unknown as Record<string, unknown>));
-    runAnalysis(code, boxes);
+    runAnalysis(code, sample.data.visualPanel ?? {});
   // Only run once when pyodide becomes ready for the current sample
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pyodideReady]);
@@ -192,8 +189,6 @@ export function EmbedPage() {
             darkMode={prefersDark}
             mouseEnabled={mouseEnabled}
             hideToolbar
-            textBoxes={textBoxes}
-            onTextBoxesChange={setTextBoxes}
             elements={currentElements}
             changedIds={changedIds}
             interactiveEnabled={interactiveEnabled}

@@ -13,7 +13,6 @@
 //
 //
 // TODO:
-//   - Move textBoxes state into GridArea (they are a visual-panel concern)
 //   - Serialization should be per component:
 //     - Editor handles userCode and exposes serialize/deserialize methods for its state
 //     - GridArea handles textBoxes and any future visual state
@@ -43,7 +42,6 @@ import { useTimelineNavigation, type AppMode } from '../timeline/useTimelineNavi
 import { executeCode, type TraceStageInfo } from '../python-engine/executor';
 import { setHandlers, hasAnyClickHandler } from '../visual-panel/handlersState';
 import { getVizRanges } from '../python-engine/viz-block-parser';
-import type { TextBox } from '../text-boxes/types';
 
 export interface SaveFile {
   userCode: string;
@@ -80,7 +78,6 @@ function App() {
   const [extrasOpen, setExtrasOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
-  const [textBoxes, setTextBoxes] = useState<TextBox[]>([]);
   const [animationsEnabled, setAnimationsEnabled] = useState(true);
   const [animationDuration, setAnimationDuration] = useState(200); // ms
 
@@ -414,8 +411,6 @@ function App() {
                 ref={gridAreaRef}
                 darkMode={darkMode}
                 mouseEnabled={mouseEnabled}
-                textBoxes={textBoxes}
-                onTextBoxesChange={setTextBoxes}
                 elements={currentElements}
                 changedIds={changedIds}
                 interactiveEnabled={vizRanges.length > 0}

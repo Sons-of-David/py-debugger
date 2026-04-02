@@ -4,7 +4,8 @@
 // Responsibilities:
 //   - Toolbar: zoom controls, align-grid, screenshot / GIF capture, text-box toggle
 //   - Interaction dispatch: click / drag / input events → Python executor → onTrace
-//   - Text box CRUD: add, edit, delete text annotations on the canvas
+//   - Text box state: owns TextBox[] internally; exposes serialize / load on
+//     GridAreaHandle for parent-driven save, load, and reset
 //   - Capture: screenshot region selection, canvas rendering, PNG download;
 //              GIF region handoff to App (onCreateGif)
 //   - Viewport control: scrollViewport and clipViewport exposed to parent via ref
@@ -48,8 +49,6 @@ export interface GridAreaHandle {
 interface GridAreaProps {
   darkMode: boolean;
   mouseEnabled: boolean;
-  textBoxes: TextBox[];
-  onTextBoxesChange: (boxes: TextBox[]) => void;
   hideToolbar?: boolean;
   /** Visual elements to display; updated reactively when currentStep changes. */
   elements?: VisualBuilderElementBase[];
@@ -69,7 +68,7 @@ interface GridAreaProps {
 }
 
 export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
-  function GridArea({ darkMode, mouseEnabled, textBoxes, onTextBoxesChange, hideToolbar = false, elements, changedIds, interactiveEnabled = false, onTrace, appMode = 'idle', projectName = 'visual-panel', onCreateGif, isCreatingGif = false, allowGif = false, onTraceClickAttempt }, ref) {
+  function GridArea({ darkMode, mouseEnabled, hideToolbar = false, elements, changedIds, interactiveEnabled = false, onTrace, appMode = 'idle', projectName = 'visual-panel', onCreateGif, isCreatingGif = false, allowGif = false, onTraceClickAttempt }, ref) {
     const {
       cells,
       overlayCells,
@@ -87,6 +86,7 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
     }, [elements, loadVisualBuilderObjects]);
 
     const gridRef = useRef<GridHandle>(null);
+    const [textBoxes, setTextBoxes] = useState<TextBox[]>([]);
     const [addingTextBox, setAddingTextBox] = useState(false);
     const [selectedTextBoxId, setSelectedTextBoxId] = useState<string | null>(null);
 
@@ -139,19 +139,19 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
     // ---------------------------------------------------------------------------
 
     const handleTextBoxAdded = useCallback((box: TextBox) => {
-      onTextBoxesChange([...textBoxes, box]);
+      setTextBoxes((prev) => [...prev, box]);
       setSelectedTextBoxId(box.id);
       setAddingTextBox(false);
-    }, [textBoxes, onTextBoxesChange]);
+    }, []);
 
     const handleTextBoxChange = useCallback((updated: TextBox) => {
-      onTextBoxesChange(textBoxes.map((b) => (b.id === updated.id ? updated : b)));
-    }, [textBoxes, onTextBoxesChange]);
+      setTextBoxes((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
+    }, []);
 
     const handleTextBoxDelete = useCallback((id: string) => {
-      onTextBoxesChange(textBoxes.filter((b) => b.id !== id));
+      setTextBoxes((prev) => prev.filter((b) => b.id !== id));
       setSelectedTextBoxId(null);
-    }, [textBoxes, onTextBoxesChange]);
+    }, []);
 
     // ---------------------------------------------------------------------------
     // Capture handlers
@@ -181,11 +181,11 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
       serialize: () => ({ textBoxes }),
       load: (state: unknown) => {
         const s = state as { textBoxes?: unknown[] } | null | undefined;
-        onTextBoxesChange(
+        setTextBoxes(
           (s?.textBoxes ?? []).map((raw) => migrateTextBox(raw as Record<string, unknown>))
         );
       },
-    }), [loadVisualBuilderObjects, captureFrameData, captureFrameCanvas, textBoxes, onTextBoxesChange]);
+    }), [loadVisualBuilderObjects, captureFrameData, captureFrameCanvas, textBoxes]);
 
     const downloadDataUrl = (dataUrl: string, filename: string) => {
       const link = document.createElement('a');
