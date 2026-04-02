@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, forwardRef, useImperativeHandle, useEffect } from 'react';
-import { renderFrameToCanvas } from './canvasRenderer';
+import { renderFrameToCanvas } from '../capture/canvasRenderer';
 import { Grid, type GridHandle, CELL_SIZE } from '../visual-panel/components/Grid';
 import { useGridState } from '../visual-panel/hooks/useGridState';
 import type { VisualBuilderElementBase } from '../api/visualBuilder';
