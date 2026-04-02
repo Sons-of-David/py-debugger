@@ -78,9 +78,9 @@ export function EmbedPage() {
 
   const mouseEnabled = appMode === 'interactive';
 
-  // Viz ranges for click handler dispatch
-  const vizRanges = useMemo(
-    () => (sample?.data.userCode ? getVizRanges(sample.data.userCode) : []),
+  // Whether the sample has viz blocks — gates interactive element handlers
+  const interactiveEnabled = useMemo(
+    () => !!sample?.data.userCode && getVizRanges(sample.data.userCode).length > 0,
     [sample]
   );
 
@@ -242,7 +242,7 @@ export function EmbedPage() {
             textBoxes={textBoxes}
             onTextBoxesChange={setTextBoxes}
             elements={currentElements}
-            vizRanges={vizRanges}
+            interactiveEnabled={interactiveEnabled}
             onTrace={startTrace}
           />
         </AnimationContext.Provider>

@@ -617,7 +617,7 @@ function App() {
                 onTextBoxesChange={setTextBoxes}
                 elements={currentElements}
                 changedIds={changedIds}
-                vizRanges={vizRanges}
+                interactiveEnabled={vizRanges.length > 0}
                 onTrace={startTrace}
                 appMode={appMode}
                 projectName={projectName}

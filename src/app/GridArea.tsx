@@ -6,7 +6,7 @@ import type { VisualBuilderElementBase } from '../api/visualBuilder';
 import { executeClickHandler, executeDragHandler, executeInputChanged, type TraceStageInfo, type DragType } from '../python-engine/executor';
 import { appendError } from '../output-terminal/terminalState';
 import type { TextBox } from '../text-boxes/types';
-import type { VizRange } from '../python-engine/viz-block-parser';
+
 import type { CaptureRegion } from '../visual-panel/components/CaptureRegionLayer';
 
 /* ---------- Shared Tailwind class groups ---------- */
@@ -39,8 +39,8 @@ interface GridAreaProps {
   elements?: VisualBuilderElementBase[];
   /** Elem IDs that changed at this step; null = full snapshot (animate all). */
   changedIds?: Set<number> | null;
-  /** editor: viz block ranges for the current code, used for auto-tracing clicks. */
-  vizRanges?: VizRange[];
+  /** True when the current code has viz blocks; enables interactive element handlers. */
+  interactiveEnabled?: boolean;
   /** editor: called when a click produces a traced mini-timeline. */
   onTrace?: (result: TraceStageInfo) => void;
   appMode?: 'idle' | 'trace' | 'interactive';
@@ -53,7 +53,7 @@ interface GridAreaProps {
 }
 
 export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
-  function GridArea({ darkMode, mouseEnabled, textBoxes, onTextBoxesChange, hideToolbar = false, elements, changedIds, vizRanges: vizRanges, onTrace: onTrace, appMode = 'idle', projectName = 'visual-panel', onCreateGif, isCreatingGif = false, allowGif = false, onTraceClickAttempt }, ref) {
+  function GridArea({ darkMode, mouseEnabled, textBoxes, onTextBoxesChange, hideToolbar = false, elements, changedIds, interactiveEnabled = false, onTrace, appMode = 'idle', projectName = 'visual-panel', onCreateGif, isCreatingGif = false, allowGif = false, onTraceClickAttempt }, ref) {
     const {
       cells,
       overlayCells,
@@ -91,28 +91,28 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
       gridRef.current?.alignGrid();
     }, []);
 
+    // TODO: Why are these handled in the GridArea instead of the Grid? 
+    // Also, these are all very similar — can they be unified into a single handler with a parameter for the type of interaction?
     const handleElementClick = useCallback(async (elemId: number, x: number, y: number) => {
-      if (vizRanges) {
-        const result = await executeClickHandler(elemId, y, x);
-        if (result.error) { appendError(result.error); return; }
-        if (result.timeline.length > 0) onTrace?.(result);
-        return;
-      }
-    }, [vizRanges, onTrace]);
+      if (!interactiveEnabled) return;
+      const result = await executeClickHandler(elemId, y, x);
+      if (result.error) { appendError(result.error); return; }
+      if (result.timeline.length > 0) onTrace?.(result);        
+    }, [interactiveEnabled, onTrace]);
 
     const handleElementInput = useCallback(async (elemId: number, text: string) => {
-      if (!vizRanges) return;
+      if (!interactiveEnabled) return;
       const result = await executeInputChanged(elemId, text);
       if (result.error) { appendError(result.error); return; }
       if (result.timeline.length > 0) onTrace?.(result);
-    }, [vizRanges, onTrace]);
+    }, [interactiveEnabled, onTrace]);
 
     const handleElementDrag = useCallback(async (elemId: number, x: number, y: number, dragType: DragType) => {
-      if (!vizRanges) return;
+      if (!interactiveEnabled) return;
       const result = await executeDragHandler(elemId, y, x, dragType);
       if (result.error) { appendError(result.error); return; }
       if (result.timeline.length > 0) onTrace?.(result);
-    }, [vizRanges, onTrace]);
+    }, [interactiveEnabled, onTrace]);
 
     const handleTextBoxAdded = useCallback((box: TextBox) => {
       onTextBoxesChange([...textBoxes, box]);
