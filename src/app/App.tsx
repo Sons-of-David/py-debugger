@@ -3,11 +3,10 @@
 //
 // Responsibilities:
 //   - Pyodide lifecycle: loading, ready state, reset between runs
-//   - App mode state machine: idle → trace → interactive (and back to idle via Edit)
 //   - Run analysis: execute user code, receive TraceStageInfo, transition to trace mode
+//   - App mode state machine: idle → trace → interactive (and back to idle via Edit)
 //   - Timeline navigation: currentStep, stepCount, goToStep, changedIds
 //   - File I/O: save/load project JSON, auto-load sample on mount
-//   - Save to samples: POST to /api/save-sample (dev only)
 //   - Keyboard shortcuts: Ctrl+Enter (analyze), Ctrl+S (save)
 //   - Animation settings: enabled toggle, duration
 //   - Layout: resizable split between Editor panel (left) and Visual Panel (right)
@@ -15,7 +14,6 @@
 //
 // TODO:
 //   - Move textBoxes state into GridArea (they are a visual-panel concern)
-//   - Move "Save to Samples" button + handleSaveToSamples into SamplesMenu
 //   - Investigate why vizRanges (viz block presence) is used to gate interactive
 //     handlers — should the Python engine expose an explicit boolean instead?
 // =============================================================================
@@ -72,7 +70,6 @@ function App() {
   const [pyodideReady, setPyodideReady] = useState(false);
   const [apiReferenceOpen, setApiReferenceOpen] = useState(false);
   const [extrasOpen, setExtrasOpen] = useState(false);
-  const [saveSampleStatus, setSaveSampleStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   const [textBoxes, setTextBoxes] = useState<TextBox[]>([]);
@@ -242,22 +239,6 @@ function App() {
     URL.revokeObjectURL(url);
   }, [serializeProject]);
 
-  const handleSaveToSamples = useCallback(async () => {
-    const { name, content } = serializeProject();
-    setSaveSampleStatus('saving');
-    try {
-      const res = await fetch('/api/save-sample', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, content }),
-      });
-      setSaveSampleStatus(res.ok ? 'saved' : 'error');
-    } catch {
-      setSaveSampleStatus('error');
-    }
-    setTimeout(() => setSaveSampleStatus('idle'), 2000);
-  }, [serializeProject]);
-
   const handleLoad = useCallback((data: { userCode?: string; textBoxes?: TextBox[] }, name: string) => {
     if (!data.userCode) {
       appendError('Invalid file: missing userCode field');
@@ -351,7 +332,7 @@ function App() {
             className="text-sm border-b border-gray-300 dark:border-gray-600 bg-transparent focus:outline-none focus:border-indigo-500 text-gray-700 dark:text-gray-200 w-36"
           />
           <input ref={fileInputRef} type="file" accept=".json" onChange={handleFileChange} className="hidden" />
-          <SamplesMenu onLoad={handleLoad} />
+          <SamplesMenu onLoad={handleLoad} serializeProject={serializeProject} />
         </div>
 
         {/* Center: pyodide status + timeline controls */}
@@ -440,8 +421,6 @@ function App() {
             onSave={handleSave}
             onLoad={() => fileInputRef.current?.click()}
             isLocal={IS_LOCAL}
-            onSaveToSamples={handleSaveToSamples}
-            saveSampleStatus={saveSampleStatus}
             onFeedback={() => setFeedbackOpen(true)}
           />
         </div>

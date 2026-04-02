@@ -7,11 +7,29 @@ const buttonNeutral = `${buttonBase} bg-gray-100 dark:bg-gray-700 hover:bg-gray-
 
 interface SamplesMenuProps {
   onLoad: (data: { userCode?: string; textBoxes?: TextBox[] }, name: string) => void;
+  serializeProject: () => { name: string; content: string };
 }
 
-export function SamplesMenu({ onLoad }: SamplesMenuProps) {
+export function SamplesMenu({ onLoad, serializeProject }: SamplesMenuProps) {
   const [samplesOpen, setSamplesOpen] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [saveSampleStatus, setSaveSampleStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
+  const handleSaveToSamples = useCallback(async () => {
+    const { name, content } = serializeProject();
+    setSaveSampleStatus('saving');
+    try {
+      const res = await fetch('/api/save-sample', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, content }),
+      });
+      setSaveSampleStatus(res.ok ? 'saved' : 'error');
+    } catch {
+      setSaveSampleStatus('error');
+    }
+    setTimeout(() => setSaveSampleStatus('idle'), 2000);
+  }, [serializeProject]);
 
   const copyToClipboard = useCallback((text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -89,6 +107,20 @@ export function SamplesMenu({ onLoad }: SamplesMenuProps) {
                 )}
               </div>
             ))}
+            {import.meta.env.DEV && (
+              <>
+                <div className="my-1 border-t border-gray-200 dark:border-gray-600" />
+                <div className="px-3 py-1 text-xs font-semibold text-amber-500 dark:text-amber-400 uppercase tracking-wide">Dev</div>
+                <button
+                  type="button"
+                  onClick={() => { handleSaveToSamples(); setSamplesOpen(false); }}
+                  disabled={saveSampleStatus === 'saving'}
+                  className="w-full text-left px-4 py-2 text-sm text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors disabled:opacity-50"
+                >
+                  {saveSampleStatus === 'saving' ? 'Saving…' : saveSampleStatus === 'saved' ? '✓ Saved!' : saveSampleStatus === 'error' ? '✗ Error' : 'Save to Samples'}
+                </button>
+              </>
+            )}
           </div>
         </>
       )}
