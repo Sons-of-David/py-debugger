@@ -223,10 +223,14 @@ function App() {
   // Load \ Save
   // ---------------------------------------------------------------------------
 
-  const handleSave = useCallback(() => {
+  const serializeProject = useCallback(() => {
     const name = projectName.trim() || 'untitled';
-    const data = { userCode: userCode, textBoxes };
-    const content = JSON.stringify(data, null, 2);
+    const content = JSON.stringify({ userCode, textBoxes }, null, 2);
+    return { name, content };
+  }, [userCode, textBoxes, projectName]);
+
+  const handleSave = useCallback(() => {
+    const { name, content } = serializeProject();
     const blob = new Blob([content], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -236,14 +240,10 @@ function App() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [userCode, textBoxes, projectName]);
+  }, [serializeProject]);
 
-  // TODO: Move "saves to samples button" into the SamplesMenu
-  //       and move this function there.
   const handleSaveToSamples = useCallback(async () => {
-    const name = projectName.trim() || 'untitled';
-    const data = { userCode: userCode, textBoxes };
-    const content = JSON.stringify(data, null, 2);
+    const { name, content } = serializeProject();
     setSaveSampleStatus('saving');
     try {
       const res = await fetch('/api/save-sample', {
@@ -256,7 +256,7 @@ function App() {
       setSaveSampleStatus('error');
     }
     setTimeout(() => setSaveSampleStatus('idle'), 2000);
-  }, [userCode, textBoxes, projectName]);
+  }, [serializeProject]);
 
   const handleLoad = useCallback((data: { userCode?: string; textBoxes?: TextBox[] }, name: string) => {
     if (!data.userCode) {
