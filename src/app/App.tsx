@@ -44,7 +44,6 @@ import { executeCode, type TraceStageInfo } from '../python-engine/executor';
 import { setHandlers, hasAnyClickHandler } from '../visual-panel/handlersState';
 import { getVizRanges } from '../python-engine/viz-block-parser';
 import type { TextBox } from '../text-boxes/types';
-import { migrateTextBox } from '../text-boxes/types';
 
 export interface SaveFile {
   userCode: string;
@@ -124,7 +123,7 @@ function App() {
     resetTimeline();
     setProjectName('untitled');
     setUserCode('');
-    setTextBoxes([]);
+    gridAreaRef.current?.load({});
     handleEdit();
   }, [resetTimeline, handleEdit]);
 
@@ -181,9 +180,9 @@ function App() {
 
   const serializeProject = useCallback(() => {
     const name = projectName.trim() || 'untitled';
-    const content = JSON.stringify({ userCode, visualPanel: { textBoxes } } satisfies SaveFile, null, 2);
+    const content = JSON.stringify({ userCode, visualPanel: gridAreaRef.current?.serialize() ?? {} } satisfies SaveFile, null, 2);
     return { name, content };
-  }, [userCode, textBoxes, projectName]);
+  }, [userCode, projectName]);
 
   const handleSave = useCallback(() => {
     const { name, content } = serializeProject();
@@ -206,8 +205,7 @@ function App() {
     handleReset();
     setProjectName(name);
     setUserCode(data.userCode);
-    const vp = data.visualPanel as { textBoxes?: unknown[] } | undefined;
-    setTextBoxes((vp?.textBoxes ?? []).map((raw) => migrateTextBox(raw as Record<string, unknown>)));
+    gridAreaRef.current?.load(data.visualPanel ?? {});
     pendingPostLoadRef.current = true;
   }, [handleReset]);
 
@@ -445,8 +443,7 @@ function App() {
       </footer>
       {feedbackOpen && (
         <FeedbackModal
-          userCode={userCode}
-          textBoxes={textBoxes}
+          getProjectJson={() => serializeProject().content}
           onClose={() => setFeedbackOpen(false)}
         />
       )}

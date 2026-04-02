@@ -19,7 +19,7 @@ import { useGridState } from '../visual-panel/hooks/useGridState';
 import type { VisualBuilderElementBase } from '../api/visualBuilder';
 import { executeClickHandler, executeDragHandler, executeInputChanged, type TraceStageInfo, type DragType } from '../python-engine/executor';
 import { appendError } from '../output-terminal/terminalState';
-import type { TextBox } from '../text-boxes/types';
+import { migrateTextBox, type TextBox } from '../text-boxes/types';
 
 import type { CaptureRegion } from '../visual-panel/components/CaptureRegionLayer';
 
@@ -41,6 +41,8 @@ export interface GridAreaHandle {
   loadVisualBuilderObjects: (elements: VisualBuilderElementBase[]) => void;
   scrollViewport: (x: number, y: number) => void;
   clipViewport: (w: number, h: number) => void;
+  serialize: () => unknown;
+  load: (state: unknown) => void;
 }
 
 interface GridAreaProps {
@@ -176,7 +178,14 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
       captureFrameCanvas,
       scrollViewport: (x: number, y: number) => gridRef.current?.scrollTo(x, y),
       clipViewport: (w: number, h: number) => gridRef.current?.clipTo(w, h),
-    }), [loadVisualBuilderObjects, captureFrameData, captureFrameCanvas]);
+      serialize: () => ({ textBoxes }),
+      load: (state: unknown) => {
+        const s = state as { textBoxes?: unknown[] } | null | undefined;
+        onTextBoxesChange(
+          (s?.textBoxes ?? []).map((raw) => migrateTextBox(raw as Record<string, unknown>))
+        );
+      },
+    }), [loadVisualBuilderObjects, captureFrameData, captureFrameCanvas, textBoxes, onTextBoxesChange]);
 
     const downloadDataUrl = (dataUrl: string, filename: string) => {
       const link = document.createElement('a');

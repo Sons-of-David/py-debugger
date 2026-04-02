@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import type { TextBox } from '../text-boxes/types';
 
 type FeedbackType = 'bug' | 'suggestion' | 'code-share' | 'other';
 
@@ -11,12 +10,11 @@ const TYPES: { value: FeedbackType; label: string }[] = [
 ];
 
 interface FeedbackModalProps {
-  userCode: string;
-  textBoxes: TextBox[];
+  getProjectJson: () => string;
   onClose: () => void;
 }
 
-export function FeedbackModal({ userCode, textBoxes, onClose }: FeedbackModalProps) {
+export function FeedbackModal({ getProjectJson, onClose }: FeedbackModalProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [type, setType] = useState<FeedbackType>('suggestion');
@@ -30,7 +28,7 @@ export function FeedbackModal({ userCode, textBoxes, onClose }: FeedbackModalPro
 
     setStatus('submitting');
     try {
-      const json = JSON.stringify({ userCode, textBoxes }, null, 2);
+      const json = getProjectJson();
       const res = await fetch('/api/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
