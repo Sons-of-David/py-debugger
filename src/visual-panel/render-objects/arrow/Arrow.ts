@@ -2,6 +2,7 @@ import { registerVisualElement } from "../../types/elementRegistry";
 import type { ObjDoc } from "../../../api/visualBuilder";
 import { rgbToHex } from "../../../api/visualBuilder";
 import { BasicShape } from "../BasicShape";
+import { POSITION_PROPS, SIZED_PROPS, colorProp, COMMON_TAIL_PROPS, DELETE_METHOD } from "../schemaHelpers";
 
 export class Arrow extends BasicShape {
   angle: number;
@@ -29,19 +30,14 @@ export const ARROW_SCHEMA: ObjDoc = {
   objName: 'Arrow',
   docstring: 'An arrow shape on the grid. Use angle to control direction: 0=up, 90=right, 180=down, 270=left. Use Arrow.UP/DOWN/LEFT/RIGHT constants or set_orientation() for convenience.',
   properties: [
-    { name: 'x', type: 'int', description: 'Column (left edge of bounding box).', default: '0' },
-    { name: 'y', type: 'int', description: 'Row (top edge of bounding box).', default: '0' },
-    { name: 'width', type: 'int', description: 'Width in grid cells.', default: '1' },
-    { name: 'height', type: 'int', description: 'Height in grid cells.', default: '1' },
-    { name: 'color', type: 'tuple[int, int, int]', description: 'RGB fill color (0-255 per channel).', default: '(16, 185, 129)' },
+    ...POSITION_PROPS,
+    ...SIZED_PROPS,
+    colorProp('(16, 185, 129)'),
     { name: 'angle', type: 'float', description: 'Direction in degrees clockwise from up. 0=up, 90=right, 180=down, 270=left.', default: '0' },
-    { name: 'visible', type: 'bool', description: 'Show or hide the arrow.', default: 'True' },
-    { name: 'alpha', type: 'float', description: 'Opacity, 0.0 (transparent) to 1.0 (opaque).', default: '1.0' },
-    { name: 'animate', type: 'bool', description: 'Animate transitions to this state. Set to False for instant updates.', default: 'True' },
-    { name: 'z', type: 'int', description: 'Depth layer. Lower z renders on top of higher z.', default: '0' },
+    ...COMMON_TAIL_PROPS,
   ],
   methods: [
-    { name: 'delete', signature: 'delete()', docstring: 'Remove this element from the canvas and its parent panel.' },
+    DELETE_METHOD,
     { name: 'set_orientation', signature: "set_orientation(direction: str)", docstring: "Set angle from a direction string: 'up', 'right', 'down', or 'left'." },
   ],
   constants: [

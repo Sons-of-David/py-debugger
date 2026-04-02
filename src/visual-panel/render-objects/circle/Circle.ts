@@ -2,6 +2,7 @@ import { registerVisualElement } from "../../types/elementRegistry";
 import type { ObjDoc } from "../../../api/visualBuilder";
 import { rgbToHex } from "../../../api/visualBuilder";
 import { BasicShape } from "../BasicShape";
+import { POSITION_PROPS, SIZED_PROPS, colorProp, COMMON_TAIL_PROPS, DELETE_METHOD } from "../schemaHelpers";
 
 export class Circle extends BasicShape {
 
@@ -23,19 +24,12 @@ export const CIRCLE_SCHEMA: ObjDoc = {
   objName: 'Circle',
   docstring: 'A circle (or ellipse) shape on the grid.',
   properties: [
-    { name: 'x', type: 'int', description: 'Column (left edge of bounding box).', default: '0' },
-    { name: 'y', type: 'int', description: 'Row (top edge of bounding box).', default: '0' },
-    { name: 'width', type: 'int', description: 'Width in grid cells.', default: '1' },
-    { name: 'height', type: 'int', description: 'Height in grid cells.', default: '1' },
-    { name: 'color', type: 'tuple[int, int, int]', description: 'RGB fill color (0-255 per channel).', default: '(59, 130, 246)' },
-    { name: 'visible', type: 'bool', description: 'Show or hide the circle.', default: 'True' },
-    { name: 'alpha', type: 'float', description: 'Opacity, 0.0 (transparent) to 1.0 (opaque).', default: '1.0' },
-    { name: 'animate', type: 'bool', description: 'Animate transitions to this state. Set to False for instant updates.', default: 'True' },
-    { name: 'z', type: 'int', description: 'Depth layer. Lower z renders on top of higher z.', default: '0' },
+    ...POSITION_PROPS,
+    ...SIZED_PROPS,
+    colorProp('(59, 130, 246)'),
+    ...COMMON_TAIL_PROPS,
   ],
-  methods: [
-    { name: 'delete', signature: 'delete()', docstring: 'Remove this element from the canvas and its parent panel.' },
-  ],
+  methods: [DELETE_METHOD],
 };
 
 registerVisualElement('circle', Circle, CIRCLE_SCHEMA);

@@ -1,6 +1,7 @@
 import { registerVisualElement } from "../../types/elementRegistry";
 import type { ObjDoc, VisualBuilderElementBase } from "../../../api/visualBuilder";
 import { rgbToHex } from "../../../api/visualBuilder";
+import { POSITION_PROPS, SIZED_PROPS, COMMON_TAIL_PROPS, DELETE_METHOD } from "../schemaHelpers";
 
 interface ElementStyle {
   color?: string;
@@ -55,20 +56,13 @@ export const LABEL_SCHEMA: ObjDoc = {
   docstring: 'Text label.',
   properties: [
     { name: 'label', type: 'str', description: 'Display text.', default: '""' },
-    { name: 'x', type: 'int', description: 'Column (left edge).', default: '0' },
-    { name: 'y', type: 'int', description: 'Row (top edge).', default: '0' },
-    { name: 'width', type: 'int', description: 'Width in grid cells.', default: '1' },
-    { name: 'height', type: 'int', description: 'Height in grid cells.', default: '1' },
+    ...POSITION_PROPS,
+    ...SIZED_PROPS,
     { name: 'font_size', type: 'int', description: 'Font size in pixels.', default: '14' },
     { name: 'color', type: 'tuple[int, int, int] | None', description: 'RGB text color.', default: 'None' },
-    { name: 'visible', type: 'bool', description: 'Show or hide the label.', default: 'True' },
-    { name: 'alpha', type: 'float', description: 'Opacity, 0.0 (transparent) to 1.0 (opaque).', default: '1.0' },
-    { name: 'animate', type: 'bool', description: 'Animate transitions to this state. Set to False for instant updates.', default: 'True' },
-    { name: 'z', type: 'int', description: 'Depth layer. Lower z renders on top of higher z.', default: '0' },
+    ...COMMON_TAIL_PROPS,
   ],
-  methods: [
-    { name: 'delete', signature: 'delete()', docstring: 'Remove this element from the canvas and its parent panel.' },
-  ],
+  methods: [DELETE_METHOD],
 };
 
 registerVisualElement('label', Label, LABEL_SCHEMA);
