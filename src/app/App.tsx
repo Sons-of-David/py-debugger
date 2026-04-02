@@ -375,7 +375,6 @@ function App() {
             onNew={handleReset}
             onSave={handleSave}
             onLoad={() => fileInputRef.current?.click()}
-            isLocal={IS_LOCAL}
             onFeedback={() => setFeedbackOpen(true)}
           />
         </div>

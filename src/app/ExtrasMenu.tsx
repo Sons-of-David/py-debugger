@@ -11,7 +11,6 @@ interface ExtrasMenuProps {
   onNew: () => void;
   onSave: () => void;
   onLoad: () => void;
-  isLocal: boolean;
   onFeedback: () => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -31,7 +30,6 @@ export function ExtrasMenu({
   onNew,
   onSave,
   onLoad,
-  isLocal,
   onFeedback,
   open,
   onOpenChange,
