@@ -1,3 +1,20 @@
+// =============================================================================
+// Grid.tsx — infinite scrollable canvas: renders all visual elements
+//
+// Responsibilities:
+//   - Canvas: 50×50 cell grid with zoom, scroll, and optional clip dimensions
+//   - Object rendering: positions RenderableObjectData cells as animated
+//     motion.div elements; skips animation for unchanged elements (changedIds)
+//   - Z-ordering: sorts objects by userZ then zOrder before painting
+//   - Panel rendering: backgrounds and title handles as separate pointer-events-none layers
+//   - Drag protocol: mousedown → throttled mousemove (in-flight guard) →
+//     window-level mouseup so drag end fires even if mouse leaves the grid
+//   - Input widget: activates an overlay <input> on input-type elements
+//   - Text boxes layer: delegates to TextBoxesLayer
+//   - Capture region layer: delegates to CaptureRegionLayer
+//   - Viewport API: scrollTo, clipTo, alignGrid exposed via GridHandle ref
+// =============================================================================
+
 import { useRef, useCallback, useMemo, memo, forwardRef, useImperativeHandle, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAnimationEnabled, useAnimationDuration } from '../../animation/animationContext';

@@ -1,3 +1,17 @@
+// =============================================================================
+// GridArea.tsx — Visual Panel shell: toolbar + Grid wrapper
+//
+// Responsibilities:
+//   - Toolbar: zoom controls, align-grid, screenshot / GIF capture, text-box toggle
+//   - Interaction dispatch: click / drag / input events → Python executor → onTrace
+//   - Text box CRUD: add, edit, delete text annotations on the canvas
+//   - Capture: screenshot region selection, canvas rendering, PNG download;
+//              GIF region handoff to App (onCreateGif)
+//   - Viewport control: scrollViewport and clipViewport exposed to parent via ref
+//   - Trace-mode overlay: transparent div that blocks element clicks and fires
+//     onTraceClickAttempt so App can show "exit trace to interact" feedback
+// =============================================================================
+
 import { useState, useCallback, useRef, forwardRef, useImperativeHandle, useEffect } from 'react';
 import { renderFrameToCanvas } from '../capture/canvasRenderer';
 import { Grid, type GridHandle, CELL_SIZE } from '../visual-panel/components/Grid';

@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AnimationContext } from '../animation/animationContext';
-import { loadPyodide, isPyodideLoaded } from '../python-engine/pyodide-runtime';
+import { usePyodideLoader } from '../python-engine/usePyodideLoader';
 import { TimelineControls } from '../timeline/TimelineControls';
 import { GridArea, type GridAreaHandle } from './GridArea';
 import { getStateAt, getMaxTime, clearTimeline, setVisualTimeline } from '../timeline/timelineState';
@@ -57,13 +57,12 @@ export function EmbedPage() {
   // Grid ref
   const gridAreaRef = useRef<GridAreaHandle>(null);
 
-  // Pyodide state
-  const [pyodideReady, setPyodideReady] = useState(false);
-  const [pyodideLoading, setPyodideLoading] = useState(false);
-
   // Analysis state
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+
+  // Pyodide state
+  const { pyodideReady, pyodideLoading } = usePyodideLoader({ onError: setAnalysisError });
 
   // Timeline + mode state
   const [appMode, setAppMode] = useState<AppMode>('idle');
@@ -83,28 +82,6 @@ export function EmbedPage() {
     () => !!sample?.data.userCode && getVizRanges(sample.data.userCode).length > 0,
     [sample]
   );
-
-  // ---------------------------------------------------------------------------
-  // Pyodide loading
-  // ---------------------------------------------------------------------------
-
-  useEffect(() => {
-    if (!isPyodideLoaded()) {
-      setPyodideLoading(true);
-      loadPyodide()
-        .then(() => {
-          setPyodideReady(true);
-          setPyodideLoading(false);
-        })
-        .catch((err) => {
-          console.error('Failed to load Pyodide:', err);
-          setPyodideLoading(false);
-          setAnalysisError('Failed to load Python runtime.');
-        });
-    } else {
-      setPyodideReady(true);
-    }
-  }, []);
 
   // ---------------------------------------------------------------------------
   // Timeline navigation

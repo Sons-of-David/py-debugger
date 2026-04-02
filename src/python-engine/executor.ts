@@ -1,3 +1,19 @@
+// =============================================================================
+// executor.ts — TypeScript ↔ Pyodide bridge: runs user Python code
+//
+// Responsibilities:
+//   - Pyodide initialisation: load runtime, write engine Python files to VFS,
+//     clear stale imports, init namespace with viz ranges
+//   - Code execution: preprocess viz blocks, run user code via _exec_code,
+//     return TraceStageInfo (timeline + handlers)
+//   - Event dispatch: executeClickHandler / executeDragHandler / executeInputChanged
+//     → each calls the matching Python _exec_* function and returns a mini-timeline
+//   - Error cleaning: strip Pyodide / engine stack frames; surface user-code
+//     location; handle SerializationException as a special clean-message case
+//   - Viz block preprocessing: validate # @viz / # @end markers, transform them
+//     to __viz_begin__() / __viz_end__(dict(locals())) calls
+// =============================================================================
+
 import { loadPyodide } from './pyodide-runtime';
 
 import type { VisualBuilderElementBase } from '../api/visualBuilder';
