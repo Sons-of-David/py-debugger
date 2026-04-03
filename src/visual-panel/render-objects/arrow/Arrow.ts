@@ -1,6 +1,6 @@
 import { registerVisualElement } from "../../types/elementRegistry";
 import type { ObjDoc } from "../../../api/visualBuilder";
-import { rgbToHex } from "../../../api/visualBuilder";
+
 import { BasicShape } from "../BasicShape";
 import { POSITION_PROPS, SIZED_PROPS, colorProp, COMMON_TAIL_PROPS, DELETE_METHOD } from "../schemaHelpers";
 
@@ -11,18 +11,6 @@ export class Arrow extends BasicShape {
     super('arrow', el);
     this.color = el.color ?? [1, 0, 0];
     this.angle = el.angle ?? 0;
-  }
-
-  draw() {
-    return {
-      elementInfo: this,
-      style: { color: rgbToHex(this.color, '#10b981'), opacity: this.alpha },
-      shapeProps: {
-        width: this.width,
-        height: this.height,
-        angle: this.angle,
-      },
-    };
   }
 }
 

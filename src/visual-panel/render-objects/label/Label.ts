@@ -1,13 +1,6 @@
 import { registerVisualElement } from "../../types/elementRegistry";
 import type { ObjDoc, VisualBuilderElementBase } from "../../../api/visualBuilder";
-import { rgbToHex } from "../../../api/visualBuilder";
 import { POSITION_PROPS, SIZED_PROPS, COMMON_TAIL_PROPS, DELETE_METHOD } from "../schemaHelpers";
-
-interface ElementStyle {
-  color?: string;
-  opacity?: number;
-  fontSize?: number;
-}
 
 export class Label implements VisualBuilderElementBase {
   type: 'label' = 'label';
@@ -38,17 +31,7 @@ export class Label implements VisualBuilderElementBase {
     
   }
 
-  draw() {
-    const style: ElementStyle = { opacity: this.alpha };
-    if (this.color) style.color = rgbToHex(this.color);
-    if (this.fontSize != null) style.fontSize = this.fontSize;
 
-    return {
-      elementInfo: this as any,
-      shapeProps: { width: this.width, height: this.height },
-      ...(Object.keys(style).length > 0 && { style }),
-    };
-  }
 }
 
 export const LABEL_SCHEMA: ObjDoc = {

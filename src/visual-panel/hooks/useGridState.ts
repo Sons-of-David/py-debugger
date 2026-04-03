@@ -111,7 +111,6 @@ export function useGridState() {
             objectData: obj,
             originRow: row,
             originCol: col,
-            isPanel: true,
             zOrder: obj.info.zOrder,
           });
         }
@@ -147,7 +146,6 @@ export function useGridState() {
             objectData: clamped,
             originRow: position.row,
             originCol: position.col,
-            isPanel: false,
             zOrder: obj.info.zOrder,
           });
         }

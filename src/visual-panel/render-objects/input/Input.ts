@@ -1,7 +1,6 @@
 import { registerVisualElement } from "../../types/elementRegistry";
-import type { RenderableObjectData } from "../../types/grid";
 import type { ObjDoc } from "../../../api/visualBuilder";
-import { rgbToHex } from "../../../api/visualBuilder";
+
 import { BasicShape } from "../BasicShape";
 import { POSITION_PROPS, colorProp, DELETE_METHOD } from "../schemaHelpers";
 
@@ -16,13 +15,7 @@ export class InputElem extends BasicShape {
     this.placeholder = el.placeholder ?? '';
   }
 
-  draw(): RenderableObjectData {
-    return {
-      elementInfo: this,
-      style: { color: rgbToHex(this.color, '#6366f1'), opacity: this.alpha },
-      shapeProps: { width: this.width, height: this.height },
-    };
-  }
+
 }
 
 export const INPUT_SCHEMA: ObjDoc = {

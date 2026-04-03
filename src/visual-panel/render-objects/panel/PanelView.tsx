@@ -1,9 +1,7 @@
 import type { ObjDoc } from '../../../api/visualBuilder';
-import { registerRenderer } from '../../views/rendererRegistry';
 import { registerVisualElement } from '../../types/elementRegistry';
 import { BasicShape } from '../BasicShape';
-import { useTheme } from '../../../contexts/ThemeContext';
-import type { ElementStyle, PanelStyle } from '../../types/grid';
+import type { PanelStyle } from '../../types/grid';
 
 export class Panel extends BasicShape {
   type = 'panel' as const;
@@ -18,51 +16,6 @@ export class Panel extends BasicShape {
     this.panelStyle = el.panelStyle;
   }
 }
-
-export class PanelElement {
-  type = 'panel' as const;
-  id: string;
-  title?: string;
-  style?: ElementStyle;
-  showBorder?: boolean;
-
-  constructor(opts: { id: string; title?: string; style?: ElementStyle; showBorder?: boolean }) {
-    this.id = opts.id;
-    this.title = opts.title;
-    this.style = opts.style;
-    this.showBorder = opts.showBorder;
-  }
-}
-
-interface PanelElementViewProps {
-  panel: PanelElement;
-}
-
-// TODO: add a `color` property for the panel background fill; currently hardcoded as bg-slate-50/50
-export function PanelElementView({ panel }: PanelElementViewProps) {
-  const { darkMode } = useTheme();
-
-  if (!panel.showBorder) return null;
-
-  const titleColor = panel.style?.color || (darkMode ? '#cbd5e1' : '#64748b');
-
-  return (
-    <div className="absolute inset-0 border-2 border-dashed border-slate-400 dark:border-slate-500 bg-slate-50/50 dark:bg-slate-800/50">
-      {panel.title && (
-        <span
-          className="absolute -top-3 left-1 text-[10px] font-mono bg-slate-50 dark:bg-slate-800 px-1"
-          style={{ color: titleColor }}
-        >
-          {panel.title}
-        </span>
-      )}
-    </div>
-  );
-}
-
-registerRenderer<PanelElement>('panel', (element) => (
-  <PanelElementView panel={element as PanelElement} />
-));
 
 export const PANEL_SCHEMA: ObjDoc = {
   objName: 'Panel',

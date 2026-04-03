@@ -1,16 +1,8 @@
-import type { RenderableElement } from "../views/rendererRegistry";
 import type { VisualBuilderElementBase } from "../../api/visualBuilder";
 
 export interface CellPosition {
   row: number;
   col: number;
-}
-
-export interface ArrayInfo {
-  id: string;
-  startRow: number;
-  startCol: number;
-  length: number;
 }
 
 // Styling properties for cells
@@ -19,12 +11,6 @@ export interface ElementStyle {
   lineWidth?: number;   // Border/stroke thickness (1-5)
   opacity?: number;     // 0-1
   fontSize?: number;    // px
-}
-
-export interface ShapeProps {
-  width?: number;    // in cells
-  height?: number;   // in cells
-  angle?: number;    // degrees clockwise from up
 }
 
 export interface PanelStyle {
@@ -41,81 +27,22 @@ export const PANEL_STYLE_DEFAULT: PanelStyle = {
   titleTextClass: 'text-slate-600 dark:text-slate-300',
 };
 
-// Payload attached to elements that have interactive event handlers.
-// TODO: elemId is also encoded in objectId ("vb-elem-42") and elementInfo.
-// Consider unifying element identity so there is one source of truth.
 export interface InteractionData {
   elemId: number;
   x: number;
   y: number;
 }
 
-export interface RenderableObjectData {
-  // Unique identifier for this object (for tracking across position changes)
-  objectId?: string;
-
-  elementInfo?: RenderableElement,
-
-  // For panels (container)
-  panel?: {
-    id: string;
-    width: number;
-    height: number;
-    title?: string;
-    panelStyle?: PanelStyle;
-    showBorder?: boolean;
-  };
-  // Optional panel association for non-panel objects
-  panelId?: string;
-  // Styling options
-  style?: ElementStyle;
-  // Shape-specific props
-  shapeProps?: ShapeProps;
-  // Invalid computation reason (for grayed-out rendering)
-  invalidReason?: string;
-  // Render/drag order (higher = on top)
-  zOrder?: number;
-  // User-specified depth layer (lower = closer = rendered on top)
-  userZ?: number;
-  // Set when the Python element has an on_click handler
-  clickData?: InteractionData;
-  // Set when the Python element has any on_drag_* handler
-  dragData?: InteractionData;
-  // Set when the Python element is an Input (accepts text entry)
-  inputData?: InteractionData;
-  // When false, this element always uses jump mode regardless of the global toggle.
-  animate?: boolean;
-  // Accumulated alpha from ancestor panels (not including this element's own alpha).
-  // Applied as a CSS opacity wrapper so renderers can still control their own alpha independently.
-  // Final displayed opacity = parentAlpha * elementInfo.alpha.
-  parentAlpha?: number;
-}
-
 export interface OccupantInfo {
   objectData: GridObject;
   originRow: number;
   originCol: number;
-  isPanel: boolean;
   zOrder: number;
-}
-
-export interface GridState {
-  objects: Map<string, RenderableObjectData>;
-  zoom: number;
 }
 
 export interface ContextMenuState {
   isOpen: boolean;
   position: { x: number; y: number };
-}
-
-export function cellKey(row: number, col: number): string {
-  return `${row},${col}`;
-}
-
-export function parseKey(key: string): CellPosition {
-  const [row, col] = key.split(',').map(Number);
-  return { row, col };
 }
 
 export interface ExtraGridInfo {
@@ -135,6 +62,15 @@ export interface GridObject {
   info: ExtraGridInfo;
 }
 
+export function cellKey(row: number, col: number): string {
+  return `${row},${col}`;
+}
+
+export function parseKey(key: string): CellPosition {
+  const [row, col] = key.split(',').map(Number);
+  return { row, col };
+}
+
 export function getArrayOffset(direction: 'right' | 'left' | 'down' | 'up', index: number): { rowDelta: number; colDelta: number } {
   switch (direction) {
     case 'left':
@@ -148,4 +84,3 @@ export function getArrayOffset(direction: 'right' | 'left' | 'down' | 'up', inde
       return { rowDelta: 0, colDelta: index };
   }
 }
-
