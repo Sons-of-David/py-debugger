@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import type {
   OccupantInfo,
   PanelStyle,
@@ -10,6 +10,126 @@ import type { Panel } from '../render-objects/panel';
 import type { BasicShape } from '../render-objects/BasicShape';
 import { cellKey } from '../types/grid';
 import { hasHandler } from '../handlersState';
+
+// ── Tree node types ──────────────────────────────────────────────────────────
+interface PanelTreeNode { el: VisualBuilderElementBase; gridId: string; children: TreeNodeEntry[]; }
+interface LeafTreeNode  { el: VisualBuilderElementBase; gridId: string; }
+type TreeNodeEntry = PanelTreeNode | LeafTreeNode;
+const isPanelNode = (n: TreeNodeEntry): n is PanelTreeNode => 'children' in n;
+
+type ExpandableElement = VisualBuilderElementBase & {
+  expand: () => Array<{ _gridId?: string } & VisualBuilderElementBase>;
+};
+const isExpandable = (e: VisualBuilderElementBase): e is ExpandableElement =>
+  'expand' in e && typeof (e as ExpandableElement).expand === 'function';
+
+/**
+ * Pure function: converts a flat VisualBuilderElementBase array into the
+ * Map<gridId, GridObject> used by useGridState.  Exported for unit testing.
+ */
+export function buildGridObjects(elements: VisualBuilderElementBase[]): Map<string, GridObject> {
+  const next = new Map<string, GridObject>();
+  let idx = 0;
+  let z = 0;
+
+  // ── Build panel tree ──────────────────────────────────────────────────────
+  // Panel grid ID = panel-e{_elem_id}. Children reference parents by
+  // el.panelId (Python _elem_id string), so no translation map is needed.
+
+  const panelNodeMap = new Map<string, PanelTreeNode>();
+  const allNodes: TreeNodeEntry[] = [];
+
+  const addNode = (el: VisualBuilderElementBase, presetGridId?: string) => {
+    if (el.type === 'panel') {
+      const rawElemId = el._elemId ?? (el as { _elem_id?: string | number })._elem_id;
+      const gridId = `panel-e${rawElemId}`;
+      const node: PanelTreeNode = { el, gridId, children: [] };
+      panelNodeMap.set(gridId, node);
+      allNodes.push(node);
+    } else {
+      const rawElemId = (el as { _elemId?: number })._elemId;
+      const gridId = presetGridId ?? (rawElemId != null ? `elem-${rawElemId}` : `${idx++}`);
+      allNodes.push({ el, gridId });
+    }
+  };
+
+  for (const el of elements) {
+    if (isExpandable(el)) {
+      for (const sub of el.expand()) addNode(sub, sub._gridId);
+    } else {
+      addNode(el);
+    }
+  }
+
+  const rootChildren: TreeNodeEntry[] = [];
+  for (const node of allNodes) {
+    const parentNode = node.el.panelId ? panelNodeMap.get(`panel-e${node.el.panelId}`) : undefined;
+    if (parentNode) parentNode.children.push(node);
+    else rootChildren.push(node);
+  }
+
+  // ── Emit helpers ──────────────────────────────────────────────────────────
+
+  const emitPanel = (node: PanelTreeNode, parentGridId: string | undefined, absRow: number, absCol: number, inheritedAlpha: number) => {
+    const { gridId } = node;
+    next.set(gridId, {
+      element: node.el,
+      info: {
+        id: gridId,
+        position: { row: absRow, col: absCol },
+        zOrder: z++,
+        parentAlpha: inheritedAlpha,
+        panelId: parentGridId,
+      },
+    });
+  };
+
+  const emitLeaf = (node: LeafTreeNode, parentGridId: string | undefined, absRow: number, absCol: number, parentAlpha: number) => {
+    const { el } = node;
+    const elemId = el._elemId;
+    const clickData: InteractionData | undefined = elemId != null && hasHandler(elemId, 'on_click')
+      ? { elemId, x: el.x, y: el.y } : undefined;
+    const dragData: InteractionData | undefined = elemId != null && hasHandler(elemId, 'on_drag')
+      ? { elemId, x: el.x, y: el.y } : undefined;
+    const inputData: InteractionData | undefined = elemId != null && hasHandler(elemId, 'input_changed')
+      ? { elemId, x: el.x, y: el.y } : undefined;
+    next.set(node.gridId, {
+      element: node.el,
+      info: {
+        id: node.gridId,
+        position: { row: absRow, col: absCol },
+        zOrder: z++,
+        parentAlpha,
+        panelId: parentGridId,
+        clickData,
+        dragData,
+        inputData,
+      },
+    });
+  };
+
+  // ── DFS traversal ─────────────────────────────────────────────────────────
+  // Pre-order: parents emitted before children (required by cells memo).
+  // visible=false prunes the entire subtree.
+  // inheritedAlpha accumulates the product of all ancestor panel alphas.
+
+  const traverse = (node: TreeNodeEntry, parentGridId: string | undefined, originRow: number, originCol: number, inheritedAlpha: number) => {
+    if (node.el.visible === false) return;
+    const absRow = originRow + node.el.y;
+    const absCol = originCol + node.el.x;
+    if (isPanelNode(node)) {
+      emitPanel(node, parentGridId, absRow, absCol, inheritedAlpha);
+      const childAlpha = inheritedAlpha * ((node.el as { alpha?: number }).alpha ?? 1);
+      for (const child of node.children) traverse(child, node.gridId, absRow, absCol, childAlpha);
+    } else {
+      emitLeaf(node, parentGridId, absRow, absCol, inheritedAlpha);
+    }
+  };
+
+  for (const node of rootChildren) traverse(node, undefined, 0, 0, 1);
+
+  return next;
+}
 
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 2.0;
@@ -34,8 +154,6 @@ export function useGridState() {
   // ── objects ─────────────────────────────────────────────────────
 
   const [objects, setObjects] = useState<Map<string, GridObject>>(new Map());
-
-  const zOrderCounter = useRef(0);
 
   const panelAutoSizes = useMemo(() => {
     const sizes = new Map<string, { width: number; height: number }>();
@@ -192,118 +310,7 @@ export function useGridState() {
   }, [objects, panelAutoSizes]);
 
   const loadVisualBuilderObjects = useCallback((elements: VisualBuilderElementBase[]) => {
-    // ── Tree node types ─────────────────────────────────────────────────────
-    interface PanelTreeNode { el: VisualBuilderElementBase; gridId: string; children: TreeNodeEntry[]; }
-    interface LeafTreeNode  { el: VisualBuilderElementBase; gridId: string; }
-    type TreeNodeEntry = PanelTreeNode | LeafTreeNode;
-    const isPanelNode = (n: TreeNodeEntry): n is PanelTreeNode => 'children' in n;
-
-    setObjects(() => {
-      const next = new Map<string, GridObject>();
-      let idx = 0;
-      let z = zOrderCounter.current++;
-
-      // ── Build panel tree ────────────────────────────────────────────────
-      // Panel grid ID = panel-e{_elem_id}. Children reference parents by
-      // el.panelId (Python _elem_id string), so no translation map is needed.
-
-      const panelNodeMap = new Map<string, PanelTreeNode>();
-      const allNodes: TreeNodeEntry[] = [];
-
-      const addNode = (el: VisualBuilderElementBase, presetGridId?: string) => {
-        if (el.type === 'panel') {
-          const gridId = `panel-e${el._elemId}`;
-          const node: PanelTreeNode = { el, gridId, children: [] };
-          panelNodeMap.set(gridId, node);
-          allNodes.push(node);
-        } else {
-          const rawElemId = (el as { _elemId?: number })._elemId;
-          const gridId = presetGridId ?? (rawElemId != null ? `elem-${rawElemId}` : `${idx++}`);
-          allNodes.push({ el, gridId });
-        }
-      };
-
-      type ExpandableElement = VisualBuilderElementBase & { expand: () => Array<{ _gridId?: string } & VisualBuilderElementBase> };
-      const isExpandable = (e: VisualBuilderElementBase): e is ExpandableElement =>
-        'expand' in e && typeof (e as ExpandableElement).expand === 'function';
-
-      for (const el of elements) {
-        if (isExpandable(el)) {
-          for (const sub of el.expand()) addNode(sub, sub._gridId);
-        } else {
-          addNode(el);
-        }
-      }
-
-      const rootChildren: TreeNodeEntry[] = [];
-      for (const node of allNodes) {
-        const parentNode = node.el.panelId ? panelNodeMap.get(`panel-e${node.el.panelId}`) : undefined;
-        if (parentNode) parentNode.children.push(node);
-        else rootChildren.push(node);
-      }
-
-      // ── Emit helpers ────────────────────────────────────────────────────
-
-      const emitPanel = (node: PanelTreeNode, parentGridId: string | undefined, absRow: number, absCol: number) => {
-        const { gridId } = node;
-        next.set(gridId, {
-          element: node.el,
-          info: {
-            id: gridId,
-            position: { row: absRow, col: absCol },
-            zOrder: z++,
-            parentAlpha: 1,
-            panelId: parentGridId,
-          },
-        });
-      };
-
-      const emitLeaf = (node: LeafTreeNode, parentGridId: string | undefined, absRow: number, absCol: number, parentAlpha: number) => {
-        const { el } = node;
-        const elemId = el._elemId;
-        const clickData: InteractionData | undefined = elemId != null && hasHandler(elemId, 'on_click')
-          ? { elemId, x: el.x, y: el.y } : undefined;
-        const dragData: InteractionData | undefined = elemId != null && hasHandler(elemId, 'on_drag')
-          ? { elemId, x: el.x, y: el.y } : undefined;
-        const inputData: InteractionData | undefined = elemId != null && hasHandler(elemId, 'input_changed')
-          ? { elemId, x: el.x, y: el.y } : undefined;
-        next.set(node.gridId, {
-          element: node.el,
-          info: {
-            id: node.gridId,
-            position: { row: absRow, col: absCol },
-            zOrder: z++,
-            parentAlpha,
-            panelId: parentGridId,
-            clickData,
-            dragData,
-            inputData,
-          },
-        });
-      };
-
-      // ── DFS traversal ───────────────────────────────────────────────────
-      // Pre-order: parents emitted before children (required by cells memo).
-      // visible=false prunes the entire subtree.
-      // inheritedAlpha accumulates the product of all ancestor panel alphas.
-
-      const traverse = (node: TreeNodeEntry, parentGridId: string | undefined, originRow: number, originCol: number, inheritedAlpha: number) => {
-        if (node.el.visible === false) return;
-        const absRow = originRow + node.el.y;
-        const absCol = originCol + node.el.x;
-        if (isPanelNode(node)) {
-          emitPanel(node, parentGridId, absRow, absCol);
-          const childAlpha = inheritedAlpha * ((node.el as { alpha?: number }).alpha ?? 1);
-          for (const child of node.children) traverse(child, node.gridId, absRow, absCol, childAlpha);
-        } else {
-          emitLeaf(node, parentGridId, absRow, absCol, inheritedAlpha);
-        }
-      };
-
-      for (const node of rootChildren) traverse(node, undefined, 0, 0, 1);
-
-      return next;
-    });
+    setObjects(() => buildGridObjects(elements));
   }, []);
 
   return {
