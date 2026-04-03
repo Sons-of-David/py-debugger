@@ -18,8 +18,9 @@
 import { useRef, useCallback, useMemo, forwardRef, useImperativeHandle, useState, useEffect } from 'react';
 import { useAnimationDuration } from '../../animation/animationContext';
 import { GridSingleObject, type RenderableObject } from './GridSingleObject';
-import type { RenderableObjectData, PanelStyle } from '../types/grid';
+import type { GridObject, PanelStyle } from '../types/grid';
 import { PANEL_STYLE_DEFAULT } from '../types/grid';
+import type { BasicShape } from '../render-objects/BasicShape';
 import type { TextBox } from '../../text-boxes/types';
 import { TextBoxesLayer } from '../../text-boxes/TextBoxesLayer';
 import { CaptureRegionLayer, type CaptureRegion } from './CaptureRegionLayer';
@@ -33,8 +34,8 @@ const GRID_ROWS = 50;
 // ── Types ──────────────────────────────────────────────────────────────────
 
 interface GridProps {
-  objects: Map<string, RenderableObjectData>;
-  overlayObjects?: Map<string, RenderableObjectData>;
+  objects: Map<string, GridObject>;
+  overlayObjects?: Map<string, GridObject>;
   occupancyMap?: Map<string, unknown>; // kept for API compat
   panels: Array<PanelInfo>;
   /** Elem IDs that changed at this step; null = full snapshot (animate all). */
@@ -206,34 +207,32 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
   const objectsToRender = useMemo((): RenderableObject[] => {
     const result: RenderableObject[] = [];
 
-    for (const [posKey, objectData] of objects) {
-      if (objectData.panel) continue;
+    for (const [posKey, gridObj] of objects) {
+      if (gridObj.element.type === 'panel') continue;
       const [row, col] = posKey.split(',').map(Number);
-      const baseWidth = objectData.shapeProps?.width ?? 1;
-      const baseHeight = objectData.shapeProps?.height ?? 1;
+      const shape = gridObj.element as BasicShape;
       result.push({
-        key: objectData.objectId ?? posKey,
-        row, col, objectData,
-        widthCells: baseWidth,
-        heightCells: baseHeight,
+        key: gridObj.info.id,
+        row, col, obj: gridObj,
+        widthCells: shape.width ?? 1,
+        heightCells: shape.height ?? 1,
       });
     }
 
-    for (const [posKey, objectData] of overlayObjects) {
+    for (const [posKey, gridObj] of overlayObjects) {
       const [row, col] = posKey.split(',').map(Number);
-      const baseWidth = objectData.shapeProps?.width ?? 1;
-      const baseHeight = objectData.shapeProps?.height ?? 1;
+      const shape = gridObj.element as BasicShape;
       result.push({
-        key: objectData.objectId ?? ('overlay-' + posKey),
-        row, col, objectData,
-        widthCells: baseWidth,
-        heightCells: baseHeight,
+        key: 'overlay-' + gridObj.info.id,
+        row, col, obj: gridObj,
+        widthCells: shape.width ?? 1,
+        heightCells: shape.height ?? 1,
       });
     }
 
     result.sort((a, b) =>
-      (b.objectData.userZ ?? 0) - (a.objectData.userZ ?? 0) ||
-      (a.objectData.zOrder ?? 0) - (b.objectData.zOrder ?? 0)
+      ((b.obj.element as BasicShape).z ?? 0) - ((a.obj.element as BasicShape).z ?? 0) ||
+      a.obj.info.zOrder - b.obj.info.zOrder
     );
     return result;
   }, [objects, overlayObjects]);

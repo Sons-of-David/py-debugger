@@ -1,29 +1,19 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import type {
-  CellPosition,
-  RenderableObjectData,
   OccupantInfo,
   PanelStyle,
   InteractionData,
+  GridObject,
 } from '../types/grid';
 import type { VisualBuilderElementBase } from '../../api/visualBuilder';
 import type { Panel } from '../render-objects/panel';
+import type { BasicShape } from '../render-objects/BasicShape';
 import { cellKey } from '../types/grid';
-import { PanelElement } from '../render-objects';
 import { hasHandler } from '../handlersState';
 
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 2.0;
 const ZOOM_STEP = 0.1;
-
-interface GridObject {
-  id: string;
-  element: VisualBuilderElementBase;
-  data: RenderableObjectData;
-  position: CellPosition;
-  zOrder: number;
-}
-
 
 export function useGridState() {
   // ── Zoom Level ─────────────────────────────────────────────────────
@@ -60,24 +50,25 @@ export function useGridState() {
       let maxCol = 0;
 
       for (const [, child] of objects) {
-        if (child.data.panelId !== panelId) continue;
+        if (child.info.panelId !== panelId) continue;
 
         let w = 1, h = 1;
         if (child.element.type === 'panel') {
-          const nested = computeSize(child.id);
+          const nested = computeSize(child.info.id);
           w = nested.width;
           h = nested.height;
         } else {
-          w = child.data.shapeProps?.width ?? 1;
-          h = child.data.shapeProps?.height ?? 1;
+          w = (child.element as BasicShape).width ?? 1;
+          h = (child.element as BasicShape).height ?? 1;
         }
 
-        maxRow = Math.max(maxRow, child.position.row - panelObj.position.row + h);
-        maxCol = Math.max(maxCol, child.position.col - panelObj.position.col + w);
+        maxRow = Math.max(maxRow, child.info.position.row - panelObj.info.position.row + h);
+        maxCol = Math.max(maxCol, child.info.position.col - panelObj.info.position.col + w);
       }
 
-      const declaredW = panelObj.data.panel?.width ?? 5;
-      const declaredH = panelObj.data.panel?.height ?? 5;
+      const panelEl = panelObj.element as Panel;
+      const declaredW = panelEl.width ?? 5;
+      const declaredH = panelEl.height ?? 5;
       const size = { width: Math.max(declaredW, maxCol), height: Math.max(declaredH, maxRow) };
       sizes.set(panelId, size);
       return size;
@@ -91,14 +82,14 @@ export function useGridState() {
   }, [objects]);
 
   const { objects: positionedObjects, overlayObjects, occupancyMap } = useMemo((): {
-    objects: Map<string, RenderableObjectData>;
-    overlayObjects: Map<string, RenderableObjectData>;
+    objects: Map<string, GridObject>;
+    overlayObjects: Map<string, GridObject>;
     occupancyMap: Map<string, OccupantInfo[]>;
   } => {
-    const objectMap = new Map<string, RenderableObjectData>();
-    const overlayMap = new Map<string, RenderableObjectData>();
+    const objectMap = new Map<string, GridObject>();
+    const overlayMap = new Map<string, GridObject>();
     const occMap = new Map<string, OccupantInfo[]>();
-    const sortedObjects = Array.from(objects.values()).sort((a, b) => (a.zOrder ?? 0) - (b.zOrder ?? 0));
+    const sortedObjects = Array.from(objects.values()).sort((a, b) => a.info.zOrder - b.info.zOrder);
 
     const addOccupant = (row: number, col: number, info: OccupantInfo) => {
       const key = cellKey(row, col);
@@ -110,30 +101,30 @@ export function useGridState() {
     // Populate occupancy for panels (positions are already absolute)
     for (const obj of sortedObjects) {
       if (obj.element.type !== 'panel') continue;
-      const autoSize = panelAutoSizes.get(obj.id);
+      const autoSize = panelAutoSizes.get(obj.info.id);
       const pw = autoSize?.width ?? 1;
       const ph = autoSize?.height ?? 1;
-      const { row, col } = obj.position;
+      const { row, col } = obj.info.position;
       for (let r = 0; r < ph; r++) {
         for (let c = 0; c < pw; c++) {
           addOccupant(row + r, col + c, {
-            objectData: obj.data,
+            objectData: obj,
             originRow: row,
             originCol: col,
             isPanel: true,
-            zOrder: obj.zOrder,
+            zOrder: obj.info.zOrder,
           });
         }
       }
     }
 
-    const setOrOverlay = (key: string, objectData: RenderableObjectData) => {
+    const setOrOverlay = (key: string, gridObj: GridObject) => {
       if (!objectMap.has(key)) {
-        objectMap.set(key, objectData);
+        objectMap.set(key, gridObj);
       } else {
         let n = 0;
         while (overlayMap.has(`${key},${n}`)) n++;
-        overlayMap.set(`${key},${n}`, objectData);
+        overlayMap.set(`${key},${n}`, gridObj);
       }
     };
 
@@ -141,23 +132,23 @@ export function useGridState() {
     for (const obj of sortedObjects) {
       if (obj.element.type === 'panel') continue;
       const position = {
-        row: Math.max(0, Math.min(49, obj.position.row)),
-        col: Math.max(0, Math.min(49, obj.position.col)),
+        row: Math.max(0, Math.min(49, obj.info.position.row)),
+        col: Math.max(0, Math.min(49, obj.info.position.col)),
       };
-
-      const objW = obj.data.shapeProps?.width ?? 1;
-      const objH = obj.data.shapeProps?.height ?? 1;
-      const resolvedRenderableObjectData: RenderableObjectData = { ...obj.data };
-      setOrOverlay(cellKey(position.row, position.col), resolvedRenderableObjectData);
+      const objW = (obj.element as BasicShape).width ?? 1;
+      const objH = (obj.element as BasicShape).height ?? 1;
+      // Clamp position into a new GridObject so the stored position stays unclamped
+      const clamped: GridObject = { element: obj.element, info: { ...obj.info, position } };
+      setOrOverlay(cellKey(position.row, position.col), clamped);
 
       for (let r = 0; r < objH; r++) {
         for (let c = 0; c < objW; c++) {
           addOccupant(position.row + r, position.col + c, {
-            objectData: resolvedRenderableObjectData,
+            objectData: clamped,
             originRow: position.row,
             originCol: position.col,
             isPanel: false,
-            zOrder: obj.zOrder,
+            zOrder: obj.info.zOrder,
           });
         }
       }
@@ -186,11 +177,11 @@ export function useGridState() {
     for (const [, obj] of objects) {
       if (obj.element.type !== 'panel') continue;
       const panelEl = obj.element as Panel;
-      const autoSize = panelAutoSizes.get(obj.id);
+      const autoSize = panelAutoSizes.get(obj.info.id);
       result.push({
-        id: obj.id,
-        row: obj.position.row,
-        col: obj.position.col,
+        id: obj.info.id,
+        row: obj.info.position.row,
+        col: obj.info.position.col,
         width: autoSize?.width ?? 1,
         height: autoSize?.height ?? 1,
         title: panelEl.name,
@@ -223,7 +214,7 @@ export function useGridState() {
 
       const addNode = (el: VisualBuilderElementBase, presetGridId?: string) => {
         if (el.type === 'panel') {
-          const gridId = `panel-e${(el as any)._elem_id}`;
+          const gridId = `panel-e${el._elemId}`;
           const node: PanelTreeNode = { el, gridId, children: [] };
           panelNodeMap.set(gridId, node);
           allNodes.push(node);
@@ -256,34 +247,22 @@ export function useGridState() {
       // ── Emit helpers ────────────────────────────────────────────────────
 
       const emitPanel = (node: PanelTreeNode, parentGridId: string | undefined, absRow: number, absCol: number) => {
-        const elAny = node.el as any;
         const { gridId } = node;
-        const width = elAny.width ?? 5;
-        const height = elAny.height ?? 5;
-        const panelCell = new PanelElement({ id: gridId, title: elAny.name, showBorder: elAny.show_border ?? false });
         next.set(gridId, {
-          id: gridId,
           element: node.el,
-          data: {
-            objectId: gridId,
-            elementInfo: panelCell as any,
-            panel: { id: gridId, width, height, title: elAny.name, panelStyle: elAny.panelStyle, showBorder: elAny.show_border ?? false },
-            shapeProps: { width, height },
-            zOrder: z,
-            userZ: elAny.z ?? 0,
-            ...(parentGridId ? { panelId: parentGridId } : {}),
+          info: {
+            id: gridId,
+            position: { row: absRow, col: absCol },
+            zOrder: z++,
+            parentAlpha: 1,
+            panelId: parentGridId,
           },
-          position: { row: absRow, col: absCol },
-          zOrder: z++,
         });
       };
 
       const emitLeaf = (node: LeafTreeNode, parentGridId: string | undefined, absRow: number, absCol: number, parentAlpha: number) => {
         const { el } = node;
-        const elAny = el as any;
-        if (!('draw' in el && typeof (el as { draw?: unknown }).draw === 'function')) return;
-        const drawResult = (el as { draw: () => Record<string, unknown> }).draw();
-        const elemId = elAny._elemId as number | undefined;
+        const elemId = el._elemId;
         const clickData: InteractionData | undefined = elemId != null && hasHandler(elemId, 'on_click')
           ? { elemId, x: el.x, y: el.y } : undefined;
         const dragData: InteractionData | undefined = elemId != null && hasHandler(elemId, 'on_drag')
@@ -291,22 +270,17 @@ export function useGridState() {
         const inputData: InteractionData | undefined = elemId != null && hasHandler(elemId, 'input_changed')
           ? { elemId, x: el.x, y: el.y } : undefined;
         next.set(node.gridId, {
-          id: node.gridId,
           element: node.el,
-          data: {
-            ...(drawResult as RenderableObjectData),
-            objectId: node.gridId,
+          info: {
+            id: node.gridId,
+            position: { row: absRow, col: absCol },
+            zOrder: z++,
+            parentAlpha,
             panelId: parentGridId,
-            zOrder: z,
-            userZ: elAny.z ?? 0,
-            animate: (el as { animate?: boolean }).animate,
             clickData,
             dragData,
             inputData,
-            parentAlpha,
           },
-          position: { row: absRow, col: absCol },
-          zOrder: z++,
         });
       };
 

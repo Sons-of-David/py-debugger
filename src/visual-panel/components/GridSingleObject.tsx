@@ -1,8 +1,9 @@
 import { memo, useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAnimationEnabled, useAnimationDuration } from '../../animation/animationContext';
-import type { RenderableObjectData, InteractionData } from '../types/grid';
+import type { GridObject, InteractionData } from '../types/grid';
 import { renderElement } from '../views/rendererRegistry';
+import type { BasicShape } from '../render-objects/BasicShape';
 
 import '../render-objects/rect/RectView';
 import '../render-objects/circle/CircleView';
@@ -21,7 +22,7 @@ export interface RenderableObject {
   key: string;
   row: number;
   col: number;
-  objectData: RenderableObjectData;
+  obj: GridObject;
   widthCells: number;
   heightCells: number;
 }
@@ -55,8 +56,12 @@ export const GridSingleObject = memo(function GridSingleObject({
   const inputRef = useRef<HTMLInputElement>(null);
   const globalAnimationsEnabled = useAnimationEnabled();
   const animationDuration = useAnimationDuration();
+
+  const { element, info } = obj.obj;
+  const shape = element as BasicShape;
+
   // Per-element animate flag: false overrides the global toggle to force jump mode.
-  const animationsEnabled = globalAnimationsEnabled && obj.objectData.animate !== false;
+  const animationsEnabled = globalAnimationsEnabled && shape.animate !== false;
 
   useEffect(() => {
     if (inputActive && inputRef.current) {
@@ -66,12 +71,10 @@ export const GridSingleObject = memo(function GridSingleObject({
 
   if (widthCells <= 0 || heightCells <= 0) return null;
 
-  const { objectData } = obj;
-  const elemVisible = objectData.elementInfo?.visible !== false;
-  const hasElementInfo = !!objectData.elementInfo;
-  const isInvalid = !!objectData.invalidReason;
+  const elemVisible = element.visible !== false;
+  const isInvalid = !!info.invalidReason;
 
-  const { clickData, dragData, inputData } = objectData;
+  const { clickData, dragData, inputData } = info;
   const isClickable = mouseEnabled && !!clickData && !!onElementClick;
   const isDraggable = mouseEnabled && !!dragData && !!onElementDragStart;
   const isInput = mouseEnabled && !!inputData && !!onElementInput;
@@ -111,8 +114,8 @@ export const GridSingleObject = memo(function GridSingleObject({
   const cursorClass = isDraggable ? ' cursor-grab pointer-events-auto' : (isClickable || isInput) ? ' cursor-pointer pointer-events-auto' : '';
 
   // Skip animation for elements that didn't change this step.
-  // objectId encodes the elem id: "elem-42" or "panel-e42" → 42.
-  const oidMatch = objectData.objectId ? /(\d+)$/.exec(objectData.objectId) : null;
+  // id encodes the elem id: "elem-42" or "panel-e42" → 42.
+  const oidMatch = /(\d+)$/.exec(info.id);
   const elemId = oidMatch ? parseInt(oidMatch[1]) : null;
   const didChange = changedIds == null || elemId === null || changedIds.has(elemId);
 
@@ -129,7 +132,7 @@ export const GridSingleObject = memo(function GridSingleObject({
         top: obj.row * CELL_SIZE,
         width: CELL_SIZE * widthCells,
         height: CELL_SIZE * heightCells,
-        opacity: elemVisible ? (objectData.parentAlpha ?? 1) : 0,
+        opacity: elemVisible ? (info.parentAlpha ?? 1) : 0,
       }}
       transition={transition}
       style={{ zIndex: 10, pointerEvents: elemVisible ? undefined : 'none' }}
@@ -139,7 +142,7 @@ export const GridSingleObject = memo(function GridSingleObject({
       <div
         className={`
           transition-colors relative
-          ${hasElementInfo
+          ${element.type
             // No border when an element is present: a 1px border with box-sizing:border-box
             // shrinks the content area from 40×40 to 38×38, scaling the SVG at 0.95.
             // That makes shape coordinates drift from cell centers for multi-cell elements.
@@ -149,7 +152,7 @@ export const GridSingleObject = memo(function GridSingleObject({
         `}
         style={{ width: '100%', height: '100%' }}
       >
-        {hasElementInfo && renderElement(objectData.elementInfo!)}
+        {renderElement(element)}
       </div>
       {inputActive && (
         <input

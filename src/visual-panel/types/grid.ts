@@ -1,4 +1,5 @@
 import type { RenderableElement } from "../views/rendererRegistry";
+import type { VisualBuilderElementBase } from "../../api/visualBuilder";
 
 export interface CellPosition {
   row: number;
@@ -91,7 +92,7 @@ export interface RenderableObjectData {
 }
 
 export interface OccupantInfo {
-  objectData: RenderableObjectData;
+  objectData: GridObject;
   originRow: number;
   originCol: number;
   isPanel: boolean;
@@ -115,6 +116,23 @@ export function cellKey(row: number, col: number): string {
 export function parseKey(key: string): CellPosition {
   const [row, col] = key.split(',').map(Number);
   return { row, col };
+}
+
+export interface ExtraGridInfo {
+  id: string;               // grid ID ("elem-42", "panel-e3")
+  position: CellPosition;
+  panelId?: string;
+  zOrder: number;
+  parentAlpha: number;
+  clickData?: InteractionData;
+  dragData?: InteractionData;
+  inputData?: InteractionData;
+  invalidReason?: string;
+}
+
+export interface GridObject {
+  element: VisualBuilderElementBase;
+  info: ExtraGridInfo;
 }
 
 export function getArrayOffset(direction: 'right' | 'left' | 'down' | 'up', index: number): { rowDelta: number; colDelta: number } {
