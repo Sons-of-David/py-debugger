@@ -17,6 +17,7 @@ const ZOOM_STEP = 0.1;
 
 interface GridObject {
   id: string;
+  element: VisualBuilderElementBase;
   data: RenderableObjectData;
   position: CellPosition;
   zOrder: number;
@@ -260,6 +261,7 @@ export function useGridState() {
         const panelCell = new PanelElement({ id: gridId, title: elAny.name, showBorder: elAny.show_border ?? false });
         next.set(gridId, {
           id: gridId,
+          element: node.el,
           data: {
             objectId: gridId,
             elementInfo: panelCell as any,
@@ -288,6 +290,7 @@ export function useGridState() {
           ? { elemId, x: el.x, y: el.y } : undefined;
         next.set(node.gridId, {
           id: node.gridId,
+          element: node.el,
           data: {
             ...(drawResult as RenderableObjectData),
             objectId: node.gridId,
