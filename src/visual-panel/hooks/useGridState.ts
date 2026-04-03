@@ -7,6 +7,7 @@ import type {
   InteractionData,
 } from '../types/grid';
 import type { VisualBuilderElementBase } from '../../api/visualBuilder';
+import type { Panel } from '../render-objects/panel';
 import { cellKey } from '../types/grid';
 import { PanelElement } from '../render-objects';
 import { hasHandler } from '../handlersState';
@@ -53,7 +54,7 @@ export function useGridState() {
       if (sizes.has(panelId)) return sizes.get(panelId)!;
 
       const panelObj = objects.get(panelId);
-      if (!panelObj?.data.panel) return { width: 1, height: 1 };
+      if (!panelObj || panelObj.element.type !== 'panel') return { width: 1, height: 1 };
 
       let maxRow = 0;
       let maxCol = 0;
@@ -62,8 +63,8 @@ export function useGridState() {
         if (child.data.panelId !== panelId) continue;
 
         let w = 1, h = 1;
-        if (child.data.panel) {
-          const nested = computeSize(child.data.panel.id);
+        if (child.element.type === 'panel') {
+          const nested = computeSize(child.id);
           w = nested.width;
           h = nested.height;
         } else {
@@ -75,15 +76,15 @@ export function useGridState() {
         maxCol = Math.max(maxCol, child.position.col - panelObj.position.col + w);
       }
 
-      const declaredW = panelObj.data.panel.width ?? 1;
-      const declaredH = panelObj.data.panel.height ?? 1;
+      const declaredW = panelObj.data.panel?.width ?? 5;
+      const declaredH = panelObj.data.panel?.height ?? 5;
       const size = { width: Math.max(declaredW, maxCol), height: Math.max(declaredH, maxRow) };
       sizes.set(panelId, size);
       return size;
     };
 
     for (const [panelId, obj] of objects) {
-      if (obj.data.panel) computeSize(panelId);
+      if (obj.element.type === 'panel') computeSize(panelId);
     }
 
     return sizes;
@@ -108,8 +109,8 @@ export function useGridState() {
 
     // Populate occupancy for panels (positions are already absolute)
     for (const obj of sortedObjects) {
-      if (!obj.data.panel?.id) continue;
-      const autoSize = panelAutoSizes.get(obj.data.panel.id);
+      if (obj.element.type !== 'panel') continue;
+      const autoSize = panelAutoSizes.get(obj.id);
       const pw = autoSize?.width ?? 1;
       const ph = autoSize?.height ?? 1;
       const { row, col } = obj.position;
@@ -138,7 +139,7 @@ export function useGridState() {
 
     // Unified pass: all non-panel objects (positions are already absolute)
     for (const obj of sortedObjects) {
-      if (obj.data.panel) continue;
+      if (obj.element.type === 'panel') continue;
       const position = {
         row: Math.max(0, Math.min(49, obj.position.row)),
         col: Math.max(0, Math.min(49, obj.position.col)),
@@ -183,17 +184,18 @@ export function useGridState() {
     }> = [];
 
     for (const [, obj] of objects) {
-      if (!obj.data.panel) continue;
-      const autoSize = panelAutoSizes.get(obj.data.panel.id);
+      if (obj.element.type !== 'panel') continue;
+      const panelEl = obj.element as Panel;
+      const autoSize = panelAutoSizes.get(obj.id);
       result.push({
-        id: obj.data.panel.id,
+        id: obj.id,
         row: obj.position.row,
         col: obj.position.col,
         width: autoSize?.width ?? 1,
         height: autoSize?.height ?? 1,
-        title: obj.data.panel.title,
-        panelStyle: obj.data.panel.panelStyle,
-        showBorder: obj.data.panel.showBorder,
+        title: panelEl.name,
+        panelStyle: panelEl.panelStyle,
+        showBorder: panelEl.show_border ?? false,
       });
     }
 
