@@ -21,7 +21,6 @@ useGridState (derived memos)
   ├─ panelAutoSizes   — panel sizes auto-expanded to fit children
   ├─ cells            — flat Map<"row,col", RenderableObjectData>
   ├─ overlayCells     — overflow Map for same-cell collisions
-  ├─ occupancyMap     — which cells are occupied (hover/tooltip use)
   └─ panels           — array of panel metadata (position + size + style)
        ▼
 Grid.tsx (pure renderer)
@@ -120,7 +119,7 @@ Only the `else` branch attaches `clickData`, `dragData`, or `inputData`. Arrays 
 
 Computes the effective size of each panel. A panel declared as `width=5, height=5` but containing a child at position (4, 4) with `width=2` expands to `width=6`. Supports nested panels by recursing. The result is a `Map<panelId, { width, height }>`.
 
-#### `cells`, `overlayCells`, `occupancyMap`
+#### `cells`, `overlayCells`
 
 The main layout memo. Runs after `panelAutoSizes` is stable.
 

@@ -78,7 +78,6 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
       setZoom,
       panels,
       loadVisualBuilderObjects,
-      occupancyMap,
     } = useGridState();
 
     useEffect(() => {
@@ -292,7 +291,6 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
             objects={objects}
             changedIds={changedIds}
             overlayObjects={overlayObjects}
-            occupancyMap={occupancyMap}
             panels={panels}
             zoom={zoom}
             onZoom={handleZoom}

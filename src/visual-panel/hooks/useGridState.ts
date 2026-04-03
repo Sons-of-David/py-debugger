@@ -199,41 +199,15 @@ export function useGridState() {
     return sizes;
   }, [objects]);
 
-  const { objects: positionedObjects, overlayObjects, occupancyMap } = useMemo((): {
+  const { objects: positionedObjects, overlayObjects } = useMemo((): {
     objects: Map<string, GridObject>;
     overlayObjects: Map<string, GridObject>;
-    occupancyMap: Map<string, OccupantInfo[]>;
   } => {
     const objectMap = new Map<string, GridObject>();
     const overlayMap = new Map<string, GridObject>();
     const occMap = new Map<string, OccupantInfo[]>();
     const sortedObjects = Array.from(objects.values()).sort((a, b) => a.info.zOrder - b.info.zOrder);
 
-    const addOccupant = (row: number, col: number, info: OccupantInfo) => {
-      const key = cellKey(row, col);
-      const list = occMap.get(key);
-      if (list) list.push(info);
-      else occMap.set(key, [info]);
-    };
-
-    // Populate occupancy for panels (positions are already absolute)
-    for (const obj of sortedObjects) {
-      if (obj.element.type !== 'panel') continue;
-      const autoSize = panelAutoSizes.get(obj.info.id);
-      const pw = autoSize?.width ?? 1;
-      const ph = autoSize?.height ?? 1;
-      const { row, col } = obj.info.position;
-      for (let r = 0; r < ph; r++) {
-        for (let c = 0; c < pw; c++) {
-          addOccupant(row + r, col + c, {
-            objectData: obj,
-            originRow: row,
-            originCol: col,
-            zOrder: obj.info.zOrder,
-          });
-        }
-      }
-    }
 
     const setOrOverlay = (key: string, gridObj: GridObject) => {
       if (!objectMap.has(key)) {
@@ -252,29 +226,17 @@ export function useGridState() {
         row: Math.max(0, Math.min(49, obj.info.position.row)),
         col: Math.max(0, Math.min(49, obj.info.position.col)),
       };
-      const objW = (obj.element as BasicShape).width ?? 1;
-      const objH = (obj.element as BasicShape).height ?? 1;
       // Clamp position into a new GridObject so the stored position stays unclamped
       const clamped: GridObject = { element: obj.element, info: { ...obj.info, position } };
       setOrOverlay(cellKey(position.row, position.col), clamped);
 
-      for (let r = 0; r < objH; r++) {
-        for (let c = 0; c < objW; c++) {
-          addOccupant(position.row + r, position.col + c, {
-            objectData: clamped,
-            originRow: position.row,
-            originCol: position.col,
-            zOrder: obj.info.zOrder,
-          });
-        }
-      }
     }
 
     for (const [, list] of occMap) {
       if (list.length > 1) list.sort((a, b) => a.zOrder - b.zOrder);
     }
 
-    return { objects: objectMap, overlayObjects: overlayMap, occupancyMap: occMap };
+    return { objects: objectMap, overlayObjects: overlayMap };
   }, [objects, panelAutoSizes]);
 
   const panels = useMemo(() => {
@@ -317,7 +279,6 @@ export function useGridState() {
     objects: positionedObjects,
     overlayObjects,
     zoom,
-    occupancyMap,
     zoomIn,
     zoomOut,
     setZoom,

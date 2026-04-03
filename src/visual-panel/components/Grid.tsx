@@ -36,7 +36,6 @@ const GRID_ROWS = 50;
 interface GridProps {
   objects: Map<string, GridObject>;
   overlayObjects?: Map<string, GridObject>;
-  occupancyMap?: Map<string, unknown>; // kept for API compat
   panels: Array<PanelInfo>;
   /** Elem IDs that changed at this step; null = full snapshot (animate all). */
   changedIds?: Set<number> | null;
@@ -85,7 +84,6 @@ export interface PanelInfo {
 export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
   objects,
   overlayObjects = new Map(),
-  occupancyMap: _occupancyMap = new Map(),
   panels,
   changedIds,
   zoom,
