@@ -1,7 +1,23 @@
 import type { ObjDoc } from '../../../api/visualBuilder';
 import { registerRenderer } from '../../views/rendererRegistry';
+import { registerVisualElement } from '../../types/elementRegistry';
+import { BasicShape } from '../BasicShape';
 import { useTheme } from '../../../contexts/ThemeContext';
-import type { ElementStyle } from '../../types/grid';
+import type { ElementStyle, PanelStyle } from '../../types/grid';
+
+export class Panel extends BasicShape {
+  type = 'panel' as const;
+  name: string;
+  show_border: boolean;
+  panelStyle?: PanelStyle;
+
+  constructor(el: any) {
+    super('panel', el);
+    this.name = el.name ?? '';
+    this.show_border = el.show_border ?? false;
+    this.panelStyle = el.panelStyle;
+  }
+}
 
 export class PanelElement {
   type = 'panel' as const;
@@ -68,3 +84,5 @@ export const PANEL_SCHEMA: ObjDoc = {
     { name: 'delete', signature: 'delete()', docstring: 'Remove this panel from the canvas.' },
   ],
 };
+
+registerVisualElement('panel', Panel, PANEL_SCHEMA);

@@ -1,1 +1,1 @@
-export { PanelElement, PanelElementView, PANEL_SCHEMA } from './PanelView';
+export { Panel, PanelElement, PanelElementView, PANEL_SCHEMA } from './PanelView';
