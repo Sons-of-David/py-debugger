@@ -35,7 +35,6 @@ const GRID_ROWS = 50;
 
 interface GridProps {
   objects: Map<string, GridObject>;
-  overlayObjects?: Map<string, GridObject>;
   panels: Array<PanelInfo>;
   /** Elem IDs that changed at this step; null = full snapshot (animate all). */
   changedIds?: Set<number> | null;
@@ -83,7 +82,6 @@ export interface PanelInfo {
 
 export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
   objects,
-  overlayObjects = new Map(),
   panels,
   changedIds,
   zoom,
@@ -205,23 +203,11 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
   const objectsToRender = useMemo((): RenderableObject[] => {
     const result: RenderableObject[] = [];
 
-    for (const [posKey, gridObj] of objects) {
-      if (gridObj.element.type === 'panel') continue;
-      const [row, col] = posKey.split(',').map(Number);
+    for (const [, gridObj] of objects) {
+      const { row, col } = gridObj.info.position;
       const shape = gridObj.element as BasicShape;
       result.push({
         key: gridObj.info.id,
-        row, col, obj: gridObj,
-        widthCells: shape.width ?? 1,
-        heightCells: shape.height ?? 1,
-      });
-    }
-
-    for (const [posKey, gridObj] of overlayObjects) {
-      const [row, col] = posKey.split(',').map(Number);
-      const shape = gridObj.element as BasicShape;
-      result.push({
-        key: 'overlay-' + gridObj.info.id,
         row, col, obj: gridObj,
         widthCells: shape.width ?? 1,
         heightCells: shape.height ?? 1,
@@ -232,8 +218,9 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
       ((b.obj.element as BasicShape).z ?? 0) - ((a.obj.element as BasicShape).z ?? 0) ||
       a.obj.info.zOrder - b.obj.info.zOrder
     );
+
     return result;
-  }, [objects, overlayObjects]);
+  }, [objects]);
 
   const renderedObjects = useMemo(() => {
     return objectsToRender.map((obj) => (

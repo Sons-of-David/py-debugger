@@ -71,7 +71,6 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
   function GridArea({ darkMode, mouseEnabled, hideToolbar = false, elements, changedIds, interactiveEnabled = false, onTrace, appMode = 'idle', projectName = 'visual-panel', onCreateGif, isCreatingGif = false, allowGif = false, onTraceClickAttempt }, ref) {
     const {
       objects,
-      overlayObjects,
       zoom,
       zoomIn,
       zoomOut,
@@ -290,7 +289,6 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
             ref={gridRef}
             objects={objects}
             changedIds={changedIds}
-            overlayObjects={overlayObjects}
             panels={panels}
             zoom={zoom}
             onZoom={handleZoom}

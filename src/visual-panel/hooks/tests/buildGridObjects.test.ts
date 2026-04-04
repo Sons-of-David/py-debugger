@@ -84,6 +84,78 @@ describe('Array2D', () => {
   });
 });
 
+// ── Key stability (React animation) ──────────────────────────────────────────
+// For React to animate an element rather than remount it, the grid key must be
+// identical across consecutive buildGridObjects calls for the same logical object.
+
+describe('Key stability', () => {
+  it('Rect with same _elemId keeps the same key when its position changes', () => {
+    const step1: VisualBuilderElementBase = { type: 'rect', x: 0, y: 0, _elemId: 7 };
+    const step2: VisualBuilderElementBase = { type: 'rect', x: 3, y: 4, _elemId: 7 };
+
+    const keys1 = new Set(buildGridObjects([step1]).keys());
+    const keys2 = new Set(buildGridObjects([step2]).keys());
+
+    expect(keys1).toEqual(keys2);
+  });
+
+  it('Array1D with same _elemId keeps the same keys when its values change', () => {
+    const step1 = new Array1D({ values: [10, 20], x: 0, y: 0, _elem_id: 3 });
+    const step2 = new Array1D({ values: [99, 88], x: 0, y: 0, _elem_id: 3 });
+
+    const keys1 = new Set(buildGridObjects([step1]).keys());
+    const keys2 = new Set(buildGridObjects([step2]).keys());
+
+    expect(keys1).toEqual(keys2);
+  });
+
+  it('Array2D with same _elemId keeps the same keys when its values change', () => {
+    const step1 = new Array2D({ values: [[1, 2], [3, 4]], x: 0, y: 0, _elem_id: 4 });
+    const step2 = new Array2D({ values: [[9, 8], [7, 6]], x: 0, y: 0, _elem_id: 4 });
+
+    const keys1 = new Set(buildGridObjects([step1]).keys());
+    const keys2 = new Set(buildGridObjects([step2]).keys());
+
+    expect(keys1).toEqual(keys2);
+  });
+
+  it('panel children keep their individual keys when positions change between steps', () => {
+    // Find where a specific _elemId ended up in the result map.
+    const keyOf = (result: Map<string, GridObject>, elemId: number) =>
+      [...result.entries()].find(([, v]) => v.element._elemId === elemId)?.[0];
+
+    const step1 = [
+      { type: 'panel',  x: 0, y: 0, _elemId: 10 } as VisualBuilderElementBase,
+      { type: 'rect',   x: 1, y: 0, _elemId: 11, panelId: '10' } as VisualBuilderElementBase,
+      { type: 'circle', x: 0, y: 1, _elemId: 12, panelId: '10' } as VisualBuilderElementBase,
+    ];
+    const step2 = [
+      { type: 'panel',  x: 2, y: 4, _elemId: 10 } as VisualBuilderElementBase,
+      { type: 'rect',   x: 2, y: 3, _elemId: 11, panelId: '10' } as VisualBuilderElementBase, // moved
+      { type: 'circle', x: 1, y: 2, _elemId: 12, panelId: '10' } as VisualBuilderElementBase, // moved
+    ];
+
+    const r1 = buildGridObjects(step1);
+    const r2 = buildGridObjects(step2);
+    console.log(r1);
+    console.log(r2);
+
+    expect(keyOf(r1, 10)).toBe(keyOf(r2, 10));
+    expect(keyOf(r1, 11)).toBe(keyOf(r2, 11));
+    expect(keyOf(r1, 12)).toBe(keyOf(r2, 12));
+  });
+
+  it('two Array1Ds with different _elemIds produce non-overlapping keys', () => {
+    const arr1 = new Array1D({ values: [1, 2], x: 0, y: 0, _elem_id: 10 });
+    const arr2 = new Array1D({ values: [3, 4], x: 0, y: 5, _elem_id: 20 });
+
+    const result = buildGridObjects([arr1, arr2]);
+
+    // All 6 keys must be distinct — overlap would cause one array to clobber the other
+    expect(result.size).toBe(6);
+  });
+});
+
 // ── Panel with Rect and Circle ────────────────────────────────────────────────
 
 describe('Panel with children', () => {

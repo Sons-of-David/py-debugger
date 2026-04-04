@@ -1,6 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
 import type {
-  OccupantInfo,
   PanelStyle,
   InteractionData,
   GridObject,
@@ -8,7 +7,6 @@ import type {
 import type { VisualBuilderElementBase } from '../../api/visualBuilder';
 import type { Panel } from '../render-objects/panel';
 import type { BasicShape } from '../render-objects/BasicShape';
-import { cellKey } from '../types/grid';
 import { hasHandler } from '../handlersState';
 
 // ── Tree node types ──────────────────────────────────────────────────────────
@@ -199,45 +197,21 @@ export function useGridState() {
     return sizes;
   }, [objects]);
 
-  const { objects: positionedObjects, overlayObjects } = useMemo((): {
-    objects: Map<string, GridObject>;
-    overlayObjects: Map<string, GridObject>;
-  } => {
+  const positionedObjects = useMemo((): Map<string, GridObject> => {
     const objectMap = new Map<string, GridObject>();
-    const overlayMap = new Map<string, GridObject>();
-    const occMap = new Map<string, OccupantInfo[]>();
-    const sortedObjects = Array.from(objects.values()).sort((a, b) => a.info.zOrder - b.info.zOrder);
 
-
-    const setOrOverlay = (key: string, gridObj: GridObject) => {
-      if (!objectMap.has(key)) {
-        objectMap.set(key, gridObj);
-      } else {
-        let n = 0;
-        while (overlayMap.has(`${key},${n}`)) n++;
-        overlayMap.set(`${key},${n}`, gridObj);
-      }
-    };
-
-    // Unified pass: all non-panel objects (positions are already absolute)
-    for (const obj of sortedObjects) {
+    for (const obj of objects.values()) {
       if (obj.element.type === 'panel') continue;
       const position = {
         row: Math.max(0, Math.min(49, obj.info.position.row)),
         col: Math.max(0, Math.min(49, obj.info.position.col)),
       };
       // Clamp position into a new GridObject so the stored position stays unclamped
-      const clamped: GridObject = { element: obj.element, info: { ...obj.info, position } };
-      setOrOverlay(cellKey(position.row, position.col), clamped);
-
+      objectMap.set(obj.info.id, { element: obj.element, info: { ...obj.info, position } });
     }
 
-    for (const [, list] of occMap) {
-      if (list.length > 1) list.sort((a, b) => a.zOrder - b.zOrder);
-    }
-
-    return { objects: objectMap, overlayObjects: overlayMap };
-  }, [objects, panelAutoSizes]);
+    return objectMap;
+  }, [objects]);
 
   const panels = useMemo(() => {
     const result: Array<{
@@ -277,7 +251,6 @@ export function useGridState() {
 
   return {
     objects: positionedObjects,
-    overlayObjects,
     zoom,
     zoomIn,
     zoomOut,

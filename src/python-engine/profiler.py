@@ -1,15 +1,15 @@
 """Standalone profiler for the visual builder engine.
 
 Usage:
-    python profiler.py <sample-name>          # e.g. python profiler.py 9-astar-maze
-    python profiler.py <sample-name> --stats  # also print cProfile top-20 calls
+    python3 src/python-engine/profiler.py <sample-name>          # e.g. python profiler.py 9-astar-maze
+    python3 src/python-engine/profiler.py <sample-name> --stats  # also print cProfile top-20 calls
 
 The script loads a sample JSON file from src/samples/, preprocesses the code
 (replicating the TypeScript # @viz / # @end substitution), initialises the
 engine, and runs _exec_code under cProfile.
 
 Run from the repo root or from this directory:
-    python src/python-engine/profiler.py 9-astar-maze
+    python3 src/python-engine/profiler.py 9-astar-maze
 """
 
 import sys
