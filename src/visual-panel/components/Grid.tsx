@@ -6,7 +6,6 @@
 //   - Object rendering: positions RenderableObjectData objects as animated
 //     motion.div elements; skips animation for unchanged elements (changedIds)
 //   - Z-ordering: sorts objects by userZ then zOrder before painting
-//   - Panel rendering: backgrounds and title handles as separate pointer-events-none layers
 //   - Drag protocol: mousedown → throttled mousemove (in-flight guard) →
 //     window-level mouseup so drag end fires even if mouse leaves the grid
 //   - Input widget: activates an overlay <input> on input-type elements
@@ -16,11 +15,8 @@
 // =============================================================================
 
 import { useRef, useCallback, useMemo, forwardRef, useImperativeHandle, useState, useEffect } from 'react';
-import { useAnimationDuration } from '../../animation/animationContext';
 import { GridSingleObject, type RenderableObject } from './GridSingleObject';
-import type { GridObject, PanelStyle } from '../types/grid';
-import { PANEL_STYLE_DEFAULT } from '../types/grid';
-import type { BasicShape } from '../render-objects/BasicShape';
+import type { GridObject } from '../types/grid';
 import type { TextBox } from '../../text-boxes/types';
 import { TextBoxesLayer } from '../../text-boxes/TextBoxesLayer';
 import { CaptureRegionLayer, type CaptureRegion } from './CaptureRegionLayer';
@@ -35,7 +31,6 @@ const GRID_ROWS = 50;
 
 interface GridProps {
   objects: Map<string, GridObject>;
-  panels: Array<PanelInfo>;
   /** Elem IDs that changed at this step; null = full snapshot (animate all). */
   changedIds?: Set<number> | null;
   zoom: number;
@@ -66,23 +61,10 @@ export interface GridHandle {
   clipTo: (w: number, h: number) => void;
 }
 
-export interface PanelInfo {
-  id: string;
-  row: number;
-  col: number;
-  width: number;
-  height: number;
-  title?: string;
-  panelStyle?: PanelStyle;
-  showBorder?: boolean;
-  invalidReason?: string;
-}
-
 // ── Main Grid component ────────────────────────────────────────────────────
 
 export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
   objects,
-  panels,
   changedIds,
   zoom,
   onZoom,
@@ -104,7 +86,6 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
 }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const gridContentRef = useRef<HTMLDivElement>(null);
-  const animationDuration = useAnimationDuration();
   const [clipDims, setClipDims] = useState<{ w: number; h: number } | null>(null);
 
   // ── Drag state ──────────────────────────────────────────────────────────
@@ -206,12 +187,11 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
     for (const [, gridObj] of objects) {
       const col = gridObj.absElement.x;
       const row = gridObj.absElement.y;
-      const shape = gridObj.element as BasicShape;
       result.push({
         key: gridObj.info.id,
         row, col, obj: gridObj,
-        widthCells: shape.width ?? 1,
-        heightCells: shape.height ?? 1,
+        widthCells: (gridObj.absElement as { width?: number }).width ?? 1,
+        heightCells: (gridObj.absElement as { height?: number }).height ?? 1,
       });
     }
 
@@ -237,51 +217,6 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
     ));
   }, [objectsToRender, mouseEnabled, onElementClick, handleDragStart, onElementInput, changedIds]);
 
-  const getPanelClasses = (panel: PanelInfo): string => {
-    const base = 'absolute transition-all ease-out';
-    const invalid = panel.invalidReason ? 'opacity-50 grayscale' : '';
-    const style = panel.panelStyle ?? PANEL_STYLE_DEFAULT;
-
-    return `${base} ${style.borderClass} ${style.backgroundClass} ${invalid}`;
-  };
-
-  const renderedPanelBackgrounds = useMemo(() => {
-    return panels.filter((p) => p.showBorder !== false).map((panel) => (
-      <div
-        key={panel.id}
-        className={getPanelClasses(panel)}
-        style={{
-          left: panel.col * CELL_SIZE,
-          top: panel.row * CELL_SIZE,
-          width: panel.width * CELL_SIZE,
-          height: panel.height * CELL_SIZE,
-          zIndex: 5,
-          transitionDuration: `${animationDuration}ms`,
-        }}
-      />
-    ));
-  }, [panels]);
-
-  const renderedPanelHandles = useMemo(() => {
-    return panels.filter((p) => p.title).map((panel) => {
-      const style = panel.panelStyle ?? PANEL_STYLE_DEFAULT;
-      return (
-        <span
-          key={panel.id}
-          className={`absolute text-[10px] font-mono px-1 rounded ${style.titleBgClass} ${style.titleTextClass}`}
-          style={{
-            left: panel.col * CELL_SIZE + 4,
-            top: panel.row * CELL_SIZE,
-            transform: 'translateY(-100%)',
-            userSelect: 'none',
-            zIndex: 20,
-          }}
-        >
-          {panel.title}
-        </span>
-      );
-    });
-  }, [panels]);
 
   return (
     <div
@@ -322,24 +257,10 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
           }}
         />
 
-        {/* Panel backgrounds layer (below objects) */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="relative w-full h-full pointer-events-none">
-            {renderedPanelBackgrounds}
-          </div>
-        </div>
-
         {/* Objects layer */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="relative w-full h-full pointer-events-none">
             {renderedObjects}
-          </div>
-        </div>
-
-        {/* Panel handles layer */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="relative w-full h-full">
-            {renderedPanelHandles}
           </div>
         </div>
 

@@ -75,7 +75,6 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
       zoomIn,
       zoomOut,
       setZoom,
-      panels,
       loadVisualBuilderObjects,
     } = useGridState();
 
@@ -289,7 +288,6 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
             ref={gridRef}
             objects={objects}
             changedIds={changedIds}
-            panels={panels}
             zoom={zoom}
             onZoom={handleZoom}
             darkMode={darkMode}

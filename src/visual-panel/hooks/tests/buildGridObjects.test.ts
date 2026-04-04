@@ -170,7 +170,7 @@ describe('Panel with children', () => {
     expectGridObjects([panel, rect, circle], new Map([
       ['panel-e10', {
         element: panel,
-        absElement: { ...panel, x: 2, y: 1, alpha: 1, z: 0 },
+        absElement: { ...panel, x: 2, y: 1, alpha: 1, z: 0, width: 5, height: 5 },
         info: { id: 'panel-e10', zOrder: 0, panelId: undefined },
       }],
       ['elem-11', {

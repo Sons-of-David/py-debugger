@@ -1,6 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
 import type {
-  PanelStyle,
   InteractionData,
   GridObject,
 } from '../types/grid';
@@ -66,14 +65,41 @@ export function buildGridObjects(elements: VisualBuilderElementBase[]): Map<stri
     else rootChildren.push(node);
   }
 
+  // ── Panel size computation ────────────────────────────────────────────────
+
+  // TODO: have a grownup fix this stuff
+  const computePanelSize = (node: PanelTreeNode, panelAbsCol: number, panelAbsRow: number): { width: number; height: number } => {
+    let maxRow = 0, maxCol = 0;
+    for (const child of node.children) {
+      const childAbsRow = panelAbsRow + child.el.y;
+      const childAbsCol = panelAbsCol + child.el.x;
+      let w: number, h: number;
+      if (isPanelNode(child)) {
+        const nested = computePanelSize(child, childAbsCol, childAbsRow);
+        w = nested.width; h = nested.height;
+      } else {
+        w = (child.el as BasicShape).width ?? 1;
+        h = (child.el as BasicShape).height ?? 1;
+      }
+      maxRow = Math.max(maxRow, childAbsRow - panelAbsRow + h);
+      maxCol = Math.max(maxCol, childAbsCol - panelAbsCol + w);
+    }
+    const panelEl = node.el as Panel;
+    return {
+      width:  Math.max(panelEl.width  ?? 5, maxCol),
+      height: Math.max(panelEl.height ?? 5, maxRow),
+    };
+  };
+
   // ── Emit helpers ──────────────────────────────────────────────────────────
 
   const emitPanel = (node: PanelTreeNode, parentGridId: string | undefined, absRow: number, absCol: number, inheritedAlpha: number, inheritedZ: number) => {
     const { gridId } = node;
     const panelEl = node.el as { alpha?: number; z?: number };
+    const { width, height } = computePanelSize(node, absCol, absRow);
     next.set(gridId, {
       element: node.el,
-      absElement: { ...node.el, x: absCol, y: absRow, alpha: inheritedAlpha * (panelEl.alpha ?? 1), z: inheritedZ + (panelEl.z ?? 0) },
+      absElement: { ...node.el, x: absCol, y: absRow, alpha: inheritedAlpha * (panelEl.alpha ?? 1), z: inheritedZ + (panelEl.z ?? 0), width, height } as VisualBuilderElementBase,
       info: {
         id: gridId,
         zOrder: z++,
@@ -155,55 +181,10 @@ export function useGridState() {
 
   const [objects, setObjects] = useState<Map<string, GridObject>>(new Map());
 
-  const panelAutoSizes = useMemo(() => {
-    const sizes = new Map<string, { width: number; height: number }>();
-
-    const computeSize = (panelId: string): { width: number; height: number } => {
-      if (sizes.has(panelId)) return sizes.get(panelId)!;
-
-      const panelObj = objects.get(panelId);
-      if (!panelObj || panelObj.element.type !== 'panel') return { width: 1, height: 1 };
-
-      let maxRow = 0;
-      let maxCol = 0;
-
-      for (const [, child] of objects) {
-        if (child.info.panelId !== panelId) continue;
-
-        let w = 1, h = 1;
-        if (child.element.type === 'panel') {
-          const nested = computeSize(child.info.id);
-          w = nested.width;
-          h = nested.height;
-        } else {
-          w = (child.element as BasicShape).width ?? 1;
-          h = (child.element as BasicShape).height ?? 1;
-        }
-
-        maxRow = Math.max(maxRow, child.absElement.y - panelObj.absElement.y + h);
-        maxCol = Math.max(maxCol, child.absElement.x - panelObj.absElement.x + w);
-      }
-
-      const panelEl = panelObj.element as Panel;
-      const declaredW = panelEl.width ?? 5;
-      const declaredH = panelEl.height ?? 5;
-      const size = { width: Math.max(declaredW, maxCol), height: Math.max(declaredH, maxRow) };
-      sizes.set(panelId, size);
-      return size;
-    };
-
-    for (const [panelId, obj] of objects) {
-      if (obj.element.type === 'panel') computeSize(panelId);
-    }
-
-    return sizes;
-  }, [objects]);
-
   const positionedObjects = useMemo((): Map<string, GridObject> => {
     const objectMap = new Map<string, GridObject>();
 
     for (const obj of objects.values()) {
-      if (obj.element.type === 'panel') continue;
       const clampedX = Math.max(0, Math.min(49, obj.absElement.x));
       const clampedY = Math.max(0, Math.min(49, obj.absElement.y));
       // Clamp absElement so the stored (unclamped) absElement stays unchanged
@@ -217,38 +198,6 @@ export function useGridState() {
     return objectMap;
   }, [objects]);
 
-  const panels = useMemo(() => {
-    const result: Array<{
-      id: string;
-      row: number;
-      col: number;
-      width: number;
-      height: number;
-      title?: string;
-      panelStyle?: PanelStyle;
-      showBorder?: boolean;
-      invalidReason?: string;
-    }> = [];
-
-    for (const [, obj] of objects) {
-      if (obj.element.type !== 'panel') continue;
-      const panelEl = obj.element as Panel;
-      const autoSize = panelAutoSizes.get(obj.info.id);
-      result.push({
-        id: obj.info.id,
-        row: obj.absElement.y,
-        col: obj.absElement.x,
-        width: autoSize?.width ?? 1,
-        height: autoSize?.height ?? 1,
-        title: panelEl.name,
-        panelStyle: panelEl.panelStyle,
-        showBorder: panelEl.show_border ?? false,
-      });
-    }
-
-    return result;
-  }, [objects, panelAutoSizes]);
-
   const loadVisualBuilderObjects = useCallback((elements: VisualBuilderElementBase[]) => {
     setObjects(() => buildGridObjects(elements));
   }, []);
@@ -259,7 +208,6 @@ export function useGridState() {
     zoomIn,
     zoomOut,
     setZoom,
-    panels,
     loadVisualBuilderObjects,
   };
 }
