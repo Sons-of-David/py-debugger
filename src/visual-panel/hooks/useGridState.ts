@@ -68,12 +68,12 @@ export function buildGridObjects(elements: VisualBuilderElementBase[]): Map<stri
 
   // ── Emit helpers ──────────────────────────────────────────────────────────
 
-  const emitPanel = (node: PanelTreeNode, parentGridId: string | undefined, absRow: number, absCol: number, inheritedAlpha: number) => {
+  const emitPanel = (node: PanelTreeNode, parentGridId: string | undefined, absRow: number, absCol: number, inheritedAlpha: number, inheritedZ: number) => {
     const { gridId } = node;
-    const panelEl = node.el as { alpha?: number };
+    const panelEl = node.el as { alpha?: number; z?: number };
     next.set(gridId, {
       element: node.el,
-      absElement: { ...node.el, x: absCol, y: absRow, alpha: inheritedAlpha * (panelEl.alpha ?? 1) },
+      absElement: { ...node.el, x: absCol, y: absRow, alpha: inheritedAlpha * (panelEl.alpha ?? 1), z: inheritedZ + (panelEl.z ?? 0) },
       info: {
         id: gridId,
         position: { row: absRow, col: absCol },
@@ -84,7 +84,7 @@ export function buildGridObjects(elements: VisualBuilderElementBase[]): Map<stri
     });
   };
 
-  const emitLeaf = (node: LeafTreeNode, parentGridId: string | undefined, absRow: number, absCol: number, parentAlpha: number) => {
+  const emitLeaf = (node: LeafTreeNode, parentGridId: string | undefined, absRow: number, absCol: number, parentAlpha: number, inheritedZ: number) => {
     const { el } = node;
     const elemId = el._elemId;
     const clickData: InteractionData | undefined = elemId != null && hasHandler(elemId, 'on_click')
@@ -95,7 +95,7 @@ export function buildGridObjects(elements: VisualBuilderElementBase[]): Map<stri
       ? { elemId, x: el.x, y: el.y } : undefined;
     next.set(node.gridId, {
       element: node.el,
-      absElement: { ...node.el, x: absCol, y: absRow, alpha: parentAlpha * (el.alpha ?? 1) },
+      absElement: { ...node.el, x: absCol, y: absRow, alpha: parentAlpha * (el.alpha ?? 1), z: inheritedZ + (el.z ?? 0) },
       info: {
         id: node.gridId,
         position: { row: absRow, col: absCol },
@@ -113,21 +113,24 @@ export function buildGridObjects(elements: VisualBuilderElementBase[]): Map<stri
   // Pre-order: parents emitted before children (required by cells memo).
   // visible=false prunes the entire subtree.
   // inheritedAlpha accumulates the product of all ancestor panel alphas.
+  // inheritedZ accumulates the sum of all ancestor panel z values.
 
-  const traverse = (node: TreeNodeEntry, parentGridId: string | undefined, originRow: number, originCol: number, inheritedAlpha: number) => {
+  const traverse = (node: TreeNodeEntry, parentGridId: string | undefined, originRow: number, originCol: number, inheritedAlpha: number, inheritedZ: number) => {
     if (node.el.visible === false) return;
     const absRow = originRow + node.el.y;
     const absCol = originCol + node.el.x;
     if (isPanelNode(node)) {
-      emitPanel(node, parentGridId, absRow, absCol, inheritedAlpha);
-      const childAlpha = inheritedAlpha * ((node.el as { alpha?: number }).alpha ?? 1);
-      for (const child of node.children) traverse(child, node.gridId, absRow, absCol, childAlpha);
+      emitPanel(node, parentGridId, absRow, absCol, inheritedAlpha, inheritedZ);
+      const panelEl = node.el as { alpha?: number; z?: number };
+      const childAlpha = inheritedAlpha * (panelEl.alpha ?? 1);
+      const childZ = inheritedZ + (panelEl.z ?? 0);
+      for (const child of node.children) traverse(child, node.gridId, absRow, absCol, childAlpha, childZ);
     } else {
-      emitLeaf(node, parentGridId, absRow, absCol, inheritedAlpha);
+      emitLeaf(node, parentGridId, absRow, absCol, inheritedAlpha, inheritedZ);
     }
   };
 
-  for (const node of rootChildren) traverse(node, undefined, 0, 0, 1);
+  for (const node of rootChildren) traverse(node, undefined, 0, 0, 1, 0);
 
   return next;
 }

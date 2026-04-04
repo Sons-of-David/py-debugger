@@ -28,7 +28,7 @@ describe('Rect', () => {
     expectGridObjects([rect], new Map([
       ['elem-1', {
         element: rect,
-        absElement: { ...rect, x: 3, y: 2, alpha: 1 },
+        absElement: { ...rect, x: 3, y: 2, alpha: 1, z: 0 },
         info: {
           id: 'elem-1',
           position: { row: 2, col: 3 },
@@ -172,17 +172,17 @@ describe('Panel with children', () => {
     expectGridObjects([panel, rect, circle], new Map([
       ['panel-e10', {
         element: panel,
-        absElement: { ...panel, x: 2, y: 1, alpha: 1 },
+        absElement: { ...panel, x: 2, y: 1, alpha: 1, z: 0 },
         info: { id: 'panel-e10', position: { row: 1, col: 2 }, zOrder: 0, parentAlpha: 1, panelId: undefined },
       }],
       ['elem-11', {
         element: rect,
-        absElement: { ...rect, x: 3, y: 1, alpha: 1 },
+        absElement: { ...rect, x: 3, y: 1, alpha: 1, z: 0 },
         info: { id: 'elem-11', position: { row: 1, col: 3 }, zOrder: 1, parentAlpha: 1, panelId: 'panel-e10', clickData: undefined, dragData: undefined, inputData: undefined },
       }],
       ['elem-12', {
         element: circle,
-        absElement: { ...circle, x: 2, y: 2, alpha: 1 },
+        absElement: { ...circle, x: 2, y: 2, alpha: 1, z: 0 },
         info: { id: 'elem-12', position: { row: 2, col: 2 }, zOrder: 2, parentAlpha: 1, panelId: 'panel-e10', clickData: undefined, dragData: undefined, inputData: undefined },
       }],
     ]));
