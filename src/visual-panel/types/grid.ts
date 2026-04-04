@@ -58,7 +58,8 @@ export interface ExtraGridInfo {
 }
 
 export interface GridObject {
-  element: VisualBuilderElementBase;
+  element: VisualBuilderElementBase; // original element, kept for possible future use
+  absElement: VisualBuilderElementBase;
   info: ExtraGridInfo;
 }
 

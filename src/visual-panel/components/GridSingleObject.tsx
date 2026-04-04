@@ -57,7 +57,7 @@ export const GridSingleObject = memo(function GridSingleObject({
   const globalAnimationsEnabled = useAnimationEnabled();
   const animationDuration = useAnimationDuration();
 
-  const { element, info } = obj.obj;
+  const { element, absElement, info } = obj.obj;
   const shape = element as BasicShape;
 
   // Per-element animate flag: false overrides the global toggle to force jump mode.
@@ -71,7 +71,7 @@ export const GridSingleObject = memo(function GridSingleObject({
 
   if (widthCells <= 0 || heightCells <= 0) return null;
 
-  const elemVisible = element.visible !== false;
+  const elemVisible = absElement.visible !== false;
   const isInvalid = !!info.invalidReason;
 
   const { clickData, dragData, inputData } = info;
@@ -132,7 +132,7 @@ export const GridSingleObject = memo(function GridSingleObject({
         top: obj.row * CELL_SIZE,
         width: CELL_SIZE * widthCells,
         height: CELL_SIZE * heightCells,
-        opacity: elemVisible ? (info.parentAlpha ?? 1) : 0,
+        opacity: elemVisible ? (absElement.alpha ?? 1) : 0,
       }}
       transition={transition}
       style={{ zIndex: 10, pointerEvents: elemVisible ? undefined : 'none' }}
@@ -152,7 +152,7 @@ export const GridSingleObject = memo(function GridSingleObject({
         `}
         style={{ width: '100%', height: '100%' }}
       >
-        {renderElement(element)}
+        {renderElement(absElement)}
       </div>
       {inputActive && (
         <input

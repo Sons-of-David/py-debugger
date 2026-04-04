@@ -204,7 +204,8 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
     const result: RenderableObject[] = [];
 
     for (const [, gridObj] of objects) {
-      const { row, col } = gridObj.info.position;
+      const col = gridObj.absElement.x;
+      const row = gridObj.absElement.y;
       const shape = gridObj.element as BasicShape;
       result.push({
         key: gridObj.info.id,
@@ -215,7 +216,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
     }
 
     result.sort((a, b) =>
-      ((b.obj.element as BasicShape).z ?? 0) - ((a.obj.element as BasicShape).z ?? 0) ||
+      (b.obj.absElement.z ?? 0) - (a.obj.absElement.z ?? 0) ||
       a.obj.info.zOrder - b.obj.info.zOrder
     );
 

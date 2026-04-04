@@ -70,8 +70,10 @@ export function buildGridObjects(elements: VisualBuilderElementBase[]): Map<stri
 
   const emitPanel = (node: PanelTreeNode, parentGridId: string | undefined, absRow: number, absCol: number, inheritedAlpha: number) => {
     const { gridId } = node;
+    const panelEl = node.el as { alpha?: number };
     next.set(gridId, {
       element: node.el,
+      absElement: { ...node.el, x: absCol, y: absRow, alpha: inheritedAlpha * (panelEl.alpha ?? 1) },
       info: {
         id: gridId,
         position: { row: absRow, col: absCol },
@@ -93,6 +95,7 @@ export function buildGridObjects(elements: VisualBuilderElementBase[]): Map<stri
       ? { elemId, x: el.x, y: el.y } : undefined;
     next.set(node.gridId, {
       element: node.el,
+      absElement: { ...node.el, x: absCol, y: absRow, alpha: parentAlpha * (el.alpha ?? 1) },
       info: {
         id: node.gridId,
         position: { row: absRow, col: absCol },
@@ -202,12 +205,14 @@ export function useGridState() {
 
     for (const obj of objects.values()) {
       if (obj.element.type === 'panel') continue;
-      const position = {
-        row: Math.max(0, Math.min(49, obj.info.position.row)),
-        col: Math.max(0, Math.min(49, obj.info.position.col)),
-      };
+      const clampedX = Math.max(0, Math.min(49, obj.absElement.x));
+      const clampedY = Math.max(0, Math.min(49, obj.absElement.y));
       // Clamp position into a new GridObject so the stored position stays unclamped
-      objectMap.set(obj.info.id, { element: obj.element, info: { ...obj.info, position } });
+      objectMap.set(obj.info.id, {
+        element: obj.element,
+        absElement: { ...obj.absElement, x: clampedX, y: clampedY },
+        info: { ...obj.info, position: { row: clampedY, col: clampedX } },
+      });
     }
 
     return objectMap;
