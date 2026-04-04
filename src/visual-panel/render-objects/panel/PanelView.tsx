@@ -1,7 +1,9 @@
 import type { ObjDoc } from '../../../api/visualBuilder';
 import { registerVisualElement } from '../../types/elementRegistry';
+import { registerRenderer } from '../../views/rendererRegistry';
 import { BasicShape } from '../BasicShape';
 import type { PanelStyle } from '../../types/grid';
+import { PANEL_STYLE_DEFAULT } from '../../types/grid';
 
 export class Panel extends BasicShape {
   type = 'panel' as const;
@@ -39,3 +41,22 @@ export const PANEL_SCHEMA: ObjDoc = {
 };
 
 registerVisualElement('panel', Panel, PANEL_SCHEMA);
+
+function PanelView({ panel }: { panel: Panel }) {
+  if (!panel.show_border) return null;
+  const style = panel.panelStyle ?? PANEL_STYLE_DEFAULT;
+  return (
+    <div className={`w-full h-full relative ${style.borderClass} ${style.backgroundClass}`}>
+      {panel.name && (
+        <span
+          className={`absolute text-[10px] font-mono px-1 rounded ${style.titleBgClass} ${style.titleTextClass}`}
+          style={{ left: 4, top: 0, transform: 'translateY(-100%)', userSelect: 'none' }}
+        >
+          {panel.name}
+        </span>
+      )}
+    </div>
+  );
+}
+
+registerRenderer<Panel>('panel', (el) => <PanelView panel={el as Panel} />);
