@@ -47,10 +47,8 @@ export interface ContextMenuState {
 
 export interface ExtraGridInfo {
   id: string;               // grid ID ("elem-42", "panel-e3")
-  position: CellPosition;
   panelId?: string;
   zOrder: number;
-  parentAlpha: number;
   clickData?: InteractionData;
   dragData?: InteractionData;
   inputData?: InteractionData;

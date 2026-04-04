@@ -76,9 +76,7 @@ export function buildGridObjects(elements: VisualBuilderElementBase[]): Map<stri
       absElement: { ...node.el, x: absCol, y: absRow, alpha: inheritedAlpha * (panelEl.alpha ?? 1), z: inheritedZ + (panelEl.z ?? 0) },
       info: {
         id: gridId,
-        position: { row: absRow, col: absCol },
         zOrder: z++,
-        parentAlpha: inheritedAlpha,
         panelId: parentGridId,
       },
     });
@@ -98,9 +96,7 @@ export function buildGridObjects(elements: VisualBuilderElementBase[]): Map<stri
       absElement: { ...node.el, x: absCol, y: absRow, alpha: parentAlpha * (el.alpha ?? 1), z: inheritedZ + (el.z ?? 0) },
       info: {
         id: node.gridId,
-        position: { row: absRow, col: absCol },
         zOrder: z++,
-        parentAlpha,
         panelId: parentGridId,
         clickData,
         dragData,
@@ -184,8 +180,8 @@ export function useGridState() {
           h = (child.element as BasicShape).height ?? 1;
         }
 
-        maxRow = Math.max(maxRow, child.info.position.row - panelObj.info.position.row + h);
-        maxCol = Math.max(maxCol, child.info.position.col - panelObj.info.position.col + w);
+        maxRow = Math.max(maxRow, child.absElement.y - panelObj.absElement.y + h);
+        maxCol = Math.max(maxCol, child.absElement.x - panelObj.absElement.x + w);
       }
 
       const panelEl = panelObj.element as Panel;
@@ -210,11 +206,11 @@ export function useGridState() {
       if (obj.element.type === 'panel') continue;
       const clampedX = Math.max(0, Math.min(49, obj.absElement.x));
       const clampedY = Math.max(0, Math.min(49, obj.absElement.y));
-      // Clamp position into a new GridObject so the stored position stays unclamped
+      // Clamp absElement so the stored (unclamped) absElement stays unchanged
       objectMap.set(obj.info.id, {
         element: obj.element,
         absElement: { ...obj.absElement, x: clampedX, y: clampedY },
-        info: { ...obj.info, position: { row: clampedY, col: clampedX } },
+        info: obj.info,
       });
     }
 
@@ -240,8 +236,8 @@ export function useGridState() {
       const autoSize = panelAutoSizes.get(obj.info.id);
       result.push({
         id: obj.info.id,
-        row: obj.info.position.row,
-        col: obj.info.position.col,
+        row: obj.absElement.y,
+        col: obj.absElement.x,
         width: autoSize?.width ?? 1,
         height: autoSize?.height ?? 1,
         title: panelEl.name,
