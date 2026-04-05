@@ -49,7 +49,6 @@ export const GridSingleObject = memo(function GridSingleObject({
   onElementInput?: (elemId: number, text: string) => void;
   changedIds?: Set<number> | null;
 }) {
-  const { widthCells, heightCells } = obj;
   const [flashing, setFlashing] = useState(false);
   const [inputActive, setInputActive] = useState(false);
   const [inputText, setInputText] = useState('');
@@ -59,6 +58,11 @@ export const GridSingleObject = memo(function GridSingleObject({
 
   const { element, absElement, info } = obj.obj;
   const shape = element as BasicShape;
+
+  const col = absElement.x;
+  const row = absElement.y;
+  const widthCells = (absElement as { width?: number }).width ?? 1;
+  const heightCells = (absElement as { height?: number }).height ?? 1;
 
   // Per-element animate flag: false overrides the global toggle to force jump mode.
   const animationsEnabled = globalAnimationsEnabled && shape.animate !== false;
@@ -97,7 +101,7 @@ export const GridSingleObject = memo(function GridSingleObject({
     ? (e: React.MouseEvent<HTMLDivElement>) => {
         e.preventDefault();
         const [x, y] = coordsFromElementEvent(e, dragData!);
-        onElementDragStart!(dragData!.elemId, x, y, obj.col - dragData!.x, obj.row - dragData!.y);
+        onElementDragStart!(dragData!.elemId, x, y, col - dragData!.x, row - dragData!.y);
       }
     : undefined;
 
@@ -128,8 +132,8 @@ export const GridSingleObject = memo(function GridSingleObject({
       className={`absolute${cursorClass}`}
       initial={{ opacity: 0 }}
       animate={{
-        left: obj.col * CELL_SIZE,
-        top: obj.row * CELL_SIZE,
+        left: col * CELL_SIZE,
+        top: row * CELL_SIZE,
         width: CELL_SIZE * widthCells,
         height: CELL_SIZE * heightCells,
         opacity: elemVisible ? (absElement.alpha ?? 1) : 0,
