@@ -1,22 +1,18 @@
 import React from "react";
+import type { VisualBuilderElementBase } from "../../api/visualBuilder";
 
-export interface RenderableElement {
-  type: string;
-  visible?: boolean;
-}
+type ElementRenderFn<T extends VisualBuilderElementBase> = (element: T) => React.ReactElement;
 
-type ElementRenderFn<T extends RenderableElement> = (element: T) => React.ReactElement;
+const registry = new Map<string, ElementRenderFn<VisualBuilderElementBase>>();
 
-const registry = new Map<string, ElementRenderFn<RenderableElement>>();
-
-export function registerRenderer<T extends RenderableElement>(
+export function registerRenderer<T extends VisualBuilderElementBase>(
   kind: string,
   renderFn: ElementRenderFn<T>
 ) {
-  registry.set(kind, renderFn as ElementRenderFn<RenderableElement>);
+  registry.set(kind, renderFn as ElementRenderFn<VisualBuilderElementBase>);
 }
 
-export function renderElement(element: RenderableElement): React.ReactElement {
+export function renderElement(element: VisualBuilderElementBase): React.ReactElement {
   const renderFn = registry.get(element.type);
   if (!renderFn) throw new Error(`No renderer registered for kind: "${element.type}"`);
   return renderFn(element);

@@ -16,11 +16,9 @@
 //   - Serialization should be per component:
 //     - Editor handles userCode and exposes serialize/deserialize methods for its state
 //     - GridArea handles textBoxes and any future visual state
-//   - Investigate why vizRanges (viz block presence) is used to gate interactive
-//     handlers — should the Python engine expose an explicit boolean instead?
 // =============================================================================
 
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useGifExport } from '../capture/useGifExport';
 
@@ -41,7 +39,6 @@ import { getMaxTime } from '../timeline/timelineState';
 import { useTimelineNavigation, type AppMode } from '../timeline/useTimelineNavigation';
 import { executeCode, type TraceStageInfo } from '../python-engine/executor';
 import { setHandlers, hasAnyClickHandler } from '../visual-panel/handlersState';
-import { getVizRanges } from '../python-engine/viz-block-parser';
 
 export interface SaveFile {
   userCode: string;
@@ -167,9 +164,6 @@ function App() {
     commitSegment('----- end trace -----');
     setAppMode('interactive');
   }, []);
-
-  // viz block ranges for the current code; stable until code changes
-  const vizRanges = useMemo(() => getVizRanges(userCode), [userCode]);
 
   // ---------------------------------------------------------------------------
   // Load \ Save
@@ -412,7 +406,7 @@ function App() {
                 mouseEnabled={mouseEnabled}
                 elements={currentElements}
                 changedIds={changedIds}
-                interactiveEnabled={vizRanges.length > 0}
+                interactiveEnabled={hasInteractiveElements}
                 onTrace={startTrace}
                 appMode={appMode}
                 projectName={projectName}

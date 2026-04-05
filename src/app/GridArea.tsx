@@ -39,7 +39,7 @@ const panelHeader =
   "flex-shrink-0 h-10 px-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between";
 
 export interface GridAreaHandle {
-  loadVisualBuilderObjects: (elements: VisualBuilderElementBase[]) => void;
+  loadGridObjects: (elements: VisualBuilderElementBase[]) => void;
   scrollViewport: (x: number, y: number) => void;
   clipViewport: (w: number, h: number) => void;
   serialize: () => unknown;
@@ -54,7 +54,7 @@ interface GridAreaProps {
   elements?: VisualBuilderElementBase[];
   /** Elem IDs that changed at this step; null = full snapshot (animate all). */
   changedIds?: Set<number> | null;
-  /** True when the current code has viz blocks; enables interactive element handlers. */
+  /** True when the algorithm has click/drag handlers; shows the trace-mode overlay. */
   interactiveEnabled?: boolean;
   /** editor: called when a click produces a traced mini-timeline. */
   onTrace?: (result: TraceStageInfo) => void;
@@ -71,19 +71,16 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
   function GridArea({ darkMode, mouseEnabled, hideToolbar = false, elements, changedIds, interactiveEnabled = false, onTrace, appMode = 'idle', projectName = 'visual-panel', onCreateGif, isCreatingGif = false, allowGif = false, onTraceClickAttempt }, ref) {
     const {
       objects,
-      overlayObjects,
       zoom,
       zoomIn,
       zoomOut,
       setZoom,
-      panels,
-      loadVisualBuilderObjects,
-      occupancyMap,
+      loadGridObjects,
     } = useGridState();
 
     useEffect(() => {
-      loadVisualBuilderObjects(elements ?? []);
-    }, [elements, loadVisualBuilderObjects]);
+      loadGridObjects(elements ?? []);
+    }, [elements, loadGridObjects]);
 
     const gridRef = useRef<GridHandle>(null);
     const [textBoxes, setTextBoxes] = useState<TextBox[]>([]);
@@ -114,25 +111,22 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
     // TODO: Why are these handled in the GridArea instead of the Grid? 
     // Also, these are all very similar — can they be unified into a single handler with a parameter for the type of interaction?
     const handleElementClick = useCallback(async (elemId: number, x: number, y: number) => {
-      if (!interactiveEnabled) return;
       const result = await executeClickHandler(elemId, y, x);
       if (result.error) { appendError(result.error); return; }
-      if (result.timeline.length > 0) onTrace?.(result);        
-    }, [interactiveEnabled, onTrace]);
+      if (result.timeline.length > 0) onTrace?.(result);
+    }, [onTrace]);
 
     const handleElementInput = useCallback(async (elemId: number, text: string) => {
-      if (!interactiveEnabled) return;
       const result = await executeInputChanged(elemId, text);
       if (result.error) { appendError(result.error); return; }
       if (result.timeline.length > 0) onTrace?.(result);
-    }, [interactiveEnabled, onTrace]);
+    }, [onTrace]);
 
     const handleElementDrag = useCallback(async (elemId: number, x: number, y: number, dragType: DragType) => {
-      if (!interactiveEnabled) return;
       const result = await executeDragHandler(elemId, y, x, dragType);
       if (result.error) { appendError(result.error); return; }
       if (result.timeline.length > 0) onTrace?.(result);
-    }, [interactiveEnabled, onTrace]);
+    }, [onTrace]);
 
     // ---------------------------------------------------------------------------
     // Text box handlers
@@ -173,7 +167,7 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
     }, [captureFrameCanvas]);
 
     useImperativeHandle(ref, () => ({
-      loadVisualBuilderObjects,
+      loadGridObjects,
       captureFrameData,
       captureFrameCanvas,
       scrollViewport: (x: number, y: number) => gridRef.current?.scrollTo(x, y),
@@ -185,7 +179,7 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
           (s?.textBoxes ?? []).map((raw) => migrateTextBox(raw as Record<string, unknown>))
         );
       },
-    }), [loadVisualBuilderObjects, captureFrameData, captureFrameCanvas, textBoxes]);
+    }), [loadGridObjects, captureFrameData, captureFrameCanvas, textBoxes]);
 
     const downloadDataUrl = (dataUrl: string, filename: string) => {
       const link = document.createElement('a');
@@ -281,19 +275,10 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
         )}
 
         <div className="flex-1 overflow-hidden relative">
-          {appMode === 'trace' && !capturingRegionMode && (
-            <div
-              className="absolute inset-0 z-10 cursor-pointer"
-              onClick={onTraceClickAttempt}
-            />
-          )}
           <Grid
             ref={gridRef}
             objects={objects}
             changedIds={changedIds}
-            overlayObjects={overlayObjects}
-            occupancyMap={occupancyMap}
-            panels={panels}
             zoom={zoom}
             onZoom={handleZoom}
             darkMode={darkMode}
@@ -308,6 +293,7 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
             onTextBoxAdded={handleTextBoxAdded}
             onTextBoxChange={handleTextBoxChange}
             onTextBoxDelete={handleTextBoxDelete}
+            onTraceClick={appMode === 'trace' && !capturingRegionMode && interactiveEnabled ? onTraceClickAttempt : undefined}
             capturingRegion={capturingRegionMode}
             captureRegionBounds={captureRegion}
             onCaptureRegionDrawn={handleCaptureRegionDrawn}

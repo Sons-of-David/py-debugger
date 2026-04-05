@@ -1,9 +1,15 @@
 import type { VisualBuilderElementBase } from "../../../api/visualBuilder";
 import { rgbToHex } from "../../../api/visualBuilder";
-import type { RenderableObjectData, ElementStyle, PanelStyle } from "../../types/grid";
+import type { PanelStyle } from "../../types/grid";
 import type { ObjDoc } from "../../../api/visualBuilder";
 import { registerVisualElement } from "../../types/elementRegistry";
-import { getArrayOffset } from "../../types/grid";
+
+export interface ElementStyle {
+  color?: string;       // Fill/text color
+  lineWidth?: number;   // Border/stroke thickness (1-5)
+  opacity?: number;     // 0-1
+  fontSize?: number;    // px
+}
 
 export const PANEL_STYLE_1D: PanelStyle = {
   borderClass: 'border-2 border-amber-400 dark:border-amber-600',
@@ -19,6 +25,20 @@ export const PANEL_STYLE_2D: PanelStyle = {
   titleTextClass: 'text-violet-700 dark:text-violet-300',
 };
 
+function getArrayOffset(direction: 'right' | 'left' | 'down' | 'up', index: number): { rowDelta: number; colDelta: number } {
+  switch (direction) {
+    case 'left':
+      return { rowDelta: 0, colDelta: -index };
+    case 'down':
+      return { rowDelta: index, colDelta: 0 };
+    case 'up':
+      return { rowDelta: -index, colDelta: 0 };
+    case 'right':
+    default:
+      return { rowDelta: 0, colDelta: index };
+  }
+}
+
 export interface ArrayPanelInfo {
   id: string;
   width: number;
@@ -31,12 +51,14 @@ export interface ArrayPanelInfo {
 export interface ArrayDrawResult {
   panel: ArrayPanelInfo;
   panelOffset: { row: number; col: number };
-  cells: { cellId: string; data: Partial<RenderableObjectData>; position: [number, number] }[];
+  cells: { cellId: string; cell: Array1DCell | Array2DCell; position: [number, number] }[];
   nextIdx: number;
 }
 
-export class Array1DCell {
+export class Array1DCell implements VisualBuilderElementBase {
   type = 'array1dcell' as const;
+  x: number = 0;
+  y: number = 0;
   arrayId: string;
   index: number;
   showIndex: boolean;
@@ -57,16 +79,12 @@ export class Array1DCell {
     this.style = opts.style;
   }
 
-  draw(): Partial<RenderableObjectData> {
-    return {
-      elementInfo: this as any,
-      style: this.style,
-    };
-  }
 }
 
-export class Array2DCell {
+export class Array2DCell implements VisualBuilderElementBase {
   type = 'array2dcell' as const;
+  x: number = 0;
+  y: number = 0;
   arrayId: string;
   row: number;
   col: number;
@@ -96,12 +114,6 @@ export class Array2DCell {
     this.style = opts.style;
   }
 
-  draw(): Partial<RenderableObjectData> {
-    return {
-      elementInfo: this as any,
-      style: this.style,
-    };
-  }
 }
 
 export class Array1D implements VisualBuilderElementBase {
@@ -155,11 +167,10 @@ export class Array1D implements VisualBuilderElementBase {
         width: panelInfo.width, height: panelInfo.height,
         name: panelInfo.title, show_border: true, panelStyle: panelInfo.panelStyle,
       },
-      ...drawCells.map(cell => ({
-        type: 'array1dcell' as const, _gridId: cell.cellId,
+      ...drawCells.map(cell => Object.assign(cell.cell, {
+        _gridId: cell.cellId,
         x: cell.position[1], y: cell.position[0],
         visible: true, alpha: 1, z: this.z, panelId: panelElemId,
-        draw: () => cell.data,
       })),
     ];
   }
@@ -196,7 +207,7 @@ export class Array1D implements VisualBuilderElementBase {
 
       cells.push({
         cellId: elemId != null ? `array-cell-e${elemId}-${i}` : `${idx}`,
-        data: cell.draw(),
+        cell,
         position: [cellRow, cellCol],
       });
       idx++;
@@ -296,11 +307,10 @@ export class Array2D implements VisualBuilderElementBase {
         width: panelInfo.width, height: panelInfo.height,
         name: panelInfo.title, show_border: this.rectangular, panelStyle: panelInfo.panelStyle,
       },
-      ...drawCells.map(cell => ({
-        type: 'array2dcell' as const, _gridId: cell.cellId,
+      ...drawCells.map(cell => Object.assign(cell.cell, {
+        _gridId: cell.cellId,
         x: cell.position[1], y: cell.position[0],
         visible: true, alpha: 1, z: this.z, panelId: panelElemId,
-        draw: () => cell.data,
       })),
     ];
   }
@@ -331,7 +341,7 @@ export class Array2D implements VisualBuilderElementBase {
 
         cells.push({
           cellId: elemId != null ? `array2d-cell-e${elemId}-${r}-${c}` : `${idx}`,
-          data: cell.draw(),
+          cell,
           position: [r, c],
         });
         idx++;

@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { registerRenderer } from '../../views/rendererRegistry';
 import type { Line } from './Line';
 import { useAnimationEnabled, useAnimationDuration } from '../../../animation/animationContext';
+import { rgbToHex } from '../../../api/visualBuilder';
 
 const CELL = 40; // must match CELL_SIZE in Grid.tsx
 
@@ -42,14 +43,14 @@ function LineView({ line }: { line: Line }) {
 
   const endArrow = line.endCap === 'arrow' ? (
     <motion.polygon
-      animate={{ points: arrowPoints(ex, ey, ux, uy, arrowLen, arrowHalf), fill: line.hexColor, opacity: line.alpha }}
+      animate={{ points: arrowPoints(ex, ey, ux, uy, arrowLen, arrowHalf), fill: rgbToHex(line.color, '#ef4444'), opacity: line.alpha }}
       transition={transition}
     />
   ) : null;
 
   const startArrow = line.startCap === 'arrow' ? (
     <motion.polygon
-      animate={{ points: arrowPoints(sx, sy, -ux, -uy, arrowLen, arrowHalf), fill: line.hexColor, opacity: line.alpha }}
+      animate={{ points: arrowPoints(sx, sy, -ux, -uy, arrowLen, arrowHalf), fill: rgbToHex(line.color, '#ef4444'), opacity: line.alpha }}
       transition={transition}
     />
   ) : null;
@@ -63,7 +64,7 @@ function LineView({ line }: { line: Line }) {
       style={{ position: 'absolute', top: 0, left: 0 }}
     >
       <motion.line
-        animate={{ x1, y1, x2, y2, stroke: line.hexColor, opacity: line.alpha }}
+        animate={{ x1, y1, x2, y2, stroke: rgbToHex(line.color, '#ef4444'), opacity: line.alpha }}
         transition={transition}
         strokeWidth={line.strokeWeight}
         strokeLinecap="round"

@@ -3,10 +3,9 @@
 //
 // Responsibilities:
 //   - Canvas: 50×50 cell grid with zoom, scroll, and optional clip dimensions
-//   - Object rendering: positions RenderableObjectData objects as animated
+//   - Object rendering: positions GridObject values as animated
 //     motion.div elements; skips animation for unchanged elements (changedIds)
 //   - Z-ordering: sorts objects by userZ then zOrder before painting
-//   - Panel rendering: backgrounds and title handles as separate pointer-events-none layers
 //   - Drag protocol: mousedown → throttled mousemove (in-flight guard) →
 //     window-level mouseup so drag end fires even if mouse leaves the grid
 //   - Input widget: activates an overlay <input> on input-type elements
@@ -16,10 +15,8 @@
 // =============================================================================
 
 import { useRef, useCallback, useMemo, forwardRef, useImperativeHandle, useState, useEffect } from 'react';
-import { useAnimationDuration } from '../../animation/animationContext';
-import { GridSingleObject, type RenderableObject } from './GridSingleObject';
-import type { RenderableObjectData, PanelStyle } from '../types/grid';
-import { PANEL_STYLE_DEFAULT } from '../types/grid';
+import { GridSingleObject } from './GridSingleObject';
+import type { GridObject } from '../types/grid';
 import type { TextBox } from '../../text-boxes/types';
 import { TextBoxesLayer } from '../../text-boxes/TextBoxesLayer';
 import { CaptureRegionLayer, type CaptureRegion } from './CaptureRegionLayer';
@@ -33,10 +30,7 @@ const GRID_ROWS = 50;
 // ── Types ──────────────────────────────────────────────────────────────────
 
 interface GridProps {
-  objects: Map<string, RenderableObjectData>;
-  overlayObjects?: Map<string, RenderableObjectData>;
-  occupancyMap?: Map<string, unknown>; // kept for API compat
-  panels: Array<PanelInfo>;
+  objects: Map<string, GridObject>;
   /** Elem IDs that changed at this step; null = full snapshot (animate all). */
   changedIds?: Set<number> | null;
   zoom: number;
@@ -54,6 +48,9 @@ interface GridProps {
   onTextBoxAdded?: (box: TextBox) => void;
   onTextBoxChange?: (box: TextBox) => void;
   onTextBoxDelete?: (id: string) => void;
+  // Fired when user clicks anywhere on the grid in trace mode (background or object).
+  // Rendered below text boxes so text boxes remain interactive.
+  onTraceClick?: () => void;
   // Capture region props
   capturingRegion?: boolean;
   captureRegionBounds?: CaptureRegion | null;
@@ -67,25 +64,10 @@ export interface GridHandle {
   clipTo: (w: number, h: number) => void;
 }
 
-export interface PanelInfo {
-  id: string;
-  row: number;
-  col: number;
-  width: number;
-  height: number;
-  title?: string;
-  panelStyle?: PanelStyle;
-  showBorder?: boolean;
-  invalidReason?: string;
-}
-
 // ── Main Grid component ────────────────────────────────────────────────────
 
 export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
   objects,
-  overlayObjects = new Map(),
-  occupancyMap: _occupancyMap = new Map(),
-  panels,
   changedIds,
   zoom,
   onZoom,
@@ -101,13 +83,13 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
   onTextBoxAdded,
   onTextBoxChange,
   onTextBoxDelete,
+  onTraceClick,
   capturingRegion = false,
   captureRegionBounds = null,
   onCaptureRegionDrawn,
 }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const gridContentRef = useRef<HTMLDivElement>(null);
-  const animationDuration = useAnimationDuration();
   const [clipDims, setClipDims] = useState<{ w: number; h: number } | null>(null);
 
   // ── Drag state ──────────────────────────────────────────────────────────
@@ -203,45 +185,17 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
   const gridLineColor = darkMode ? '#4b5563' : '#d1d5db';
   const gridBgColor = darkMode ? '#1f2937' : '#ffffff';
 
-  const objectsToRender = useMemo((): RenderableObject[] => {
-    const result: RenderableObject[] = [];
-
-    for (const [posKey, objectData] of objects) {
-      if (objectData.panel) continue;
-      const [row, col] = posKey.split(',').map(Number);
-      const baseWidth = objectData.shapeProps?.width ?? 1;
-      const baseHeight = objectData.shapeProps?.height ?? 1;
-      result.push({
-        key: objectData.objectId ?? posKey,
-        row, col, objectData,
-        widthCells: baseWidth,
-        heightCells: baseHeight,
-      });
-    }
-
-    for (const [posKey, objectData] of overlayObjects) {
-      const [row, col] = posKey.split(',').map(Number);
-      const baseWidth = objectData.shapeProps?.width ?? 1;
-      const baseHeight = objectData.shapeProps?.height ?? 1;
-      result.push({
-        key: objectData.objectId ?? ('overlay-' + posKey),
-        row, col, objectData,
-        widthCells: baseWidth,
-        heightCells: baseHeight,
-      });
-    }
-
-    result.sort((a, b) =>
-      (b.objectData.userZ ?? 0) - (a.objectData.userZ ?? 0) ||
-      (a.objectData.zOrder ?? 0) - (b.objectData.zOrder ?? 0)
+  const objectsToRender = useMemo((): GridObject[] => {
+    return [...objects.values()].sort((a, b) =>
+      (b.absElement.z ?? 0) - (a.absElement.z ?? 0) ||
+      a.info.zOrder - b.info.zOrder
     );
-    return result;
-  }, [objects, overlayObjects]);
+  }, [objects]);
 
   const renderedObjects = useMemo(() => {
     return objectsToRender.map((obj) => (
       <GridSingleObject
-        key={obj.key}
+        key={obj.info.id}
         obj={obj}
         mouseEnabled={mouseEnabled}
         onElementClick={onElementClick}
@@ -252,51 +206,6 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
     ));
   }, [objectsToRender, mouseEnabled, onElementClick, handleDragStart, onElementInput, changedIds]);
 
-  const getPanelClasses = (panel: PanelInfo): string => {
-    const base = 'absolute transition-all ease-out';
-    const invalid = panel.invalidReason ? 'opacity-50 grayscale' : '';
-    const style = panel.panelStyle ?? PANEL_STYLE_DEFAULT;
-
-    return `${base} ${style.borderClass} ${style.backgroundClass} ${invalid}`;
-  };
-
-  const renderedPanelBackgrounds = useMemo(() => {
-    return panels.filter((p) => p.showBorder !== false).map((panel) => (
-      <div
-        key={panel.id}
-        className={getPanelClasses(panel)}
-        style={{
-          left: panel.col * CELL_SIZE,
-          top: panel.row * CELL_SIZE,
-          width: panel.width * CELL_SIZE,
-          height: panel.height * CELL_SIZE,
-          zIndex: 5,
-          transitionDuration: `${animationDuration}ms`,
-        }}
-      />
-    ));
-  }, [panels]);
-
-  const renderedPanelHandles = useMemo(() => {
-    return panels.filter((p) => p.title).map((panel) => {
-      const style = panel.panelStyle ?? PANEL_STYLE_DEFAULT;
-      return (
-        <span
-          key={panel.id}
-          className={`absolute text-[10px] font-mono px-1 rounded ${style.titleBgClass} ${style.titleTextClass}`}
-          style={{
-            left: panel.col * CELL_SIZE + 4,
-            top: panel.row * CELL_SIZE,
-            transform: 'translateY(-100%)',
-            userSelect: 'none',
-            zIndex: 20,
-          }}
-        >
-          {panel.title}
-        </span>
-      );
-    });
-  }, [panels]);
 
   return (
     <div
@@ -337,13 +246,6 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
           }}
         />
 
-        {/* Panel backgrounds layer (below objects) */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="relative w-full h-full pointer-events-none">
-            {renderedPanelBackgrounds}
-          </div>
-        </div>
-
         {/* Objects layer */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="relative w-full h-full pointer-events-none">
@@ -351,17 +253,19 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
           </div>
         </div>
 
-        {/* Panel handles layer */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="relative w-full h-full">
-            {renderedPanelHandles}
-          </div>
-        </div>
+        {/* Trace mode overlay — below text boxes so they remain interactive */}
+        {onTraceClick && (
+          <div
+            className="absolute inset-0 cursor-pointer"
+            style={{ zIndex: 20 }}
+            onClick={onTraceClick}
+          />
+        )}
 
         {/* Text boxes layer */}
         <div
           className="absolute inset-0"
-          style={{ pointerEvents: addingTextBox ? 'auto' : 'none' }}
+          style={{ zIndex: 50, pointerEvents: addingTextBox ? 'auto' : 'none' }}
         >
           <div className="relative w-full h-full">
             <TextBoxesLayer

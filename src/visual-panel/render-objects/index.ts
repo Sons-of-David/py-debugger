@@ -18,5 +18,5 @@ export {
   type ArrayDrawResult,
   type ArrayPanelInfo,
 } from './array';
-export { PanelElement, PanelElementView, PANEL_SCHEMA } from './panel';
+export { Panel, PANEL_SCHEMA } from './panel';
 export { InputElem, INPUT_SCHEMA, InputView } from './input';

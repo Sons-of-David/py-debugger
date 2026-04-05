@@ -13,7 +13,6 @@ export interface VisualBuilderElementBase {
   _elemId?: number;           // stable identity from Python _elem_id; used as React key
 }
 
-
 // Schema for Monaco autocomplete, hover, and API reference panel
 export interface PropertyDoc {
   name: string;
@@ -31,8 +30,8 @@ export interface ObjDoc {
 }
 
 import { getAllSchemas } from '../visual-panel/types/elementRegistry';
-import { PANEL_SCHEMA } from '../visual-panel/render-objects/panel';
 
+import '../visual-panel/render-objects/panel/PanelView';
 import '../visual-panel/render-objects/rect/Rect';
 import '../visual-panel/render-objects/circle/Circle';
 import '../visual-panel/render-objects/arrow/Arrow';
@@ -41,7 +40,7 @@ import '../visual-panel/render-objects/array/arrayShapes';
 import '../visual-panel/render-objects/line/Line';
 
 export function getVisualElemSchema(): ObjDoc[] {
-  return [PANEL_SCHEMA, ...getAllSchemas()];
+  return getAllSchemas();
 }
 
 export const VISUAL_ELEM_SCHEMA: ObjDoc[] = getVisualElemSchema();

@@ -1,52 +1,29 @@
 import type { ObjDoc } from '../../../api/visualBuilder';
+import { registerVisualElement } from '../../types/elementRegistry';
 import { registerRenderer } from '../../views/rendererRegistry';
-import { useTheme } from '../../../contexts/ThemeContext';
-import type { ElementStyle } from '../../types/grid';
+import { BasicShape } from '../BasicShape';
+import type { PanelStyle } from '../../types/grid';
 
-export class PanelElement {
+export const PANEL_STYLE_DEFAULT: PanelStyle = {
+  borderClass: 'border-2 border-dashed',
+  backgroundClass: 'bg-slate-50/50 dark:bg-slate-800/50',
+  titleBgClass: 'bg-slate-50 dark:bg-slate-700',
+  titleTextClass: 'text-slate-600 dark:text-slate-300',
+};
+
+export class Panel extends BasicShape {
   type = 'panel' as const;
-  id: string;
-  title?: string;
-  style?: ElementStyle;
-  showBorder?: boolean;
+  name: string;
+  show_border: boolean;
+  panelStyle?: PanelStyle;
 
-  constructor(opts: { id: string; title?: string; style?: ElementStyle; showBorder?: boolean }) {
-    this.id = opts.id;
-    this.title = opts.title;
-    this.style = opts.style;
-    this.showBorder = opts.showBorder;
+  constructor(el: any) {
+    super('panel', el);
+    this.name = el.name ?? '';
+    this.show_border = el.show_border ?? false;
+    this.panelStyle = el.panelStyle;
   }
 }
-
-interface PanelElementViewProps {
-  panel: PanelElement;
-}
-
-// TODO: add a `color` property for the panel background fill; currently hardcoded as bg-slate-50/50
-export function PanelElementView({ panel }: PanelElementViewProps) {
-  const { darkMode } = useTheme();
-
-  if (!panel.showBorder) return null;
-
-  const titleColor = panel.style?.color || (darkMode ? '#cbd5e1' : '#64748b');
-
-  return (
-    <div className="absolute inset-0 border-2 border-dashed border-slate-400 dark:border-slate-500 bg-slate-50/50 dark:bg-slate-800/50">
-      {panel.title && (
-        <span
-          className="absolute -top-3 left-1 text-[10px] font-mono bg-slate-50 dark:bg-slate-800 px-1"
-          style={{ color: titleColor }}
-        >
-          {panel.title}
-        </span>
-      )}
-    </div>
-  );
-}
-
-registerRenderer<PanelElement>('panel', (element) => (
-  <PanelElementView panel={element as PanelElement} />
-));
 
 export const PANEL_SCHEMA: ObjDoc = {
   objName: 'Panel',
@@ -68,3 +45,24 @@ export const PANEL_SCHEMA: ObjDoc = {
     { name: 'delete', signature: 'delete()', docstring: 'Remove this panel from the canvas.' },
   ],
 };
+
+registerVisualElement('panel', Panel, PANEL_SCHEMA);
+
+function PanelView({ panel }: { panel: Panel }) {
+  if (!panel.show_border) return null;
+  const style = panel.panelStyle ?? PANEL_STYLE_DEFAULT;
+  return (
+    <div className={`w-full h-full relative ${style.borderClass} ${style.backgroundClass}`}>
+      {panel.name && (
+        <span
+          className={`absolute text-[10px] font-mono px-1 rounded ${style.titleBgClass} ${style.titleTextClass}`}
+          style={{ left: 4, top: 0, transform: 'translateY(-100%)', userSelect: 'none' }}
+        >
+          {panel.name}
+        </span>
+      )}
+    </div>
+  );
+}
+
+registerRenderer<Panel>('panel', (el) => <PanelView panel={el as Panel} />);
