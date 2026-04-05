@@ -1,6 +1,5 @@
 import { registerVisualElement } from '../../types/elementRegistry';
 import type { ObjDoc, VisualBuilderElementBase } from '../../../api/visualBuilder';
-import { rgbToHex } from '../../../api/visualBuilder';
 import { COMMON_TAIL_PROPS, DELETE_METHOD } from '../schemaHelpers';
 
 export class Line implements VisualBuilderElementBase {
@@ -37,11 +36,6 @@ export class Line implements VisualBuilderElementBase {
     this.startCap = el.startCap === 'arrow' ? 'arrow' : 'none';
     this.endCap = el.endCap === 'none' ? 'none' : 'arrow';
   }
-
-  get hexColor(): string {
-    return rgbToHex(this.color, '#ef4444');
-  }
-
 
 }
 
