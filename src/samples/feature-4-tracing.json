@@ -1,6 +1,295 @@
 {
-  "userCode": "# \u2500\u2500 Tracing Variables Demo \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n# Two ways to bind visual elements to algorithm variables at each traced step:\n#\n#   1. V('expr') \u2014 evaluates the expression at each timeline step.\n#      Must be assigned directly to a shape property:\n#        rect.width = V('i')       \u2713\n#        rect.width = 1 + V('i')   \u2717  \u2014 use V('1+i') instead\n#      Optional: default=<value> for steps where expr is undefined.\n#\n#   2. viz blocks \u2014 wrap mutations in # @viz ... # @end to record a snapshot.\n#      Any V() change outside a viz block also triggers a snapshot automatically.\n#\n# \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\n# Find Array Maximum \u2014 algorithm traced by this example.\n# Press Analyze, then step through the timeline.\n\narr = [1,5,4,7,9,3,5,2]\nindex_max = 0\n\n# @viz\npanel = Panel(x=1, y=1)\n\npanel.add(\n    Array(cells=V('arr'), x=0, y=1),\n    # i is undefined at this point, so a default value is provided.\n    # Alternative: add 'i = 0' before this viz block.\n    Arrow(angle=Arrow.DOWN, x=V('i', default=0), color=(230,70,80)),\n    Rect(x=V('index_max'), y=1, alpha=0.3),\n    \n)\n\nlabel = Label(label=V('current max'), x=2, y=2, width=4)\npanel.add(label)\n\n# @end\n\ndef print_result():\n    print(f'max value is {arr[index_max]=}')\n\nfor i in range(len(arr)):\n    if arr[index_max] < arr[i]:\n        index_max = i\n        # @viz\n        label.label = f'current max: {arr[i]}'\n        # @end\n\nprint_result()\n",
+  "userCode": "# ── Tracing Variables Demo ────────────────────────────────────────────────────\n# Two ways to bind visual elements to algorithm variables at each traced step:\n#\n#   1. V('expr') — evaluates the expression at each timeline step.\n#      Must be assigned directly to a shape property:\n#        rect.width = V('i')       ✓\n#        rect.width = 1 + V('i')   ✗  — use V('1+i') instead\n#      Optional: default=<value> for steps where expr is undefined.\n#\n#   2. viz blocks — wrap mutations in # @viz ... # @end to record a snapshot.\n#      Any V() change outside a viz block also triggers a snapshot automatically.\n#\n# ─────────────────────────────────────────────────────────────────────────────\n\n# Find Array Maximum — algorithm traced by this example.\n# Press Analyze, then step through the timeline.\n\narr = [1,5,4,7,9,3,5,2]\nindex_max = 0\n\n# @viz\npanel = Panel(x=1, y=1)\n\npanel.add(\n    Array(cells=V('arr'), x=0, y=1),\n    # i is undefined at this point, so a default value is provided.\n    # Alternative: add 'i = 0' before this viz block.\n    Arrow(angle=Arrow.DOWN, x=V('i', default=0), color=(230,70,80)),\n    Rect(x=V('index_max'), y=1, alpha=0.6),\n    \n)\n\nlabel = Label(label=V('current max'), x=2, y=2, width=4)\npanel.add(label)\n\n# @end\n\ndef print_result():\n    print(f'max value is {arr[index_max]=}')\n\nfor i in range(len(arr)):\n    if arr[index_max] < arr[i]:\n        index_max = i\n        # @viz\n        label.label = f'current max: {arr[i]}'\n        # @end\n\nprint_result()\n",
   "visualPanel": {
-    "textBoxes": []
+    "textBoxes": [
+      {
+        "id": "text-f4-title",
+        "row": 6,
+        "col": 1,
+        "widthCells": 9,
+        "heightCells": 9,
+        "bgColor": "#444444",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#ffb43f",
+                        "fontSize": "24px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Find Array Maximum"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "rgb(150, 211, 95)",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Algorithm"
+                },
+                {
+                  "type": "text",
+                  "text": ":"
+                }
+              ]
+            },
+            {
+              "type": "bulletList",
+              "content": [
+                {
+                  "type": "listItem",
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "type": "text",
+                          "marks": [
+                            {
+                              "type": "textStyle",
+                              "attrs": {
+                                "color": null,
+                                "fontSize": "16px"
+                              }
+                            }
+                          ],
+                          "text": "Scan each element once (O(n))"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "listItem",
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "type": "text",
+                          "marks": [
+                            {
+                              "type": "textStyle",
+                              "attrs": {
+                                "color": null,
+                                "fontSize": "16px"
+                              }
+                            }
+                          ],
+                          "text": "Keep track of the largest value seen so far"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "listItem",
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "type": "text",
+                          "marks": [
+                            {
+                              "type": "textStyle",
+                              "attrs": {
+                                "color": null,
+                                "fontSize": "16px"
+                              }
+                            }
+                          ],
+                          "text": "Record its index to highlight it visually"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "listItem",
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "type": "text",
+                          "marks": [
+                            {
+                              "type": "textStyle",
+                              "attrs": {
+                                "color": null,
+                                "fontSize": "16px"
+                              }
+                            }
+                          ],
+                          "text": "set_debug(True) starts tracing from that line — initialization is hidden"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    },
+                    {
+                      "type": "underline"
+                    }
+                  ],
+                  "text": "Visual legend:"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "rgb(184, 64, 64)",
+                        "fontSize": "13px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Red arrow"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "",
+                        "fontSize": "13px"
+                      }
+                    }
+                  ],
+                  "text": " = current index i  (via V)"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "",
+                        "fontSize": "13px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Transparent rect"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "",
+                        "fontSize": "13px"
+                      }
+                    }
+                  ],
+                  "text": " = current max position  (via V)"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "",
+                        "fontSize": "13px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Label"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "",
+                        "fontSize": "13px"
+                      }
+                    }
+                  ],
+                  "text": " = current max value  (via update)"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            }
+          ]
+        }
+      }
+    ]
   }
 }

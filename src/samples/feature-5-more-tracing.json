@@ -1,6 +1,297 @@
 {
-  "userCode": "# Fibonacci / domino tiling \u2014 f(n) = f(n-1) + f(n-2).\n# Press Analyze, then step through the timeline to watch the recursion unfold.\n# Look at the visual builder editor for more details.\n\nn = 5\n\n# @viz\nRECT_COLOR = (128, 26, 134)\nCIRCLE_COLOR = (143, 227, 136)\n\npanel = Panel(x=1, y=1)\ncounter_label = Label(x=1, y=3, width=3)\npanel.add(Rect(width=n, height=2, color=RECT_COLOR), counter_label)\ndominoes = []\ndominoes_x = 0    \ncounter = 0\n# @end\n\n\ndef fib(n: int) -> int:\n    if n <= 0:\n        print('Empty Board!')\n        # @viz\n        global counter\n        counter +=1 \n        counter_label.label=f'counted {counter}'\n        # @end\n        return 1 # One (empty) way to fill an empty board\n\n    # Either remove 1 and compute the rest:\n    # @viz\n    global dominoes_x\n    dominoes.append(Circle(height=2, x=dominoes_x, color=CIRCLE_COLOR))\n    panel.add(dominoes[-1])\n    dominoes_x+=1\n    # @end\n    res = fib(n-1)\n    # @viz\n    dominoes.pop().delete()\n    dominoes_x-=1\n    # @end\n    # Or remove 2 (if possible) and compute the rest:\n    if n >= 2:\n        # @viz\n        dominoes.append(Circle(width=2, x=dominoes_x, color=CIRCLE_COLOR))\n        dominoes.append(Circle(width=2, x=dominoes_x, y=1, color=CIRCLE_COLOR))\n        panel.add(dominoes[-1], dominoes[-2])\n        dominoes_x+=2\n        # @end\n        res += fib(n-2)\n        # @viz\n        dominoes.pop().delete()\n        dominoes.pop().delete()\n        dominoes_x-=2\n        # @end\n        \n    return res\n\nresult = fib(n)\nprint(result)\n# @viz\ncounter_label.label = f'Fib({n})={result}'\n# @end",
+  "userCode": "# Fibonacci / domino tiling — f(n) = f(n-1) + f(n-2).\n# Press Analyze, then step through the timeline to watch the recursion unfold.\n# Look at the visual builder editor for more details.\n\nn = 5\n\n# @viz\nRECT_COLOR = (128, 26, 134)\nCIRCLE_COLOR = (143, 227, 136)\n\npanel = Panel(x=1, y=1)\ncounter_label = Label(x=1, y=3, width=3)\npanel.add(Rect(width=n, height=2, color=RECT_COLOR), counter_label)\ndominoes = []\ndominoes_x = 0    \ncounter = 0\n# @end\n\n\ndef fib(n: int) -> int:\n    if n <= 0:\n        print('Empty Board!')\n        # @viz\n        global counter\n        counter +=1 \n        counter_label.label=f'counted {counter}'\n        # @end\n        return 1 # One (empty) way to fill an empty board\n\n    # Either remove 1 and compute the rest:\n    # @viz\n    global dominoes_x\n    dominoes.append(Circle(height=2, x=dominoes_x, color=CIRCLE_COLOR))\n    panel.add(dominoes[-1])\n    dominoes_x+=1\n    # @end\n    res = fib(n-1)\n    # @viz\n    dominoes.pop().delete()\n    dominoes_x-=1\n    # @end\n    # Or remove 2 (if possible) and compute the rest:\n    if n >= 2:\n        # @viz\n        dominoes.append(Circle(width=2, x=dominoes_x, color=CIRCLE_COLOR))\n        dominoes.append(Circle(width=2, x=dominoes_x, y=1, color=CIRCLE_COLOR))\n        panel.add(dominoes[-1], dominoes[-2])\n        dominoes_x+=2\n        # @end\n        res += fib(n-2)\n        # @viz\n        dominoes.pop().delete()\n        dominoes.pop().delete()\n        dominoes_x-=2\n        # @end\n        \n    return res\n\nresult = fib(n)\nprint(result)\n# @viz\ncounter_label.label = f'Fib({n})={result}'\n# @end",
   "visualPanel": {
-    "textBoxes": []
+    "textBoxes": [
+      {
+        "id": "text-f5-title",
+        "row": 1,
+        "col": 7,
+        "widthCells": 10,
+        "heightCells": 12,
+        "bgColor": "#444444",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#ffb43f",
+                        "fontSize": "24px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Fibonacci Recursion"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#ff8c82",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "The problem"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": ":"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "How many ways are there to fill a board of size 2xn with domino bricks of size 1x2 and 2x1 ?"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#96d35f",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "The solution"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": ":"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "Denote by f(n) the number of ways. Either we start with a 2x1 vertical block and we need to fill a 2x(n-1) board or we start with two 1x2 blocks and we need to fill a 2x(n-2) board."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "All together, we have"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "        f(n) = f(n-1) + f(n-2)"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "rgb(116, 167, 254)",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Visual encoding:"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "rgb(214, 214, 214)",
+                        "fontSize": "16px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Single circle"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "rgb(214, 214, 214)",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": " = fib(n-1) call  (removes 1 slot)"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "rgb(214, 214, 214)",
+                        "fontSize": "16px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Double circle"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "rgb(214, 214, 214)",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": " = fib(n-2) call  (removes 2 slots)"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "rgb(214, 214, 214)",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "Circles disappear on return, revealing how the board is filled."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
   }
 }
