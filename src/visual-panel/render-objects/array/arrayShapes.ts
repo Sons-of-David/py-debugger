@@ -35,8 +35,10 @@ export interface ArrayDrawResult {
   nextIdx: number;
 }
 
-export class Array1DCell {
+export class Array1DCell implements VisualBuilderElementBase {
   type = 'array1dcell' as const;
+  x: number = 0;
+  y: number = 0;
   arrayId: string;
   index: number;
   showIndex: boolean;
@@ -59,8 +61,10 @@ export class Array1DCell {
 
 }
 
-export class Array2DCell {
+export class Array2DCell implements VisualBuilderElementBase {
   type = 'array2dcell' as const;
+  x: number = 0;
+  y: number = 0;
   arrayId: string;
   row: number;
   col: number;
