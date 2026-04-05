@@ -54,7 +54,7 @@ interface GridAreaProps {
   elements?: VisualBuilderElementBase[];
   /** Elem IDs that changed at this step; null = full snapshot (animate all). */
   changedIds?: Set<number> | null;
-  /** True when the current code has viz blocks; enables interactive element handlers. */
+  /** True when the algorithm has click/drag handlers; shows the trace-mode overlay. */
   interactiveEnabled?: boolean;
   /** editor: called when a click produces a traced mini-timeline. */
   onTrace?: (result: TraceStageInfo) => void;
@@ -111,25 +111,22 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
     // TODO: Why are these handled in the GridArea instead of the Grid? 
     // Also, these are all very similar — can they be unified into a single handler with a parameter for the type of interaction?
     const handleElementClick = useCallback(async (elemId: number, x: number, y: number) => {
-      if (!interactiveEnabled) return;
       const result = await executeClickHandler(elemId, y, x);
       if (result.error) { appendError(result.error); return; }
-      if (result.timeline.length > 0) onTrace?.(result);        
-    }, [interactiveEnabled, onTrace]);
+      if (result.timeline.length > 0) onTrace?.(result);
+    }, [onTrace]);
 
     const handleElementInput = useCallback(async (elemId: number, text: string) => {
-      if (!interactiveEnabled) return;
       const result = await executeInputChanged(elemId, text);
       if (result.error) { appendError(result.error); return; }
       if (result.timeline.length > 0) onTrace?.(result);
-    }, [interactiveEnabled, onTrace]);
+    }, [onTrace]);
 
     const handleElementDrag = useCallback(async (elemId: number, x: number, y: number, dragType: DragType) => {
-      if (!interactiveEnabled) return;
       const result = await executeDragHandler(elemId, y, x, dragType);
       if (result.error) { appendError(result.error); return; }
       if (result.timeline.length > 0) onTrace?.(result);
-    }, [interactiveEnabled, onTrace]);
+    }, [onTrace]);
 
     // ---------------------------------------------------------------------------
     // Text box handlers
@@ -278,12 +275,6 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
         )}
 
         <div className="flex-1 overflow-hidden relative">
-          {appMode === 'trace' && !capturingRegionMode && (
-            <div
-              className="absolute inset-0 z-10 cursor-pointer"
-              onClick={onTraceClickAttempt}
-            />
-          )}
           <Grid
             ref={gridRef}
             objects={objects}
@@ -302,6 +293,7 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
             onTextBoxAdded={handleTextBoxAdded}
             onTextBoxChange={handleTextBoxChange}
             onTextBoxDelete={handleTextBoxDelete}
+            onTraceClick={appMode === 'trace' && !capturingRegionMode && interactiveEnabled ? onTraceClickAttempt : undefined}
             capturingRegion={capturingRegionMode}
             captureRegionBounds={captureRegion}
             onCaptureRegionDrawn={handleCaptureRegionDrawn}

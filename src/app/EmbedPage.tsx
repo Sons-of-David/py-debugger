@@ -7,7 +7,6 @@ import { GridArea, type GridAreaHandle } from './GridArea';
 import { getMaxTime } from '../timeline/timelineState';
 import { executeCode, type TraceStageInfo } from '../python-engine/executor';
 import { setHandlers, hasAnyClickHandler } from '../visual-panel/handlersState';
-import { getVizRanges } from '../python-engine/viz-block-parser';
 import { SAMPLES } from './sampleRegistry';
 import { useTimelineNavigation, type AppMode } from '../timeline/useTimelineNavigation';
 
@@ -71,11 +70,6 @@ export function EmbedPage() {
   } = useTimelineNavigation(appMode);
 
 
-  // Whether the sample has viz blocks — gates interactive element handlers
-  const interactiveEnabled = useMemo(
-    () => !!sample?.data.userCode && getVizRanges(sample.data.userCode).length > 0,
-    [sample]
-  );
 
   // ---------------------------------------------------------------------------
   // startTrace
@@ -191,7 +185,7 @@ export function EmbedPage() {
             hideToolbar
             elements={currentElements}
             changedIds={changedIds}
-            interactiveEnabled={interactiveEnabled}
+            interactiveEnabled={hasInteractiveElements}
             onTrace={startTrace}
           />
         </AnimationContext.Provider>

@@ -48,6 +48,9 @@ interface GridProps {
   onTextBoxAdded?: (box: TextBox) => void;
   onTextBoxChange?: (box: TextBox) => void;
   onTextBoxDelete?: (id: string) => void;
+  // Fired when user clicks anywhere on the grid in trace mode (background or object).
+  // Rendered below text boxes so text boxes remain interactive.
+  onTraceClick?: () => void;
   // Capture region props
   capturingRegion?: boolean;
   captureRegionBounds?: CaptureRegion | null;
@@ -80,6 +83,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
   onTextBoxAdded,
   onTextBoxChange,
   onTextBoxDelete,
+  onTraceClick,
   capturingRegion = false,
   captureRegionBounds = null,
   onCaptureRegionDrawn,
@@ -249,10 +253,19 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
           </div>
         </div>
 
+        {/* Trace mode overlay — below text boxes so they remain interactive */}
+        {onTraceClick && (
+          <div
+            className="absolute inset-0 cursor-pointer"
+            style={{ zIndex: 20 }}
+            onClick={onTraceClick}
+          />
+        )}
+
         {/* Text boxes layer */}
         <div
           className="absolute inset-0"
-          style={{ pointerEvents: addingTextBox ? 'auto' : 'none' }}
+          style={{ zIndex: 50, pointerEvents: addingTextBox ? 'auto' : 'none' }}
         >
           <div className="relative w-full h-full">
             <TextBoxesLayer
