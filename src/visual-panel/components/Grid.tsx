@@ -3,7 +3,7 @@
 //
 // Responsibilities:
 //   - Canvas: 50×50 cell grid with zoom, scroll, and optional clip dimensions
-//   - Object rendering: positions RenderableObjectData objects as animated
+//   - Object rendering: positions GridObject values as animated
 //     motion.div elements; skips animation for unchanged elements (changedIds)
 //   - Z-ordering: sorts objects by userZ then zOrder before painting
 //   - Drag protocol: mousedown → throttled mousemove (in-flight guard) →
@@ -15,7 +15,7 @@
 // =============================================================================
 
 import { useRef, useCallback, useMemo, forwardRef, useImperativeHandle, useState, useEffect } from 'react';
-import { GridSingleObject, type RenderableObject } from './GridSingleObject';
+import { GridSingleObject } from './GridSingleObject';
 import type { GridObject } from '../types/grid';
 import type { TextBox } from '../../text-boxes/types';
 import { TextBoxesLayer } from '../../text-boxes/TextBoxesLayer';
@@ -181,32 +181,17 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
   const gridLineColor = darkMode ? '#4b5563' : '#d1d5db';
   const gridBgColor = darkMode ? '#1f2937' : '#ffffff';
 
-  const objectsToRender = useMemo((): RenderableObject[] => {
-    const result: RenderableObject[] = [];
-
-    for (const [, gridObj] of objects) {
-      const col = gridObj.absElement.x;
-      const row = gridObj.absElement.y;
-      result.push({
-        key: gridObj.info.id,
-        row, col, obj: gridObj,
-        widthCells: (gridObj.absElement as { width?: number }).width ?? 1,
-        heightCells: (gridObj.absElement as { height?: number }).height ?? 1,
-      });
-    }
-
-    result.sort((a, b) =>
-      (b.obj.absElement.z ?? 0) - (a.obj.absElement.z ?? 0) ||
-      a.obj.info.zOrder - b.obj.info.zOrder
+  const objectsToRender = useMemo((): GridObject[] => {
+    return [...objects.values()].sort((a, b) =>
+      (b.absElement.z ?? 0) - (a.absElement.z ?? 0) ||
+      a.info.zOrder - b.info.zOrder
     );
-
-    return result;
   }, [objects]);
 
   const renderedObjects = useMemo(() => {
     return objectsToRender.map((obj) => (
       <GridSingleObject
-        key={obj.key}
+        key={obj.info.id}
         obj={obj}
         mouseEnabled={mouseEnabled}
         onElementClick={onElementClick}

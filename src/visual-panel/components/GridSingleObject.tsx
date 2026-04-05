@@ -1,7 +1,7 @@
 import { memo, useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAnimationEnabled, useAnimationDuration } from '../../animation/animationContext';
-import type { GridObject, InteractionData } from '../types/grid';
+import type { InteractionData } from '../types/grid';
 import { renderElement } from '../views/rendererRegistry';
 import type { BasicShape } from '../render-objects/BasicShape';
 
@@ -18,21 +18,14 @@ import '../render-objects/input/InputView';
 // CELL_SIZE is intentionally kept in sync with Grid.tsx; not imported from there to avoid a circular dep.
 const CELL_SIZE = 40;
 
-export interface RenderableObject {
-  key: string;
-  row: number;
-  col: number;
-  obj: GridObject;
-  widthCells: number;
-  heightCells: number;
-}
-
 function coordsFromElementEvent(e: React.MouseEvent, data: InteractionData): [number, number] {
   return [
     data.x + Math.floor(e.nativeEvent.offsetX / CELL_SIZE),
     data.y + Math.floor(e.nativeEvent.offsetY / CELL_SIZE),
   ];
 }
+
+import type { GridObject } from '../types/grid';
 
 export const GridSingleObject = memo(function GridSingleObject({
   obj,
@@ -42,7 +35,7 @@ export const GridSingleObject = memo(function GridSingleObject({
   onElementInput,
   changedIds,
 }: {
-  obj: RenderableObject;
+  obj: GridObject;
   mouseEnabled: boolean;
   onElementClick?: (elemId: number, x: number, y: number) => void;
   onElementDragStart?: (elemId: number, x: number, y: number, panelOriginCol: number, panelOriginRow: number) => void;
@@ -56,7 +49,7 @@ export const GridSingleObject = memo(function GridSingleObject({
   const globalAnimationsEnabled = useAnimationEnabled();
   const animationDuration = useAnimationDuration();
 
-  const { element, absElement, info } = obj.obj;
+  const { element, absElement, info } = obj;
   const shape = element as BasicShape;
 
   const col = absElement.x;
