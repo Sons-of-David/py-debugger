@@ -21,7 +21,11 @@ const isExpandable = (e: VisualBuilderElementBase): e is ExpandableElement =>
 
 /**
  * Pure function: converts a flat VisualBuilderElementBase array into the
- * Map<gridId, GridObject> used by useGridState.  Exported for unit testing.
+ * Map<gridId, GridObject> used by useGridState.  
+ * Used to move from relative coordinates (e.g. element x/y relative to panel) to absolute coordinates 
+ * (element x/y relative to the grid), and to determine panels' bound to fit their children.
+ * 
+ * Exported for unit testing.
  */
 export function buildGridObjects(elements: VisualBuilderElementBase[]): Map<string, GridObject> {
   const next = new Map<string, GridObject>();
@@ -178,6 +182,9 @@ export function useGridState() {
   const positionedObjects = useMemo((): Map<string, GridObject> => {
     const objectMap = new Map<string, GridObject>();
 
+    // TODO: This is a temporary fix to clamp objects within the 50x50 grid. 
+    //       We should not draw objects completely outside the grid, and only draw them partially
+    //       if they are partially outside.
     for (const obj of objects.values()) {
       const clampedX = Math.max(0, Math.min(49, obj.absElement.x));
       const clampedY = Math.max(0, Math.min(49, obj.absElement.y));
@@ -192,7 +199,7 @@ export function useGridState() {
     return objectMap;
   }, [objects]);
 
-  const loadVisualBuilderObjects = useCallback((elements: VisualBuilderElementBase[]) => {
+  const loadGridObjects = useCallback((elements: VisualBuilderElementBase[]) => {
     setObjects(() => buildGridObjects(elements));
   }, []);
 
@@ -202,6 +209,6 @@ export function useGridState() {
     zoomIn,
     zoomOut,
     setZoom,
-    loadVisualBuilderObjects,
+    loadGridObjects,
   };
 }

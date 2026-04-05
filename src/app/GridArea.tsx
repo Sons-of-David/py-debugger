@@ -39,7 +39,7 @@ const panelHeader =
   "flex-shrink-0 h-10 px-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between";
 
 export interface GridAreaHandle {
-  loadVisualBuilderObjects: (elements: VisualBuilderElementBase[]) => void;
+  loadGridObjects: (elements: VisualBuilderElementBase[]) => void;
   scrollViewport: (x: number, y: number) => void;
   clipViewport: (w: number, h: number) => void;
   serialize: () => unknown;
@@ -75,12 +75,12 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
       zoomIn,
       zoomOut,
       setZoom,
-      loadVisualBuilderObjects,
+      loadGridObjects,
     } = useGridState();
 
     useEffect(() => {
-      loadVisualBuilderObjects(elements ?? []);
-    }, [elements, loadVisualBuilderObjects]);
+      loadGridObjects(elements ?? []);
+    }, [elements, loadGridObjects]);
 
     const gridRef = useRef<GridHandle>(null);
     const [textBoxes, setTextBoxes] = useState<TextBox[]>([]);
@@ -170,7 +170,7 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
     }, [captureFrameCanvas]);
 
     useImperativeHandle(ref, () => ({
-      loadVisualBuilderObjects,
+      loadGridObjects,
       captureFrameData,
       captureFrameCanvas,
       scrollViewport: (x: number, y: number) => gridRef.current?.scrollTo(x, y),
@@ -182,7 +182,7 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
           (s?.textBoxes ?? []).map((raw) => migrateTextBox(raw as Record<string, unknown>))
         );
       },
-    }), [loadVisualBuilderObjects, captureFrameData, captureFrameCanvas, textBoxes]);
+    }), [loadGridObjects, captureFrameData, captureFrameCanvas, textBoxes]);
 
     const downloadDataUrl = (dataUrl: string, filename: string) => {
       const link = document.createElement('a');
