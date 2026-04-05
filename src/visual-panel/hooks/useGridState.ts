@@ -5,7 +5,6 @@ import type {
 } from '../types/grid';
 import type { VisualBuilderElementBase } from '../../api/visualBuilder';
 import type { Panel } from '../render-objects/panel';
-import type { BasicShape } from '../render-objects/BasicShape';
 import { hasHandler } from '../handlersState';
 
 // ── Tree node types ──────────────────────────────────────────────────────────
@@ -27,7 +26,6 @@ const isExpandable = (e: VisualBuilderElementBase): e is ExpandableElement =>
 export function buildGridObjects(elements: VisualBuilderElementBase[]): Map<string, GridObject> {
   const next = new Map<string, GridObject>();
   let idx = 0;
-  let z = 0;
 
   // ── Build panel tree ──────────────────────────────────────────────────────
   // Panel grid ID = panel-e{_elem_id}. Children reference parents by
@@ -65,50 +63,38 @@ export function buildGridObjects(elements: VisualBuilderElementBase[]): Map<stri
     else rootChildren.push(node);
   }
 
-  // ── Panel size computation ────────────────────────────────────────────────
-
-  // TODO: have a grownup fix this stuff
-  const computePanelSize = (node: PanelTreeNode, panelAbsCol: number, panelAbsRow: number): { width: number; height: number } => {
-    let maxRow = 0, maxCol = 0;
-    for (const child of node.children) {
-      const childAbsRow = panelAbsRow + child.el.y;
-      const childAbsCol = panelAbsCol + child.el.x;
-      let w: number, h: number;
-      if (isPanelNode(child)) {
-        const nested = computePanelSize(child, childAbsCol, childAbsRow);
-        w = nested.width; h = nested.height;
-      } else {
-        w = (child.el as BasicShape).width ?? 1;
-        h = (child.el as BasicShape).height ?? 1;
-      }
-      maxRow = Math.max(maxRow, childAbsRow - panelAbsRow + h);
-      maxCol = Math.max(maxCol, childAbsCol - panelAbsCol + w);
-    }
-    const panelEl = node.el as Panel;
-    return {
-      width:  Math.max(panelEl.width  ?? 5, maxCol),
-      height: Math.max(panelEl.height ?? 5, maxRow),
-    };
-  };
-
   // ── Emit helpers ──────────────────────────────────────────────────────────
 
-  const emitPanel = (node: PanelTreeNode, parentGridId: string | undefined, absRow: number, absCol: number, inheritedAlpha: number, inheritedZ: number) => {
+  const emitPanel = (node: PanelTreeNode, parentGridId: string | undefined, absRow: number, absCol: number, inheritedAlpha: number, inheritedZ: number, traverseOrder: number) => {
     const { gridId } = node;
     const panelEl = node.el as { alpha?: number; z?: number };
-    const { width, height } = computePanelSize(node, absCol, absRow);
+
+    // Increase width and height to fit all children.
+    const panelEl2 = node.el as Panel;
+    let maxCol = panelEl2.width  ?? 5, maxRow = panelEl2.height ?? 5;
+    for (const child of node.children) {
+      const childObj = next.get(child.gridId);
+      if (!childObj) continue; // visible=false, not emitted
+      const cw = (childObj.absElement as { width?: number }).width ?? 1;
+      const ch = (childObj.absElement as { height?: number }).height ?? 1;
+      maxCol = Math.max(maxCol, childObj.absElement.x - absCol + cw);
+      maxRow = Math.max(maxRow, childObj.absElement.y - absRow + ch);
+    }
+    const width  = maxCol;
+    const height = maxRow;
+    
     next.set(gridId, {
       element: node.el,
       absElement: { ...node.el, x: absCol, y: absRow, alpha: inheritedAlpha * (panelEl.alpha ?? 1), z: inheritedZ + (panelEl.z ?? 0), width, height } as VisualBuilderElementBase,
       info: {
         id: gridId,
-        zOrder: z++,
+        zOrder: traverseOrder,
         panelId: parentGridId,
       },
     });
   };
 
-  const emitLeaf = (node: LeafTreeNode, parentGridId: string | undefined, absRow: number, absCol: number, parentAlpha: number, inheritedZ: number) => {
+  const emitLeaf = (node: LeafTreeNode, parentGridId: string | undefined, absRow: number, absCol: number, parentAlpha: number, inheritedZ: number, traverseOrder: number) => {
     const { el } = node;
     const elemId = el._elemId;
     const clickData: InteractionData | undefined = elemId != null && hasHandler(elemId, 'on_click')
@@ -122,7 +108,7 @@ export function buildGridObjects(elements: VisualBuilderElementBase[]): Map<stri
       absElement: { ...node.el, x: absCol, y: absRow, alpha: parentAlpha * (el.alpha ?? 1), z: inheritedZ + (el.z ?? 0) },
       info: {
         id: node.gridId,
-        zOrder: z++,
+        zOrder: traverseOrder,
         panelId: parentGridId,
         clickData,
         dragData,
@@ -132,23 +118,31 @@ export function buildGridObjects(elements: VisualBuilderElementBase[]): Map<stri
   };
 
   // ── DFS traversal ─────────────────────────────────────────────────────────
-  // Pre-order: parents emitted before children (required by cells memo).
-  // visible=false prunes the entire subtree.
-  // inheritedAlpha accumulates the product of all ancestor panel alphas.
-  // inheritedZ accumulates the sum of all ancestor panel z values.
+  // Accumulating absolute numbers: position (absRow/absCol), alpha, and z, and removing invisible elements.  
+  // The traversal order is used to determine z-order when multiple elements have the same z value.
+  // Note that we use post order, so panel could compute their width/height based on their children.  
+  // However, the tranversal order uses pre-order to make sure the panels are below their children.
 
-  const traverse = (node: TreeNodeEntry, parentGridId: string | undefined, originRow: number, originCol: number, inheritedAlpha: number, inheritedZ: number) => {
+  let traverseOrder = 0;
+
+  const traverse = (
+        node: TreeNodeEntry, 
+        parentGridId: string | undefined, 
+        originRow: number, originCol: number, inheritedAlpha: number, 
+        inheritedZ: number) => {
     if (node.el.visible === false) return;
+    traverseOrder++;
     const absRow = originRow + node.el.y;
     const absCol = originCol + node.el.x;
     if (isPanelNode(node)) {
-      emitPanel(node, parentGridId, absRow, absCol, inheritedAlpha, inheritedZ);
+      const panelOrder = traverseOrder;
       const panelEl = node.el as { alpha?: number; z?: number };
       const childAlpha = inheritedAlpha * (panelEl.alpha ?? 1);
       const childZ = inheritedZ + (panelEl.z ?? 0);
       for (const child of node.children) traverse(child, node.gridId, absRow, absCol, childAlpha, childZ);
+      emitPanel(node, parentGridId, absRow, absCol, inheritedAlpha, inheritedZ, panelOrder);
     } else {
-      emitLeaf(node, parentGridId, absRow, absCol, inheritedAlpha, inheritedZ);
+      emitLeaf(node, parentGridId, absRow, absCol, inheritedAlpha, inheritedZ, traverseOrder);
     }
   };
 
