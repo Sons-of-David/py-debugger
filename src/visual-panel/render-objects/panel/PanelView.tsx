@@ -3,7 +3,13 @@ import { registerVisualElement } from '../../types/elementRegistry';
 import { registerRenderer } from '../../views/rendererRegistry';
 import { BasicShape } from '../BasicShape';
 import type { PanelStyle } from '../../types/grid';
-import { PANEL_STYLE_DEFAULT } from '../../types/grid';
+
+export const PANEL_STYLE_DEFAULT: PanelStyle = {
+  borderClass: 'border-2 border-dashed',
+  backgroundClass: 'bg-slate-50/50 dark:bg-slate-800/50',
+  titleBgClass: 'bg-slate-50 dark:bg-slate-700',
+  titleTextClass: 'text-slate-600 dark:text-slate-300',
+};
 
 export class Panel extends BasicShape {
   type = 'panel' as const;

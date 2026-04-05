@@ -151,7 +151,8 @@ export const GridSingleObject = memo(function GridSingleObject({
       >
         {renderElement(absElement)}
       </div>
-      {inputActive && (
+      {// TODO: move into renderElement. 
+      inputActive && (
         <input
           ref={inputRef}
           className="absolute inset-0 w-full h-full bg-white/90 dark:bg-gray-900/90 text-gray-900 dark:text-gray-100 font-mono text-sm px-2 rounded outline-none ring-2 ring-white"

@@ -1,9 +1,15 @@
 import type { VisualBuilderElementBase } from "../../../api/visualBuilder";
 import { rgbToHex } from "../../../api/visualBuilder";
-import type { ElementStyle, PanelStyle } from "../../types/grid";
+import type { PanelStyle } from "../../types/grid";
 import type { ObjDoc } from "../../../api/visualBuilder";
 import { registerVisualElement } from "../../types/elementRegistry";
-import { getArrayOffset } from "../../types/grid";
+
+export interface ElementStyle {
+  color?: string;       // Fill/text color
+  lineWidth?: number;   // Border/stroke thickness (1-5)
+  opacity?: number;     // 0-1
+  fontSize?: number;    // px
+}
 
 export const PANEL_STYLE_1D: PanelStyle = {
   borderClass: 'border-2 border-amber-400 dark:border-amber-600',
@@ -18,6 +24,20 @@ export const PANEL_STYLE_2D: PanelStyle = {
   titleBgClass: 'bg-violet-50 dark:bg-violet-900',
   titleTextClass: 'text-violet-700 dark:text-violet-300',
 };
+
+function getArrayOffset(direction: 'right' | 'left' | 'down' | 'up', index: number): { rowDelta: number; colDelta: number } {
+  switch (direction) {
+    case 'left':
+      return { rowDelta: 0, colDelta: -index };
+    case 'down':
+      return { rowDelta: index, colDelta: 0 };
+    case 'up':
+      return { rowDelta: -index, colDelta: 0 };
+    case 'right':
+    default:
+      return { rowDelta: 0, colDelta: index };
+  }
+}
 
 export interface ArrayPanelInfo {
   id: string;
