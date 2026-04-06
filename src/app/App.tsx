@@ -110,7 +110,7 @@ function App() {
     setHandlers({});
     setHasInteractiveElements(false);
     setAppMode('idle');
-  }, []);
+  }, [setHasInteractiveElements]);
 
   const handleReset = useCallback(() => {
     resetPythonState();
@@ -263,7 +263,7 @@ function App() {
     };
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [appMode, isAnalyzing, handleAnalyze, handleEnterInteractive, handleSave]);
+  }, [appMode, isAnalyzing, hasInteractiveElements, handleAnalyze, handleEnterInteractive, handleSave]);
 
   return (
     <AnimationContext.Provider value={{ enabled: animationsEnabled, duration: animationDuration }}>

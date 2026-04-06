@@ -1,11 +1,11 @@
 import { registerVisualElement } from "../../types/elementRegistry";
-import type { ObjDoc } from "../../../api/visualBuilder";
+import type { ObjDoc, RawPyEl } from "../../../api/visualBuilder";
 import { BasicShape } from "../BasicShape";
 import { POSITION_PROPS, SIZED_PROPS, colorProp, COMMON_TAIL_PROPS, DELETE_METHOD } from "../schemaHelpers";
 
 export class Rect extends BasicShape {
 
-  constructor(el: any) {
+  constructor(el: RawPyEl) {
     super('rect', el);
     this.color = el.color ?? [1, 0, 0];
   }

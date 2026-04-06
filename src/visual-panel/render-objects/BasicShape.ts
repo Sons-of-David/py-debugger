@@ -1,4 +1,4 @@
-import type { VisualBuilderElementBase } from "../../api/visualBuilder";
+import type { VisualBuilderElementBase, RawPyEl } from "../../api/visualBuilder";
 
 export abstract class BasicShape implements VisualBuilderElementBase {
   type: string;
@@ -14,7 +14,7 @@ export abstract class BasicShape implements VisualBuilderElementBase {
   _elemId?: number;
   animate: boolean;
 
-  constructor(type: string, el: any) {
+  constructor(type: string, el: RawPyEl) {
     this.type = type;
     this.x = el.x ?? 0;
     this.y = el.y ?? 0;

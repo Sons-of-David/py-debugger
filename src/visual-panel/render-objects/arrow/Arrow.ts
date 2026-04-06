@@ -1,5 +1,5 @@
 import { registerVisualElement } from "../../types/elementRegistry";
-import type { ObjDoc } from "../../../api/visualBuilder";
+import type { ObjDoc, RawPyEl } from "../../../api/visualBuilder";
 
 import { BasicShape } from "../BasicShape";
 import { POSITION_PROPS, SIZED_PROPS, colorProp, COMMON_TAIL_PROPS, DELETE_METHOD } from "../schemaHelpers";
@@ -7,7 +7,7 @@ import { POSITION_PROPS, SIZED_PROPS, colorProp, COMMON_TAIL_PROPS, DELETE_METHO
 export class Arrow extends BasicShape {
   angle: number;
 
-  constructor(el: any) {
+  constructor(el: RawPyEl) {
     super('arrow', el);
     this.color = el.color ?? [1, 0, 0];
     this.angle = el.angle ?? 0;

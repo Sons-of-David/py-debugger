@@ -1,4 +1,4 @@
-import type { VisualBuilderElementBase } from "../../../api/visualBuilder";
+import type { VisualBuilderElementBase, RawPyEl } from "../../../api/visualBuilder";
 import { rgbToHex } from "../../../api/visualBuilder";
 import type { PanelStyle } from "../../types/grid";
 import type { ObjDoc } from "../../../api/visualBuilder";
@@ -131,7 +131,7 @@ export class Array1D implements VisualBuilderElementBase {
   style?: ElementStyle;
   _elemId?: number;
 
-  constructor(el: any) {
+  constructor(el: RawPyEl) {
     this.x = el.x ?? 0;
     this.y = el.y ?? 0;
     this.direction = (['left', 'down', 'up'].includes(el.direction!) ? el.direction! : 'right') as 'right' | 'left' | 'down' | 'up';
@@ -268,7 +268,7 @@ export class Array2D implements VisualBuilderElementBase {
   style?: ElementStyle;
   _elemId?: number;
 
-  constructor(el: any) {
+  constructor(el: RawPyEl) {
     this.x = el.x ?? 0;
     this.y = el.y ?? 0;
     const rawValues: unknown[][] = Array.isArray(el.values) ? el.values : [];

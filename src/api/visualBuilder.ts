@@ -2,6 +2,10 @@
 
 export type ArrayDirection = 'right' | 'left' | 'down' | 'up';
 
+// Raw deserialized Python object from Pyodide — field types are not statically known
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type RawPyEl = Record<string, any>;
+
 export interface VisualBuilderElementBase {
   type: string;               // shape type
   x: number;                  // horizontal position (column)

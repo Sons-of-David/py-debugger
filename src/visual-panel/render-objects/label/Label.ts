@@ -1,9 +1,9 @@
 import { registerVisualElement } from "../../types/elementRegistry";
-import type { ObjDoc, VisualBuilderElementBase } from "../../../api/visualBuilder";
+import type { ObjDoc, VisualBuilderElementBase, RawPyEl } from "../../../api/visualBuilder";
 import { POSITION_PROPS, SIZED_PROPS, COMMON_TAIL_PROPS, DELETE_METHOD } from "../schemaHelpers";
 
 export class Label implements VisualBuilderElementBase {
-  type: 'label' = 'label';
+  type = 'label' as const;
   x: number;
   y: number;
   visible: boolean = true;
@@ -16,7 +16,7 @@ export class Label implements VisualBuilderElementBase {
   z: number;
   panelId?: string;
 
-  constructor(el: any) {
+  constructor(el: RawPyEl) {
     this.x = el.x ?? 0;
     this.y = el.y ?? 0;
     this.visible = el.visible ?? true;

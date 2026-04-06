@@ -1,4 +1,4 @@
-import type { ObjDoc } from '../../../api/visualBuilder';
+import type { ObjDoc, RawPyEl } from '../../../api/visualBuilder';
 import { registerVisualElement } from '../../types/elementRegistry';
 import { registerRenderer } from '../../views/rendererRegistry';
 import { BasicShape } from '../BasicShape';
@@ -17,7 +17,7 @@ export class Panel extends BasicShape {
   show_border: boolean;
   panelStyle?: PanelStyle;
 
-  constructor(el: any) {
+  constructor(el: RawPyEl) {
     super('panel', el);
     this.name = el.name ?? '';
     this.show_border = el.show_border ?? false;

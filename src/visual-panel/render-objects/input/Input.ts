@@ -1,5 +1,5 @@
 import { registerVisualElement } from "../../types/elementRegistry";
-import type { ObjDoc } from "../../../api/visualBuilder";
+import type { ObjDoc, RawPyEl } from "../../../api/visualBuilder";
 
 import { BasicShape } from "../BasicShape";
 import { POSITION_PROPS, colorProp, DELETE_METHOD } from "../schemaHelpers";
@@ -8,7 +8,7 @@ export class InputElem extends BasicShape {
   value: string;
   placeholder: string;
 
-  constructor(el: any) {
+  constructor(el: RawPyEl) {
     super('input', el);
     this.color = el.color ?? [99, 102, 241];
     this.value = el.value ?? '';
