@@ -138,7 +138,7 @@ export function VisualElements() {
               Side-by-side: direct placement vs. panel-relative positioning, border and min-size options.
             </p>
           </div>
-          <a href="/?sample=feature-2-panels" className={`shrink-0 ${t.btnPrimary}`}>
+          <a href="/?sample=features/2-panels" className={`shrink-0 ${t.btnPrimary}`}>
             Open in Editor →
           </a>
         </div>
@@ -249,7 +249,7 @@ export function VisualElements() {
               All shapes with labelled examples: sizes, colors, alpha, and V() bindings.
             </p>
           </div>
-          <a href="/?sample=feature-1-shapes" className={`shrink-0 ${t.btnPrimary}`}>
+          <a href="/?sample=features/1-shapes" className={`shrink-0 ${t.btnPrimary}`}>
             Open in Editor →
           </a>
         </div>
@@ -306,7 +306,7 @@ export function VisualElements() {
               1-D arrays in all four directions, uniform and jagged 2-D grids.
             </p>
           </div>
-          <a href="/?sample=feature-3-arrays" className={`shrink-0 ${t.btnPrimary}`}>
+          <a href="/?sample=features/3-arrays" className={`shrink-0 ${t.btnPrimary}`}>
             Open in Editor →
           </a>
         </div>

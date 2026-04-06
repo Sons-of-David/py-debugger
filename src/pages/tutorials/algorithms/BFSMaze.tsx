@@ -160,7 +160,7 @@ export function BFSMaze() {
       </div>
 
       {/* Embedded preview */}
-      <EmbedPreview sample="1-bfs-maze" vx={0} vy={0} vw={12} vh={11}/>
+      <EmbedPreview sample="algorithms/1-bfs-maze" vx={0} vy={0} vw={12} vh={11}/>
 
       {/* CTA */}
       <div className={t.ctaBanner}>
@@ -170,7 +170,7 @@ export function BFSMaze() {
             Open it in the editor, click a cell to run BFS, and drag walls to reshape the maze.
           </p>
         </div>
-        <Link to="/?sample=1-bfs-maze" className={`shrink-0 ${t.btnPrimary}`}>
+        <Link to="/?sample=algorithms/1-bfs-maze" className={`shrink-0 ${t.btnPrimary}`}>
           Open in Editor →
         </Link>
       </div>

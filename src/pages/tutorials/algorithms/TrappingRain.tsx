@@ -119,7 +119,7 @@ export function TrappingRain() {
       </div>
 
       {/* Embedded preview */}
-      <EmbedPreview sample="4-trapping-rain" vx={0} vy={0} vw={16} vh={11} />
+      <EmbedPreview sample="algorithms/4-trapping-rain" vx={0} vy={0} vw={16} vh={11} />
 
       {/* CTA */}
       <div className={t.ctaBanner}>
@@ -129,7 +129,7 @@ export function TrappingRain() {
             Open it in the editor, drag bars, and click the button to re-run.
           </p>
         </div>
-        <Link to="/?sample=4-trapping-rain" className={`shrink-0 ${t.btnPrimary}`}>
+        <Link to="/?sample=algorithms/4-trapping-rain" className={`shrink-0 ${t.btnPrimary}`}>
           Open in Editor →
         </Link>
       </div>
@@ -321,7 +321,7 @@ export function TrappingRain() {
         <p className={t.muted}>
           The full <code className={t.inlineCode}>on_drag</code> signature and all its
           edge cases are listed in the API panel (top-right of the editor). The{' '}
-          <Link to="/?sample=feature-7-dragging" className={t.linkAccent}>dragging sample</Link>{' '}
+          <Link to="/?sample=features/7-dragging" className={t.linkAccent}>dragging sample</Link>{' '}
           shows a simple self contained example of dragging, and for more details about the 
           interaction mode <Link to="/tutorials/interaction-mode" className={t.linkAccent}>see here</Link>.
         </p>
@@ -379,7 +379,7 @@ export function TrappingRain() {
 
         <p className={t.muted}>
           For more click patterns, see the{' '}
-          <Link to="/?sample=feature-6-interactive" className={t.linkAccent}>click interaction sample</Link>.
+          <Link to="/?sample=features/6-interactive" className={t.linkAccent}>click interaction sample</Link>.
         </p>
       </section>
 

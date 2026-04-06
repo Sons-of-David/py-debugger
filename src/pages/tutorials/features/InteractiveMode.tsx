@@ -106,7 +106,7 @@ export function InteractiveMode() {
 
         <p className={`${t.muted} mt-3`}>
           See the{' '}
-          <Link to="/?sample=feature-6-interactive" className={t.linkAccent}>
+          <Link to="/?sample=features/6-interactive" className={t.linkAccent}>
             click interaction sample
           </Link>{' '}
           for a full example with buttons and{' '}
@@ -137,7 +137,7 @@ export function InteractiveMode() {
         <CodeBlock code={onDragCode} />
         <p className={`${t.muted} mt-3`}>
           See the{' '}
-          <Link to="/?sample=feature-7-dragging" className={t.linkAccent}>
+          <Link to="/?sample=features/7-dragging" className={t.linkAccent}>
             dragging sample
           </Link>{' '}
           for a drop-target example that changes color as the square crosses into it.
@@ -157,7 +157,7 @@ export function InteractiveMode() {
         <CodeBlock code={inputCode} />
         <p className={`${t.muted} mt-3`}>
           See the{' '}
-          <Link to="/?sample=feature-8-input" className={t.linkAccent}>
+          <Link to="/?sample=features/8-input" className={t.linkAccent}>
             input sample
           </Link>{' '}
           for a two-field numeric sum example.
@@ -180,7 +180,7 @@ export function InteractiveMode() {
             click the <MousePointerClick size={12} className="inline align-middle" /> button.
           </p>
         </div>
-        <Link to="/?sample=feature-6-interactive" className={`shrink-0 ${t.btnPrimary}`}>
+        <Link to="/?sample=features/6-interactive" className={`shrink-0 ${t.btnPrimary}`}>
           Open Example →
         </Link>
       </div>

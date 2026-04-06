@@ -26,7 +26,7 @@ export type FolderNode = {
 export type TreeNode = SampleEntry | FolderNode;
 
 function isLocalPath(parts: string[]): boolean {
-  return parts.some(p => p === 'local') || parts[parts.length - 1].startsWith('local-');
+  return parts.some(p => p === 'local');
 }
 
 function formatFolderName(name: string): string {
@@ -35,8 +35,6 @@ function formatFolderName(name: string): string {
 }
 
 function makeDisplayName(filename: string): string {
-  if (filename.startsWith('feature-')) return filename.slice('feature-'.length);
-  if (filename.startsWith('local-')) return filename.slice('local-'.length);
   return filename;
 }
 
