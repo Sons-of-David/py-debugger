@@ -47,6 +47,7 @@ export interface SaveFile {
 
 const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 const AUTO_ANALYZE_ON_LOAD = true; // set to false to disable auto-analyze when loading a file
+const DEFAULT_SAMPLE_RAWNAME = 'algorithms/1-bfs-maze'; // loaded on init when no ?sample= param is given
 
 import { SAMPLES } from './sampleRegistry';
 
@@ -210,14 +211,14 @@ function App() {
 
   const [searchParams] = useSearchParams();
 
-  // Auto-load sample on mount — prefer ?sample= URL param, fall back to first sample
+  // Auto-load sample on mount — prefer ?sample= URL param, then DEFAULT_SAMPLE_RAWNAME, then first sample
   useEffect(() => {
     if (!pyodideReady || autoLoadedRef.current || SAMPLES.length === 0) return;
     autoLoadedRef.current = true;
     const sampleParam = searchParams.get('sample');
     const target = sampleParam
       ? (SAMPLES.find((s) => s.rawName === sampleParam) ?? SAMPLES[0])
-      : SAMPLES[0];
+      : (SAMPLES.find((s) => s.rawName === DEFAULT_SAMPLE_RAWNAME) ?? SAMPLES[0]);
     handleLoad(target.data, target.rawName);
   }, [pyodideReady, handleLoad, searchParams]);
 
