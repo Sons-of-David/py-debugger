@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import type { SaveFile } from './App';
-import { SAMPLES } from './sampleRegistry';
+import { SAMPLES_TREE, type SampleEntry, type FolderNode, type TreeNode } from './sampleRegistry';
 
 const buttonBase = 'px-3 py-1 rounded text-sm font-medium transition-colors';
 const buttonNeutral = `${buttonBase} bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600`;
@@ -8,6 +8,76 @@ const buttonNeutral = `${buttonBase} bg-gray-100 dark:bg-gray-700 hover:bg-gray-
 interface SamplesMenuProps {
   onLoad: (data: SaveFile, name: string) => void;
   serializeProject: () => { name: string; content: string };
+}
+
+interface RowHandlers {
+  onLoad: (data: SaveFile, name: string) => void;
+  setSamplesOpen: (open: boolean) => void;
+  copiedKey: string | null;
+  copyToClipboard: (text: string, key: string) => void;
+}
+
+function SampleRow({ displayName, rawName, data, handlers }: SampleEntry & { handlers: RowHandlers }) {
+  const { onLoad, setSamplesOpen, copiedKey, copyToClipboard } = handlers;
+  return (
+    <div className="flex items-center px-2 py-0.5 hover:bg-gray-100 dark:hover:bg-gray-700 gap-1">
+      <button
+        type="button"
+        className="flex-1 text-left px-2 py-1.5 text-sm text-gray-700 dark:text-gray-200"
+        onClick={() => { onLoad(data, rawName); setSamplesOpen(false); }}
+      >
+        {displayName}
+      </button>
+      <button
+        type="button"
+        title="Copy link"
+        className="px-2 py-0.5 rounded text-xs font-medium text-gray-400 dark:text-gray-500 hover:bg-indigo-100 dark:hover:bg-indigo-900 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
+        onClick={() => copyToClipboard(`${window.location.origin}/?sample=${encodeURIComponent(rawName)}`, `${rawName}-link`)}
+      >
+        {copiedKey === `${rawName}-link` ? 'Copied!' : '🔗'}
+      </button>
+      {import.meta.env.DEV && (
+        <button
+          type="button"
+          title="Copy iframe HTML"
+          className="px-2 py-0.5 rounded text-xs font-medium text-gray-400 dark:text-gray-500 hover:bg-amber-100 dark:hover:bg-amber-900 hover:text-amber-600 dark:hover:text-amber-300 transition-colors"
+          onClick={() => copyToClipboard(`<iframe src="${window.location.origin}/embed?sample=${encodeURIComponent(rawName)}&dark=1" width="800" height="500" style="border:none" frameborder="0"></iframe>`, `${rawName}-iframe`)}
+        >
+          {copiedKey === `${rawName}-iframe` ? 'Copied!' : '</>'}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function FolderSection({ node, depth, handlers }: { node: FolderNode; depth: number; handlers: RowHandlers }) {
+  const [open, setOpen] = useState(true);
+  const indent = depth * 12;
+  return (
+    <div>
+      <button
+        type="button"
+        style={{ paddingLeft: indent + 12 }}
+        className="w-full text-left py-1 pr-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex items-center gap-1"
+        onClick={() => setOpen(o => !o)}
+      >
+        <span className="text-[10px]">{open ? '▾' : '▸'}</span>
+        {node.displayName}
+      </button>
+      {open && (
+        <div style={{ paddingLeft: indent }}>
+          {node.children.map(child => (
+            <TreeNodeView key={child.type === 'folder' ? child.name : child.rawName} node={child} depth={depth + 1} handlers={handlers} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TreeNodeView({ node, depth, handlers }: { node: TreeNode; depth: number; handlers: RowHandlers }) {
+  if (node.type === 'folder') return <FolderSection node={node} depth={depth} handlers={handlers} />;
+  return <SampleRow {...node} handlers={handlers} />;
 }
 
 export function SamplesMenu({ onLoad, serializeProject }: SamplesMenuProps) {
@@ -37,6 +107,8 @@ export function SamplesMenu({ onLoad, serializeProject }: SamplesMenuProps) {
     setTimeout(() => setCopiedKey(null), 1500);
   }, []);
 
+  const handlers: RowHandlers = { onLoad, setSamplesOpen, copiedKey, copyToClipboard };
+
   return (
     <div className="relative">
       <button type="button" onClick={() => setSamplesOpen((o) => !o)} className={buttonNeutral}>
@@ -46,66 +118,13 @@ export function SamplesMenu({ onLoad, serializeProject }: SamplesMenuProps) {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setSamplesOpen(false)} />
           <div className="absolute left-0 top-full mt-1 z-50 min-w-[220px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded shadow-lg py-1">
-            <div className="px-3 py-1 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Algorithms</div>
-            {SAMPLES.filter(s => s.category === 'algorithm').map(({ displayName, rawName, data }) => (
-              <div key={rawName} className="flex items-center px-2 py-0.5 hover:bg-gray-100 dark:hover:bg-gray-700 gap-1">
-                <button
-                  type="button"
-                  className="flex-1 text-left px-2 py-1.5 text-sm text-gray-700 dark:text-gray-200"
-                  onClick={() => { onLoad(data, rawName); setSamplesOpen(false); }}
-                >
-                  {displayName}
-                </button>
-                <button
-                  type="button"
-                  title="Copy link"
-                  className="px-2 py-0.5 rounded text-xs font-medium text-gray-400 dark:text-gray-500 hover:bg-indigo-100 dark:hover:bg-indigo-900 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
-                  onClick={() => copyToClipboard(`${window.location.origin}/?sample=${encodeURIComponent(rawName)}`, `${rawName}-link`)}
-                >
-                  {copiedKey === `${rawName}-link` ? 'Copied!' : '🔗'}
-                </button>
-                {import.meta.env.DEV && (
-                  <button
-                    type="button"
-                    title="Copy iframe HTML"
-                    className="px-2 py-0.5 rounded text-xs font-medium text-gray-400 dark:text-gray-500 hover:bg-amber-100 dark:hover:bg-amber-900 hover:text-amber-600 dark:hover:text-amber-300 transition-colors"
-                    onClick={() => copyToClipboard(`<iframe src="${window.location.origin}/embed?sample=${encodeURIComponent(rawName)}&dark=1" width="800" height="500" style="border:none" frameborder="0"></iframe>`, `${rawName}-iframe`)}
-                  >
-                    {copiedKey === `${rawName}-iframe` ? 'Copied!' : '</>'}
-                  </button>
-                )}
-              </div>
-            ))}
-            <div className="my-1 border-t border-gray-200 dark:border-gray-600" />
-            <div className="px-3 py-1 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Features</div>
-            {SAMPLES.filter(s => s.category === 'feature').map(({ displayName, rawName, data }) => (
-              <div key={rawName} className="flex items-center px-2 py-0.5 hover:bg-gray-100 dark:hover:bg-gray-700 gap-1">
-                <button
-                  type="button"
-                  className="flex-1 text-left px-2 py-1.5 text-sm text-gray-700 dark:text-gray-200"
-                  onClick={() => { onLoad(data, rawName); setSamplesOpen(false); }}
-                >
-                  {displayName}
-                </button>
-                <button
-                  type="button"
-                  title="Copy link"
-                  className="px-2 py-0.5 rounded text-xs font-medium text-gray-400 dark:text-gray-500 hover:bg-indigo-100 dark:hover:bg-indigo-900 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
-                  onClick={() => copyToClipboard(`${window.location.origin}/?sample=${encodeURIComponent(rawName)}`, `${rawName}-link`)}
-                >
-                  {copiedKey === `${rawName}-link` ? 'Copied!' : '🔗'}
-                </button>
-                {import.meta.env.DEV && (
-                  <button
-                    type="button"
-                    title="Copy iframe HTML"
-                    className="px-2 py-0.5 rounded text-xs font-medium text-gray-400 dark:text-gray-500 hover:bg-amber-100 dark:hover:bg-amber-900 hover:text-amber-600 dark:hover:text-amber-300 transition-colors"
-                    onClick={() => copyToClipboard(`<iframe src="${window.location.origin}/embed?sample=${encodeURIComponent(rawName)}&dark=1" width="800" height="500" style="border:none" frameborder="0"></iframe>`, `${rawName}-iframe`)}
-                  >
-                    {copiedKey === `${rawName}-iframe` ? 'Copied!' : '</>'}
-                  </button>
-                )}
-              </div>
+            {SAMPLES_TREE.map(node => (
+              <TreeNodeView
+                key={node.type === 'folder' ? node.name : node.rawName}
+                node={node}
+                depth={0}
+                handlers={handlers}
+              />
             ))}
             {import.meta.env.DEV && (
               <>
