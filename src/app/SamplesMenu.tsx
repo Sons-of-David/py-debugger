@@ -50,8 +50,8 @@ function SampleRow({ displayName, rawName, data, handlers }: SampleEntry & { han
   );
 }
 
-function FolderSection({ node, depth, handlers }: { node: FolderNode; depth: number; handlers: RowHandlers }) {
-  const [open, setOpen] = useState(false);
+function FolderSection({ node, depth, handlers, folderOpen, setFolderOpen }: { node: FolderNode; depth: number; handlers: RowHandlers; folderOpen: (key: string) => boolean; setFolderOpen: (key: string, open: boolean) => void }) {
+  const open = folderOpen(node.name);
   const indent = depth * 12;
   return (
     <div>
@@ -59,7 +59,7 @@ function FolderSection({ node, depth, handlers }: { node: FolderNode; depth: num
         type="button"
         style={{ paddingLeft: indent + 12 }}
         className="w-full text-left py-1 pr-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex items-center gap-1"
-        onClick={() => setOpen(o => !o)}
+        onClick={() => setFolderOpen(node.name, !open)}
       >
         <span className="text-base leading-none">{open ? '▾' : '▸'}</span>
         {node.displayName}
@@ -67,7 +67,7 @@ function FolderSection({ node, depth, handlers }: { node: FolderNode; depth: num
       {open && (
         <div style={{ paddingLeft: indent }}>
           {node.children.map(child => (
-            <TreeNodeView key={child.type === 'folder' ? child.name : child.rawName} node={child} depth={depth + 1} handlers={handlers} />
+            <TreeNodeView key={child.type === 'folder' ? child.name : child.rawName} node={child} depth={depth + 1} handlers={handlers} folderOpen={folderOpen} setFolderOpen={setFolderOpen} />
           ))}
         </div>
       )}
@@ -75,13 +75,18 @@ function FolderSection({ node, depth, handlers }: { node: FolderNode; depth: num
   );
 }
 
-function TreeNodeView({ node, depth, handlers }: { node: TreeNode; depth: number; handlers: RowHandlers }) {
-  if (node.type === 'folder') return <FolderSection node={node} depth={depth} handlers={handlers} />;
+interface TreeNodeProps { node: TreeNode; depth: number; handlers: RowHandlers; folderOpen: (key: string) => boolean; setFolderOpen: (key: string, open: boolean) => void; }
+
+function TreeNodeView({ node, depth, handlers, folderOpen, setFolderOpen }: TreeNodeProps) {
+  if (node.type === 'folder') return <FolderSection node={node} depth={depth} handlers={handlers} folderOpen={folderOpen} setFolderOpen={setFolderOpen} />;
   return <SampleRow {...node} handlers={handlers} />;
 }
 
 export function SamplesMenu({ onLoad, serializeProject }: SamplesMenuProps) {
   const [samplesOpen, setSamplesOpen] = useState(false);
+  const [folderOpenMap, setFolderOpenMap] = useState<Record<string, boolean>>({});
+  const folderOpen = useCallback((key: string) => folderOpenMap[key] ?? false, [folderOpenMap]);
+  const setFolderOpen = useCallback((key: string, open: boolean) => setFolderOpenMap(m => ({ ...m, [key]: open })), []);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [saveSampleStatus, setSaveSampleStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
@@ -124,6 +129,8 @@ export function SamplesMenu({ onLoad, serializeProject }: SamplesMenuProps) {
                 node={node}
                 depth={0}
                 handlers={handlers}
+                folderOpen={folderOpen}
+                setFolderOpen={setFolderOpen}
               />
             ))}
             {import.meta.env.DEV && (
