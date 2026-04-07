@@ -21,6 +21,9 @@ dist-ssr
 __pycache__/
 *.pyc
 
+# Local test fixtures and sample test data (gitignored — run generate_fixtures.py to create)
+src/samples/test/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

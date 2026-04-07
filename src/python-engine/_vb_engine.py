@@ -57,6 +57,8 @@ class VisualElem:
         VisualElem._registry.clear()
         VisualElem._vis_elem_id = 0
         V._count = 0
+        V.params = {}
+        V.scope = []
 
     def __init__(self, x=0, y=0, visible=True, alpha=1.0, z=0, animate=True):
         self.x = x
