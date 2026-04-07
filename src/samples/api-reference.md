@@ -1,6 +1,6 @@
 # Combined Editor — Python API Reference
 
-[← dev-notes](./dev-notes.md)
+[← dev-notes](../dev-notes/dev-notes.md)
 
 Quick reference for writing `code` in sample JSON files (in `src/samples`). Check this before writing any sample. Update it when you discover new patterns or verify uncertain behavior.
 
@@ -21,6 +21,8 @@ All shapes share: `x` (col), `y` (row), `width`, `height`, `visible`, `alpha`, `
 | `Panel(name='', x, y, width=1, height=1, show_border=False, ...)` | transparent container | Children use relative coords. See below. |
 | `Input(x, y, width=3, height=1, color=(99,102,241), value='', placeholder='', ...)` | text input | Has `input_changed(text)` and `get_input()` |
 | `Line(start=(0,0), end=(1,1), color=(239,68,68), stroke_weight=2, start_cap='none', end_cap='arrow', start_offset=(0.5,0.5), end_offset=(0.5,0.5), z=0)` | directed line | `start`/`end` are `(row, col)` tuples. `start_cap`/`end_cap`: `'none'` or `'arrow'`. `*_offset`: `(x,y)` 0–1 anchor within the target cell. **Not clickable/draggable** |
+| `Array(cells=[], x, y, direction='right', show_index=True, color=None, visible=True, z=0)` | empty 1D list | Displays a list as a labeled row (or column if `direction='down'`). `cells` elements must be primitives. **Not clickable/draggable** |
+| `Array2D(cells=[], x, y, show_index=True, color=None, rectangular=True, visible=True, z=0)` | empty 2D list | Displays a list-of-lists as a grid. **Not clickable/draggable** |
 
 ### `delete()`
 All shapes: `elem.delete()` removes from canvas and parent panel.
@@ -76,7 +78,7 @@ class Btn(Rect):
 
 ## Interaction Priority (objects-map rule)
 
-`loadVisualBuilderObjects` stores **one entry per absolute cell position**. The element created **last** (highest `_elem_id`) wins that cell's click/drag registration.
+`loadGridObjects` stores **one entry per absolute cell position**. The element created **last** (highest `_elem_id`) wins that cell's click/drag registration.
 
 **Rule:** create backgrounds and labels **before** interactive elements at the same position.
 
@@ -150,6 +152,38 @@ for i in range(5):  # rect.width updates automatically
 
 `x` and `y` coordinate are always relative to the containing panel, and if there
 isn't such, then to the top left corner of the grid.
+
+---
+
+## Code Comment Style
+
+All sample files follow a consistent comment convention so the code is easy to scan.
+
+### File header block
+
+Every sample opens with a header that names the sample, states the interaction mode, and lists key interactions:
+
+```python
+# ── Title — brief tagline ─────────────────────────────────────────────────────
+# Mode note — e.g. "Trace-mode algorithm. Click Analyze, then step through."
+#
+# What the user sees / does (bullet points for interactive samples):
+#  • Action    → what happens
+#  • Action    → what happens
+# ─────────────────────────────────────────────────────────────────────────────
+```
+
+The horizontal rule uses `─` (U+2500, box-drawing dash), not plain `-`, and extends to ~80 chars.
+
+### Section dividers
+
+Logical blocks inside the code are separated with a short titled rule:
+
+```python
+# ── Section name ──────────────────────────────────────────────────────────────
+```
+
+Common section names: `Colors`, `Board state`, `Event handlers`, `Visual elements`, `Clear button`.
 
 ---
 
@@ -252,7 +286,7 @@ Block(x=2, y=3, animate=False)
 
 ### Standard text box style
 
-Algorithm-explanation text boxes use this canonical style (reference: `2-binary-search.json`):
+Algorithm-explanation text boxes use this canonical style (reference: `algorithms/2-binary-search.json`):
 
 ```
 bgColor:          #444444
