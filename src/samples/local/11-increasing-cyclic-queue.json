@@ -1,0 +1,249 @@
+{
+  "userCode": "# ── Increasing Cyclic Queue ─────────────────────────────────────────────────\n# Interactive mode — click Analyze, then \"Finish & Interact\" to start.\n#\n# Demonstrates a dynamic queue backed by a resizable cyclic array.\n#  • Click \"add\"    → enqueue a random element; the array doubles when full\n#  • Click \"remove\" → dequeue the front element; the array halves when ≤ 25% full\n#  • The arrow (↑)  marks the start (front) pointer in the underlying array\n# ─────────────────────────────────────────────────────────────────────────────\n\n# ── Queue implementation ──────────────────────────────────────────────────────\n\nclass TwoSidedCyclicQueue:\n    def __init__(self, size: int, start_index: int = 0):\n        start_index %= size\n        self.prev_arr = ['_']\n        self.arr=['_'] * size\n        self.start = start_index  # first index in the cyclic implementation (include)\n        self.end = start_index    # last  index in the cyclic implementation (exclude)\n        self._len = 0\n        self._max_size = size\n\n    def __len__(self):\n        return self._len\n\n    def enqueue(self, value: int, to_end: bool = True):\n        if len(self) == self._max_size:            \n            raise Exception('No more room to increase queue')\n            \n        if to_end:\n            self.arr[self.end] = value\n            self.end += 1\n            if self.end == self._max_size:\n                self.end = 0\n        else:\n            self.start -= 1\n            if self.start == -1:\n                self.start = self._max_size - 1\n            self.arr[self.start] = value\n        self._len += 1\n\n    def dequeue(self, from_start: bool = True) -> int:\n        if len(self) == 0:\n            raise Exception('Cannot remove element from an empty queue')\n\n        if from_start:\n            result = self.arr[self.start]\n            self.arr[self.start] = '_'\n            self.start += 1\n            if self.start == self._max_size:\n                self.start = 0\n        else:\n            self.end -= 1\n            if self.end == -1:\n                self.end = self._max_size - 1\n            result = self.arr[self.end]\n            self.arr[self.end] = '_'\n        self._len -= 1\n\n        return result\n\nclass ImprovedQueue:\n    \"\"\"\n    An increasing\\decreasing queue, but all actions are in O(1)\n    \"\"\"\n\n    def __init__(self, initial_size: int):\n        self._cur_queue = TwoSidedCyclicQueue(initial_size)\n        self._prev_queue = TwoSidedCyclicQueue(initial_size)\n        self._max_size = initial_size\n        self._len = 0\n\n    def __len__(self):\n        return self._len\n\n    def enqueue(self, value: int):\n        if len(self) == self._max_size:\n            assert len(self._prev_queue) == 0\n            index = self._cur_queue.end\n            if index == 0:\n                index += self._max_size\n            self._prev_queue = self._cur_queue\n            self._max_size *= 2\n            print(self._prev_queue.end)\n            self._cur_queue = TwoSidedCyclicQueue(self._max_size, start_index = index)\n        \n        if len(self._prev_queue) > 0:\n            elem = self._prev_queue.dequeue(from_start = False)\n            self._cur_queue.enqueue(elem, to_end = False)\n\n        self._cur_queue.enqueue(value)\n        self._len += 1\n\n    def dequeue(self) -> int:\n        if len(self) == 0:\n            raise Exception('Cannot remove element from an empty queue')\n        \n        if len(self._prev_queue) > 0:\n            result = self._prev_queue.dequeue()\n        else:\n            result = self._cur_queue.dequeue()\n        \n        if len(self._prev_queue) > 0:\n            elem = self._prev_queue.dequeue(from_start = False)\n            self._cur_queue.enqueue(elem, to_end = False)\n            \n        self._len -= 1\n\n        if len(self) <= self._max_size // 4:\n            assert len(self._prev_queue) == 0\n            self._prev_queue = self._cur_queue\n            self._max_size //= 2\n            self._cur_queue = TwoSidedCyclicQueue(self._max_size)\n\nqueue = ImprovedQueue(2)\n\n# @viz\nimport random\n\n# ── UI classes ────────────────────────────────────────────────────────────────\n\nclass LabeledButton(Panel):\n    def __init__(self, label: str, color: tuple[int, int, int], on_click: callable, **kwargs):\n        super().__init__(**kwargs)\n        dimension = {'width': kwargs.get('width', 1), 'height': kwargs.get('height', 1)}\n        self.rect = Rect(**dimension, color=color)\n        self.rect.on_click = on_click\n        self.add(\n            self.rect,\n            Label(label=label, **dimension)\n        )\n\n# ── Event handlers ────────────────────────────────────────────────────────────\n\nelements = list(range(100))\npanel = Panel(x=2, y=2)\ndef add_event(x: int, y: int):\n    elem = elements.pop(random.randint(0, len(elements)-1))\n    no_debug(queue.enqueue)(elem)\n\ndef remove_event(x: int, y: int):\n    result = no_debug(queue.dequeue)()\n    print(f'poped {result}')\n    elements.append(result)\n\n# ── Visual elements ───────────────────────────────────────────────────────────\n\npanel.add(\n    LabeledButton(label='add', width=2, color=(150,100,150), on_click=add_event),\n    Label(label=V('len(queue)'), x=3),\n    LabeledButton(label='remove', x=5, width=2, color=(100,150,150), on_click=remove_event),\n    Array(cells=V('queue._prev_queue.arr'), y=2),\n    Arrow(angle=Arrow.UP, x=V('queue._prev_queue.start'), y=3),\n    Array(cells=V('queue._cur_queue.arr'), y=4),\n    Arrow(angle=Arrow.UP, x=V('queue._cur_queue.start'), y=5, color=(140,110,180)),\n)\n# @end\n\n",
+  "visualPanel": {
+    "textBoxes": [
+      {
+        "id": "text-cyclic-queue-explain",
+        "row": 9,
+        "col": 2,
+        "widthCells": 12,
+        "heightCells": 9,
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#ffb43f",
+                        "fontSize": "24px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Cyclic Queue:"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#ff8c82",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Problem"
+                },
+                {
+                  "type": "text",
+                  "text": ":"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "Implement a queue that uses O(n) space and supports O(1) amortized enqueue and dequeue, even as the number of elements grows and shrinks."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#96d35f",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Algorithm"
+                },
+                {
+                  "type": "text",
+                  "text": ":"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "The queue is backed by a cyclic array with two pointers: "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "start"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": " (front, inclusive) and "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "end"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": " (back, exclusive). Both advance cyclically, wrapping around when they reach the array boundary."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "When the array is full, it is unrolled and "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "doubled"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": ". When usage drops to ≤ 25%, it is "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "halved"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": ". Each element causes at most one resize, so both operations are O(1) amortized."
+                }
+              ]
+            }
+          ]
+        },
+        "bgColor": "#444444"
+      }
+    ]
+  }
+}
