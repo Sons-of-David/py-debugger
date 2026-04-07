@@ -84,6 +84,7 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
 
     const gridRef = useRef<GridHandle>(null);
     const [textBoxes, setTextBoxes] = useState<TextBox[]>([]);
+    const [hoverCell, setHoverCell] = useState<{ col: number; row: number } | null>(null);
     const [addingTextBox, setAddingTextBox] = useState(false);
     const [selectedTextBoxId, setSelectedTextBoxId] = useState<string | null>(null);
 
@@ -271,6 +272,11 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
                 T+
               </button>
             </div>
+            {hoverCell && (
+              <span className="text-xs text-gray-400 dark:text-gray-500 font-mono">
+                ({hoverCell.col}, {hoverCell.row})
+              </span>
+            )}
           </div>
         )}
 
@@ -297,6 +303,7 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
             capturingRegion={capturingRegionMode}
             captureRegionBounds={captureRegion}
             onCaptureRegionDrawn={handleCaptureRegionDrawn}
+            onHoverCell={(col, row) => setHoverCell({ col, row })}
           />
         </div>
       </div>

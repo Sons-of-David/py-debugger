@@ -51,6 +51,7 @@ interface GridProps {
   // Fired when user clicks anywhere on the grid in trace mode (background or object).
   // Rendered below text boxes so text boxes remain interactive.
   onTraceClick?: () => void;
+  onHoverCell?: (col: number, row: number) => void;
   // Capture region props
   capturingRegion?: boolean;
   captureRegionBounds?: CaptureRegion | null;
@@ -84,6 +85,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
   onTextBoxChange,
   onTextBoxDelete,
   onTraceClick,
+  onHoverCell,
   capturingRegion = false,
   captureRegionBounds = null,
   onCaptureRegionDrawn,
@@ -131,8 +133,9 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
   }, []);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!dragStateRef.current || dragCallInFlightRef.current) return;
     const [absRow, absCol] = getCellFromMouseEvent(e);
+    onHoverCell?.(absCol, absRow);
+    if (!dragStateRef.current || dragCallInFlightRef.current) return;
     const { elemId, lastRow, lastCol, panelOriginCol, panelOriginRow } = dragStateRef.current;
     const col = absCol - panelOriginCol;
     const row = absRow - panelOriginRow;
@@ -144,7 +147,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
     // returns a Promise (async) or void (sync / not defined).
     Promise.resolve(onElementDragRef.current?.(elemId, col, row, 'mid'))
       .finally(() => { dragCallInFlightRef.current = false; });
-  }, [getCellFromMouseEvent]);
+  }, [getCellFromMouseEvent, onHoverCell]);
 
   // ── Grid setup ──────────────────────────────────────────────────────────
 

@@ -51,7 +51,7 @@ function SampleRow({ displayName, rawName, data, handlers }: SampleEntry & { han
 }
 
 function FolderSection({ node, depth, handlers }: { node: FolderNode; depth: number; handlers: RowHandlers }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const indent = depth * 12;
   return (
     <div>
@@ -61,7 +61,7 @@ function FolderSection({ node, depth, handlers }: { node: FolderNode; depth: num
         className="w-full text-left py-1 pr-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex items-center gap-1"
         onClick={() => setOpen(o => !o)}
       >
-        <span className="text-[10px]">{open ? '▾' : '▸'}</span>
+        <span className="text-base leading-none">{open ? '▾' : '▸'}</span>
         {node.displayName}
       </button>
       {open && (
