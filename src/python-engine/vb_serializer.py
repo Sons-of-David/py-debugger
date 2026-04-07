@@ -234,7 +234,7 @@ def _exec_traced(execute_fn):
             object.__getattribute__(e, '_dirty')
             for e in _engine.VisualElem._registry
         )
-        if capture.getvalue()[last_stdout_pos[0]:] or has_dirty:
+        if capture.getvalue()[last_stdout_pos[0]:] or has_dirty or len(steps) == 0:
             # If last_line is None, no non-viz line was ever traced — all executed code
             # was inside viz blocks (e.g. a click handler defined in a viz block).
             snap(final_scope, last_line[0], is_viz=last_line[0] is None)
