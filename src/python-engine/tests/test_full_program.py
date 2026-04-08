@@ -1,13 +1,16 @@
 """Full-program regression tests.
 
 For each fixture file under src/samples/test/fixtures/, loads the
-corresponding sample from src/samples/, runs it through the Python engine,
-and asserts the output matches the stored fixture.
+corresponding sample from src/samples/test/, runs it through the Python
+engine, and asserts the output matches the stored fixture.
+
+Test samples are small, curated JSON files in src/samples/test/ (visible
+in the app locally, like the local/ folder).
 
 Fixtures are generated (or regenerated) by running:
     python src/samples/test/generate_fixtures.py
 
-Tests are skipped (with a warning) when no fixture files are present yet.
+Tests are skipped when no fixture files are present yet.
 """
 
 import sys
@@ -27,30 +30,23 @@ sys.path.insert(0, IMPORTS_DIR)
 import profiler as _profiler
 import vb_serializer as _ser
 
-FIXTURES_DIR = os.path.join(ROOT, 'src', 'samples', 'test', 'fixtures')
-SAMPLES_DIR  = os.path.join(ROOT, 'src', 'samples')
+TEST_SAMPLES_DIR = os.path.join(ROOT, 'src', 'samples', 'test')
+FIXTURES_DIR     = os.path.join(TEST_SAMPLES_DIR, 'fixtures')
 
 
 def _fixture_paths():
     """Return all .json fixture paths, or an empty list if the directory doesn't exist."""
     if not os.path.isdir(FIXTURES_DIR):
         return []
-    return sorted(glob.glob(os.path.join(FIXTURES_DIR, '**', '*.json'), recursive=True))
-
-
-def _sample_path_for_fixture(fixture_path: str) -> str:
-    """Derive the sample JSON path from a fixture path."""
-    rel = os.path.relpath(fixture_path, FIXTURES_DIR)   # e.g. algorithms/1-bfs-maze.json
-    return os.path.join(SAMPLES_DIR, rel)
+    return sorted(glob.glob(os.path.join(FIXTURES_DIR, '*.json')))
 
 
 def _run_sample(user_code: str) -> dict:
     """Run user_code through the engine and return parsed result dict."""
-    import json as _json
-    viz_ranges_json = _json.dumps(_profiler.get_viz_ranges(user_code))
+    viz_ranges_json = json.dumps(_profiler.get_viz_ranges(user_code))
     _ser._init_namespace(viz_ranges_json)
     preprocessed = _profiler.preprocess(user_code)
-    return _json.loads(_ser._exec_code(preprocessed))
+    return json.loads(_ser._exec_code(preprocessed))
 
 
 # ── Parametrized regression test ──────────────────────────────────────────────
@@ -61,13 +57,16 @@ fixture_paths = _fixture_paths()
     len(fixture_paths) == 0,
     reason=(
         "No fixture files found under src/samples/test/fixtures/. "
-        "Run `python src/samples/test/generate_fixtures.py` to generate them."
+        "Add test samples to src/samples/test/ then run "
+        "`python src/samples/test/generate_fixtures.py`."
     ),
 )
 @pytest.mark.parametrize("fixture_path", fixture_paths,
-                         ids=[os.path.relpath(p, FIXTURES_DIR) for p in fixture_paths])
+                         ids=[os.path.basename(p) for p in fixture_paths])
 def test_full_program(fixture_path):
-    sample_path = _sample_path_for_fixture(fixture_path)
+    # The sample JSON lives alongside the fixture, in src/samples/test/
+    sample_name = os.path.basename(fixture_path)
+    sample_path = os.path.join(TEST_SAMPLES_DIR, sample_name)
     assert os.path.isfile(sample_path), (
         f"Sample file not found: {sample_path}\n"
         f"(fixture: {fixture_path})"
@@ -81,8 +80,7 @@ def test_full_program(fixture_path):
 
     actual = _run_sample(user_code)
 
-    # Drop profiling console output — it varies by run time and is not meaningful
-    # as a regression signal.
+    # Drop profiling console output — varies by run time, not a regression signal.
     actual.pop('console', None)
     expected.pop('console', None)
 
