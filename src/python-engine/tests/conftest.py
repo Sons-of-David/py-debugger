@@ -18,8 +18,10 @@ import pytest
 
 # ── Path setup ────────────────────────────────────────────────────────────────
 HERE = os.path.dirname(os.path.abspath(__file__))
-PYTHON_ENGINE_DIR = os.path.dirname(HERE)  # src/python-engine/
+PYTHON_ENGINE_DIR = os.path.dirname(HERE)          # src/python-engine/
+IMPORTS_DIR = os.path.join(PYTHON_ENGINE_DIR, 'imports')  # graphs, array_utils, etc.
 sys.path.insert(0, PYTHON_ENGINE_DIR)
+sys.path.insert(0, IMPORTS_DIR)
 
 # Re-use helpers already defined in profiler.py rather than duplicating them.
 import profiler as _profiler  # noqa: E402  (path must be set first)

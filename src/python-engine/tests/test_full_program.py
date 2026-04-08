@@ -20,7 +20,9 @@ import pytest
 HERE = os.path.dirname(os.path.abspath(__file__))
 PYTHON_ENGINE_DIR = os.path.dirname(HERE)
 ROOT = os.path.join(PYTHON_ENGINE_DIR, '..', '..')
+IMPORTS_DIR = os.path.join(PYTHON_ENGINE_DIR, 'imports')  # graphs, array_utils, etc.
 sys.path.insert(0, PYTHON_ENGINE_DIR)
+sys.path.insert(0, IMPORTS_DIR)
 
 import profiler as _profiler
 import vb_serializer as _ser
