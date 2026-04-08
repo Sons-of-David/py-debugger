@@ -195,6 +195,14 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
     );
   }, [objects]);
 
+  // TODO: add React component tests for renderedObjects.
+  // These tests would take the output of buildGridObjects (from useGridState),
+  // render each GridSingleObject via @testing-library/react, and assert:
+  //   - Correct SVG/DOM shape rendered for each element type (Rect, Circle, Arrow, etc.)
+  //   - Click / drag / input events fire onElementClick / onElementDragStart / onElementInput
+  //   - changedIds highlights the correct element
+  //   - z-order (objectsToRender sort) reflects the rendered stack order
+  // See src/visual-panel/hooks/tests/buildGridObjects.test.ts for the data-layer precedent.
   const renderedObjects = useMemo(() => {
     return objectsToRender.map((obj) => (
       <GridSingleObject
