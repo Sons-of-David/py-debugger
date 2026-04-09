@@ -11,17 +11,17 @@ and vb_serializer can be imported directly.  Provides two shared fixtures:
 """
 
 import sys
-import os
 import json
+from pathlib import Path
 
 import pytest
 
 # ── Path setup ────────────────────────────────────────────────────────────────
-HERE = os.path.dirname(os.path.abspath(__file__))
-PYTHON_ENGINE_DIR = os.path.dirname(HERE)          # src/python-engine/
-IMPORTS_DIR = os.path.join(PYTHON_ENGINE_DIR, 'imports')  # graphs, array_utils, etc.
-sys.path.insert(0, PYTHON_ENGINE_DIR)
-sys.path.insert(0, IMPORTS_DIR)
+_TESTS_DIR        = Path(__file__).parent
+PYTHON_ENGINE_DIR = _TESTS_DIR.parent            # src/python-engine/
+IMPORTS_DIR       = PYTHON_ENGINE_DIR / 'imports'  # graphs, array_utils, etc.
+sys.path.insert(0, str(PYTHON_ENGINE_DIR))
+sys.path.insert(0, str(IMPORTS_DIR))
 
 # Re-use helpers already defined in profiler.py rather than duplicating them.
 import profiler as _profiler  # noqa: E402  (path must be set first)

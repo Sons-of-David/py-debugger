@@ -5,10 +5,7 @@ namespace and element registry, then dispatches an event and asserts
 on the resulting timeline.
 """
 
-import sys
-import os
 import json
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
 import _vb_engine as _engine

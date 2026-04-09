@@ -13,32 +13,24 @@ Fixtures are generated (or regenerated) by running:
 Tests are skipped when no fixture files are present yet.
 """
 
-import sys
-import os
 import json
-import glob
+from pathlib import Path
 
 import pytest
-
-HERE = os.path.dirname(os.path.abspath(__file__))
-PYTHON_ENGINE_DIR = os.path.dirname(HERE)
-ROOT = os.path.join(PYTHON_ENGINE_DIR, '..', '..')
-IMPORTS_DIR = os.path.join(PYTHON_ENGINE_DIR, 'imports')  # graphs, array_utils, etc.
-sys.path.insert(0, PYTHON_ENGINE_DIR)
-sys.path.insert(0, IMPORTS_DIR)
 
 import profiler as _profiler
 import vb_serializer as _ser
 
-TEST_SAMPLES_DIR = os.path.join(ROOT, 'src', 'samples', 'test')
-FIXTURES_DIR     = os.path.join(TEST_SAMPLES_DIR, 'fixtures')
+ROOT             = Path(__file__).parent.parent.parent.parent
+TEST_SAMPLES_DIR = ROOT / 'src' / 'samples' / 'test'
+FIXTURES_DIR     = TEST_SAMPLES_DIR / 'fixtures'
 
 
 def _fixture_paths():
     """Return all .json fixture paths, or an empty list if the directory doesn't exist."""
-    if not os.path.isdir(FIXTURES_DIR):
+    if not FIXTURES_DIR.is_dir():
         return []
-    return sorted(glob.glob(os.path.join(FIXTURES_DIR, '*.json')))
+    return sorted(FIXTURES_DIR.glob('*.json'))
 
 
 def _run_sample(user_code: str) -> dict:
@@ -62,12 +54,11 @@ fixture_paths = _fixture_paths()
     ),
 )
 @pytest.mark.parametrize("fixture_path", fixture_paths,
-                         ids=[os.path.basename(p) for p in fixture_paths])
+                         ids=[p.name for p in fixture_paths])
 def test_full_program(fixture_path):
     # The sample JSON lives alongside the fixture, in src/samples/test/
-    sample_name = os.path.basename(fixture_path)
-    sample_path = os.path.join(TEST_SAMPLES_DIR, sample_name)
-    assert os.path.isfile(sample_path), (
+    sample_path = TEST_SAMPLES_DIR / fixture_path.name
+    assert sample_path.is_file(), (
         f"Sample file not found: {sample_path}\n"
         f"(fixture: {fixture_path})"
     )
@@ -89,7 +80,7 @@ def test_full_program(fixture_path):
 
 def _diff_message(actual: dict, expected: dict, fixture_path: str) -> str:
     """Return a human-readable diff summary for assertion failures."""
-    lines = [f"Mismatch for fixture: {os.path.relpath(fixture_path, ROOT)}"]
+    lines = [f"Mismatch for fixture: {fixture_path.relative_to(ROOT)}"]
 
     act_steps = actual.get('timeline', [])
     exp_steps = expected.get('timeline', [])

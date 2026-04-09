@@ -5,10 +5,6 @@ _serialize_visual_builder() delta/full-snapshot logic — without running
 the full trace pipeline.
 """
 
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-
 import pytest
 import _vb_engine as _engine
 import vb_serializer as _ser
