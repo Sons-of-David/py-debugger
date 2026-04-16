@@ -70,6 +70,12 @@ function App() {
   const pendingPostLoadRef = useRef(false);
   const [projectName, setProjectName] = useState('untitled');
 
+  // Dirty-state tracking: null = nothing loaded yet (suppress dialog on first auto-load)
+  const lastLoadedCodeRef = useRef<string | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+  const pendingActionRef = useRef<(() => void) | null>(null);
+
   const autoLoadedRef = useRef(false);
   const { pyodideReady, pyodideLoading } = usePyodideLoader();
   const [apiReferenceOpen, setApiReferenceOpen] = useState(false);
@@ -81,6 +87,12 @@ function App() {
 
   // editor state
   const [userCode, setUserCode] = useState(DEFAULT_SAMPLE);
+  const handleCodeChange = useCallback((code: string) => {
+    setUserCode(code);
+    if (lastLoadedCodeRef.current !== null) {
+      setIsDirty(code !== lastLoadedCodeRef.current);
+    }
+  }, []);
   const [isEditable, setIsEditable] = useState(true);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
@@ -113,14 +125,27 @@ function App() {
     setAppMode('idle');
   }, [setHasInteractiveElements]);
 
-  const handleReset = useCallback(() => {
+  // Internal reset (no dirty check) — used by doLoad and when user confirms discard
+  const doReset = useCallback(() => {
     resetPythonState();
     resetTimeline();
     setProjectName('untitled');
     setUserCode('');
+    lastLoadedCodeRef.current = '';
+    setIsDirty(false);
     gridAreaRef.current?.load({});
     handleEdit();
   }, [resetTimeline, handleEdit]);
+
+  // Public reset — shows unsaved-changes dialog if dirty
+  const handleReset = useCallback(() => {
+    if (isDirty) {
+      pendingActionRef.current = doReset;
+      setShowUnsavedDialog(true);
+    } else {
+      doReset();
+    }
+  }, [isDirty, doReset]);
 
   const startTrace = useCallback((result: TraceStageInfo) => {
     setHandlers(result.handlers ?? {});
@@ -177,6 +202,8 @@ function App() {
   }, [userCode, projectName]);
 
   const handleSave = useCallback(() => {
+    lastLoadedCodeRef.current = userCode;
+    setIsDirty(false);
     const { name, content } = serializeProject();
     const blob = new Blob([content], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -187,19 +214,34 @@ function App() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [serializeProject]);
+  }, [serializeProject, userCode]);
 
-  const handleLoad = useCallback((data: SaveFile, name: string) => {
+  // Internal load (no dirty check) — performs the full reset+load in one shot
+  const doLoad = useCallback((data: SaveFile, name: string) => {
     if (!data.userCode) {
       appendError('Invalid file: missing userCode field');
       return;
     }
-    handleReset();
+    resetPythonState();
+    resetTimeline();
+    handleEdit();
     setProjectName(name);
     setUserCode(data.userCode);
+    lastLoadedCodeRef.current = data.userCode;
+    setIsDirty(false);
     gridAreaRef.current?.load(data.visualPanel ?? {});
     pendingPostLoadRef.current = true;
-  }, [handleReset]);
+  }, [resetTimeline, handleEdit]);
+
+  // Public load — shows unsaved-changes dialog if dirty
+  const handleLoad = useCallback((data: SaveFile, name: string) => {
+    if (isDirty) {
+      pendingActionRef.current = () => doLoad(data, name);
+      setShowUnsavedDialog(true);
+    } else {
+      doLoad(data, name);
+    }
+  }, [isDirty, doLoad]);
 
   // After a load, fold viz blocks and optionally auto-analyze
   useEffect(() => {
@@ -240,6 +282,28 @@ function App() {
   }, [handleLoad]);
 
 
+
+  // ---------------------------------------------------------------------------
+  // Unsaved-changes dialog handlers
+  // ---------------------------------------------------------------------------
+
+  const handleDialogSaveAndContinue = useCallback(() => {
+    handleSave();
+    setShowUnsavedDialog(false);
+    pendingActionRef.current?.();
+    pendingActionRef.current = null;
+  }, [handleSave]);
+
+  const handleDialogDiscard = useCallback(() => {
+    setShowUnsavedDialog(false);
+    pendingActionRef.current?.();
+    pendingActionRef.current = null;
+  }, []);
+
+  const handleDialogCancel = useCallback(() => {
+    setShowUnsavedDialog(false);
+    pendingActionRef.current = null;
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Keyboard shortcuts
@@ -384,7 +448,7 @@ function App() {
               <Editor
                   ref={editorRef}
                   code={userCode}
-                  onChange={setUserCode}
+                  onChange={handleCodeChange}
                   isEditable={isEditable}
                   currentStep={timeline.length > 0 ? currentStep : undefined}
                   currentLine={
@@ -435,6 +499,40 @@ function App() {
           getProjectJson={() => serializeProject().content}
           onClose={() => setFeedbackOpen(false)}
         />
+      )}
+      {showUnsavedDialog && (
+        <>
+          <div className="fixed inset-0 z-50 bg-black/40" onClick={handleDialogCancel} />
+          <div className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 p-5 flex flex-col gap-4">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Unsaved changes</h2>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">You have changes that haven't been saved. What would you like to do?</p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={handleDialogSaveAndContinue}
+                className="w-full px-3 py-1.5 rounded text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-500 transition-colors"
+              >
+                Save & continue
+              </button>
+              <button
+                type="button"
+                onClick={handleDialogDiscard}
+                className="w-full px-3 py-1.5 rounded text-sm font-medium bg-red-600 text-white hover:bg-red-500 transition-colors"
+              >
+                Discard changes
+              </button>
+              <button
+                type="button"
+                onClick={handleDialogCancel}
+                className="w-full px-3 py-1.5 rounded text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </div>
     </AnimationContext.Provider>
