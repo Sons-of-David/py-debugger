@@ -11,7 +11,7 @@ interface LabelViewProps {
 export function LabelView({ label }: LabelViewProps) {
   const animate = useAnimationEnabled();
   const animationDuration = useAnimationDuration();
-  const transition = animate ? { duration: animationDuration / 1000, ease: 'easeOut' as const } : { duration: 0 };
+  const transition = (animate && label.animate) ? { duration: animationDuration / 1000, ease: 'easeOut' as const } : { duration: 0 };
   const color = label.color ? rgbToHex(label.color) : undefined;
 
   return (

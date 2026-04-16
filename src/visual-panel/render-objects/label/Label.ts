@@ -13,6 +13,7 @@ export class Label implements VisualBuilderElementBase {
   color?: [number, number, number];
   fontSize?: number;
   alpha: number;
+  animate: boolean;
   z: number;
   panelId?: string;
 
@@ -26,9 +27,9 @@ export class Label implements VisualBuilderElementBase {
     this.color = el.color;
     this.fontSize = el.fontSize;
     this.alpha = el.alpha ?? 1;
+    this.animate = el.animate ?? true;
     this.z = el.z ?? 0;
     this.panelId = el.panelId;
-    
   }
 
 

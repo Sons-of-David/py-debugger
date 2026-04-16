@@ -12,6 +12,7 @@ export interface VisualBuilderElementBase {
   y: number;                  // vertical position (row)
   visible?: boolean;          // optional, default true
   alpha?: number;             // optional, default 1
+  animate?: boolean;          // optional, default true
   z?: number;                 // depth layer: lower = closer = rendered on top, default 0
   panelId?: string;
   _elemId?: number;           // stable identity from Python _elem_id; used as React key

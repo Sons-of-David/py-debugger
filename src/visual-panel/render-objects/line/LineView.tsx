@@ -26,7 +26,7 @@ function LineView({ line }: { line: Line }) {
 
   const arrowLen = Math.max(8, line.strokeWeight * 5);
   const arrowHalf = arrowLen / 2;
-  const transition = animate ? { duration: animationDuration / 1000, ease: 'easeOut' as const } : { duration: 0 };
+  const transition = (animate && line.animate) ? { duration: animationDuration / 1000, ease: 'easeOut' as const } : { duration: 0 };
 
   const dx = ex - sx;
   const dy = ey - sy;

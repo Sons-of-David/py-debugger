@@ -51,6 +51,9 @@ class Panel(_engine.VisualElem):
         super().delete()
 
     def _serialize(self):
+        # TODO: if self.animate is False, propagate it to all children so they also
+        # skip transitions for that snapshot — children should check their own animate
+        # flag AND their parent panel's animate flag before deciding whether to animate.
         return self._serialize_from_fields(PANEL_SCHEMA)
 
 
@@ -152,8 +155,8 @@ class Arrow(_engine._ShapeBase, schema=ARROW_SCHEMA):
 class Line(_engine.VisualElem):
     def __init__(self, start=(0, 0), end=(1, 1), color=(239, 68, 68),
                  stroke_weight=2, start_offset=(0.5, 0.5), end_offset=(0.5, 0.5),
-                 start_cap='none', end_cap='arrow', z=0):
-        super().__init__(x=start[1], y=start[0])
+                 start_cap='none', end_cap='arrow', z=0, animate=True):
+        super().__init__(x=start[1], y=start[0], animate=animate)
         self.start = start
         self.end = end
         self.color = color
@@ -194,6 +197,7 @@ LABEL_SCHEMA = {
         {'name': 'font_size', 'type': 'int',             'default': 14,   'ser': 'int', 'key': 'fontSize'},
         {'name': 'color',     'type': 'tuple[int,int,int]|None', 'default': None, 'ser': 'color?'},  # None → key omitted → TS falls back to CSS default text color
         {'name': 'visible',   'type': 'bool',            'default': True, 'ser': 'base'},
+        {'name': 'animate',   'type': 'bool',            'default': True, 'ser': 'base'},
         {'name': 'z',         'type': 'int',             'default': 0,    'ser': 'base'},
     ],
 }

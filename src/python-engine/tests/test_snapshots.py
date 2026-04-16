@@ -78,6 +78,12 @@ class TestShapeFields:
         assert s['strokeWeight'] == pytest.approx(3.0)
         assert s['startCap'] == 'none'
         assert s['endCap'] == 'arrow'
+        assert s['animate'] is True
+
+    def test_line_animate_false(self):
+        ln = api.Line(animate=False)
+        s = ln._serialize()
+        assert s['animate'] is False
 
     def test_label_none_color_omitted(self):
         lb = api.Label()  # color defaults to None
