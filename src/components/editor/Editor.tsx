@@ -10,6 +10,21 @@ import sampleCode from './sample.py?raw';
 
 export const DEFAULT_SAMPLE = sampleCode;
 
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+
+interface Tab {
+  id: string;
+  name: string;
+  code: string;
+}
+
+/** Combine tabs rightmost-first (rightmost tab's code appears at the top). */
+function combineTabs(tabs: Tab[]): string {
+  return [...tabs].reverse().map(t => t.code).join('\n');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export interface EditorHandle {
   foldVizBlocks: () => void;
 }
@@ -38,7 +53,62 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
   const [editorMountKey, setEditorMountKey] = useState(0);
   const monacoTheme = darkMode ? 'vs-dark' : 'vs';
 
-  // Update viz block decorations whenever code changes
+  // ── Tab state ──────────────────────────────────────────────────────────────
+  const [tabs, setTabs] = useState<Tab[]>(() => [{ id: 'tab-1', name: 'main', code }]);
+  const [activeTabId, setActiveTabId] = useState('tab-1');
+  const [renamingTabId, setRenamingTabId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+
+  const activeTab = tabs.find(t => t.id === activeTabId) ?? tabs[0];
+  const activeCode = activeTab.code;
+
+  const handleTabCodeChange = useCallback((newCode: string) => {
+    setTabs(prev => {
+      const updated = prev.map(t => t.id === activeTabId ? { ...t, code: newCode } : t);
+      onChange(combineTabs(updated));
+      return updated;
+    });
+  }, [activeTabId, onChange]);
+
+  const handleTabSelect = useCallback((id: string) => {
+    setActiveTabId(id);
+    setRenamingTabId(null);
+  }, []);
+
+  const handleTabAdd = useCallback(() => {
+    const newId = `tab-${Date.now()}`;
+    setTabs(prev => {
+      const newTabs = [...prev, { id: newId, name: `tab${prev.length + 1}`, code: '' }];
+      onChange(combineTabs(newTabs));
+      return newTabs;
+    });
+    setActiveTabId(newId);
+  }, [onChange]);
+
+  const handleTabDelete = useCallback((id: string) => {
+    setTabs(prev => {
+      if (prev.length <= 1) return prev;
+      const newTabs = prev.filter(t => t.id !== id);
+      onChange(combineTabs(newTabs));
+      if (activeTabId === id) setActiveTabId(newTabs[newTabs.length - 1].id);
+      return newTabs;
+    });
+  }, [activeTabId, onChange]);
+
+  const handleRenameStart = useCallback((tab: Tab) => {
+    setRenamingTabId(tab.id);
+    setRenameValue(tab.name);
+  }, []);
+
+  const handleRenameCommit = useCallback(() => {
+    if (renameValue.trim()) {
+      setTabs(prev => prev.map(t => t.id === renamingTabId ? { ...t, name: renameValue.trim() } : t));
+    }
+    setRenamingTabId(null);
+  }, [renamingTabId, renameValue]);
+  // ──────────────────────────────────────────────────────────────────────────
+
+  // Update viz block decorations whenever active tab code changes
   const updateVizDecorations = useCallback(() => {
     const editor = editorRef.current;
     const monaco = monacoRef.current;
@@ -46,7 +116,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
 
     const decorations: editor.IModelDeltaDecoration[] = [];
 
-    for (const r of getVizRanges(code)) {
+    for (const r of getVizRanges(activeCode)) {
       for (let line = r.startLine; line <= r.endLine; line++) {
         decorations.push({
           range: new monaco.Range(line, 1, line, 1),
@@ -55,7 +125,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
       }
     }
 
-    for (const r of getVizBadRanges(code)) {
+    for (const r of getVizBadRanges(activeCode)) {
       for (let line = r.startLine; line <= r.endLine; line++) {
         decorations.push({
           range: new monaco.Range(line, 1, line, 1),
@@ -65,7 +135,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
     }
 
     vizDecorationsRef.current = editor.deltaDecorations(vizDecorationsRef.current, decorations);
-  }, [code]);
+  }, [activeCode]);
 
   // Update active step decoration (highlight the current executed line)
   const updateActiveDecoration = useCallback(() => {
@@ -298,7 +368,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
     foldVizBlocks: () => {
       const editor = editorRef.current;
       if (!editor) return;
-      const vizRanges = getVizRanges(code);
+      const vizRanges = getVizRanges(activeCode);
       if (vizRanges.length === 0) return;
       // Access the folding model directly instead of using editor.trigger('fold'),
       // which is async and loses the correct selection by the time it runs.
@@ -314,20 +384,59 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
         if (toCollapse.length > 0) foldingModel.toggleCollapseState(toCollapse);
       });
     },
-  }), [code]);
+  }), [activeCode]);
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-gray-900">
-      {/* Toolbar */}
-      <div className="flex-shrink-0 h-10 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-700 px-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Python Code</span>
-          {!isEditable && (
-            <span className="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded">
-              Read-only
-            </span>
-          )}
-        </div>
+      {/* Tab bar */}
+      <div className="flex-shrink-0 h-10 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-700 flex items-stretch overflow-x-auto">
+        {tabs.map(tab => (
+          <div
+            key={tab.id}
+            onClick={() => handleTabSelect(tab.id)}
+            onDoubleClick={() => handleRenameStart(tab)}
+            className={[
+              'flex items-center gap-1 px-3 cursor-pointer select-none border-r border-gray-300 dark:border-gray-700 shrink-0',
+              tab.id === activeTabId
+                ? 'border-b-2 border-b-indigo-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-white'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700',
+            ].join(' ')}
+          >
+            {renamingTabId === tab.id ? (
+              <input
+                autoFocus
+                className="w-20 text-sm bg-transparent outline outline-1 outline-indigo-400 rounded px-1"
+                value={renameValue}
+                onChange={e => setRenameValue(e.target.value)}
+                onBlur={handleRenameCommit}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') handleRenameCommit();
+                  if (e.key === 'Escape') setRenamingTabId(null);
+                }}
+                onClick={e => e.stopPropagation()}
+              />
+            ) : (
+              <span className="text-sm">{tab.name}</span>
+            )}
+            {tabs.length > 1 && (
+              <button
+                className="ml-1 text-xs leading-none text-gray-400 hover:text-red-400 dark:hover:text-red-400"
+                onClick={e => { e.stopPropagation(); handleTabDelete(tab.id); }}
+                title="Close tab"
+              >×</button>
+            )}
+          </div>
+        ))}
+        <button
+          onClick={handleTabAdd}
+          className="px-3 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 text-lg leading-none shrink-0"
+          title="Add tab"
+        >+</button>
+        {!isEditable && (
+          <div className="ml-auto flex items-center pr-3">
+            <span className="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded">Read-only</span>
+          </div>
+        )}
       </div>
 
       {/* Editor */}
@@ -336,8 +445,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
           height="100%"
           defaultLanguage="python"
           theme={monacoTheme}
-          value={code}
-          onChange={(value) => onChange(value || '')}
+          value={activeCode}
+          onChange={(value) => handleTabCodeChange(value || '')}
           onMount={handleEditorDidMount}
           options={{
             readOnly: !isEditable,
