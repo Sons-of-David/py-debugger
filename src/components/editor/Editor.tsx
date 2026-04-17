@@ -27,6 +27,8 @@ function combineTabs(tabs: Tab[]): string {
 
 export interface EditorHandle {
   foldVizBlocks: () => void;
+  serialize: () => unknown;
+  load: (state: unknown) => void;
 }
 
 interface EditorProps {
@@ -384,7 +386,23 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
         if (toCollapse.length > 0) foldingModel.toggleCollapseState(toCollapse);
       });
     },
-  }), [activeCode]);
+    serialize: () => ({ tabs }),
+    load: (state: unknown) => {
+      let newTabs: Tab[];
+      if (state && typeof state === 'object' && 'tabs' in state && Array.isArray((state as { tabs: unknown }).tabs)) {
+        newTabs = (state as { tabs: Tab[] }).tabs;
+      } else if (typeof state === 'string') {
+        // Legacy: plain userCode string
+        newTabs = [{ id: 'tab-1', name: 'main', code: state }];
+      } else {
+        newTabs = [{ id: 'tab-1', name: 'main', code: '' }];
+      }
+      setTabs(newTabs);
+      setActiveTabId(newTabs[0].id);
+      // Fire onChange so App.tsx userCode stays in sync
+      onChange(combineTabs(newTabs));
+    },
+  }), [activeCode, tabs, onChange]);
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-gray-900">
