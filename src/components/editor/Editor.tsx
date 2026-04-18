@@ -12,15 +12,38 @@ export const DEFAULT_SAMPLE = sampleCode;
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
-interface Tab {
+export interface Tab {
   id: string;
   name: string;
   code: string;
 }
 
+export interface TabLineInfo {
+  tab: Tab;
+  localLine: number; // 1-indexed line within that tab's code
+}
+
 /** Combine tabs rightmost-first (rightmost tab's code appears at the top). */
 function combineTabs(tabs: Tab[]): string {
   return [...tabs].reverse().map(t => t.code).join('\n');
+}
+
+/**
+ * Map a 1-indexed line number in the combined code back to a specific tab
+ * and the corresponding 1-indexed line within that tab.
+ *
+ * Returns null only if combinedLine is out of range (shouldn't happen in practice).
+ */
+export function getTabForLine(combinedLine: number, tabs: Tab[]): TabLineInfo | null {
+  let offset = 0;
+  for (const tab of [...tabs].reverse()) {
+    const tabLineCount = tab.code.split('\n').length;
+    if (combinedLine <= offset + tabLineCount) {
+      return { tab, localLine: combinedLine - offset };
+    }
+    offset += tabLineCount;
+  }
+  return null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -61,8 +84,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
   const [renamingTabId, setRenamingTabId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
 
-  const activeTab = tabs.find(t => t.id === activeTabId) ?? tabs[0];
-  const activeCode = activeTab.code;
+  // activeTab / activeCode are derived after effectiveActiveTabId (see below)
 
   const handleTabCodeChange = useCallback((newCode: string) => {
     setTabs(prev => {
@@ -108,6 +130,17 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
     }
     setRenamingTabId(null);
   }, [renamingTabId, renameValue]);
+
+  // Map the combined-code line number from the tracer to a tab + local line.
+  // During a trace, the tab that contains currentLine wins over the user-selected tab,
+  // so the editor follows execution without a setState-in-effect.
+  const currentLineInfo = currentLine != null ? getTabForLine(currentLine, tabs) : null;
+  const localCurrentLine = currentLineInfo?.localLine ?? null;
+  // During a trace the tab containing currentLine takes precedence over the user selection,
+  // so the editor follows execution without a setState-in-effect.
+  const effectiveActiveTabId = currentLineInfo ? currentLineInfo.tab.id : activeTabId;
+  const activeTab = tabs.find(t => t.id === effectiveActiveTabId) ?? tabs[0];
+  const activeCode = activeTab.code;
   // ──────────────────────────────────────────────────────────────────────────
 
   // Update viz block decorations whenever active tab code changes
@@ -147,9 +180,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
 
     const decorations: editor.IModelDeltaDecoration[] = [];
 
-    if (currentLine != null) {
+    if (localCurrentLine != null) {
       decorations.push({
-        range: new monaco.Range(currentLine, 1, currentLine, 1),
+        range: new monaco.Range(localCurrentLine, 1, localCurrentLine, 1),
         options: {
           isWholeLine: true,
           className: 'active-executed-line',
@@ -159,14 +192,14 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
     }
 
     activeDecorationsRef.current = editor.deltaDecorations(activeDecorationsRef.current, decorations);
-  }, [currentLine]);
+  }, [localCurrentLine]);
 
   // Scroll to the current executed line when it changes
   useEffect(() => {
-    if (currentLine != null && editorRef.current) {
-      editorRef.current.revealLineInCenterIfOutsideViewport(currentLine);
+    if (localCurrentLine != null && editorRef.current) {
+      editorRef.current.revealLineInCenterIfOutsideViewport(localCurrentLine);
     }
-  }, [currentLine]);
+  }, [localCurrentLine]);
 
   useEffect(() => {
     updateVizDecorations();
@@ -415,7 +448,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
             onDoubleClick={() => handleRenameStart(tab)}
             className={[
               'flex items-center gap-1 px-3 cursor-pointer select-none border-r border-gray-300 dark:border-gray-700 shrink-0',
-              tab.id === activeTabId
+              tab.id === effectiveActiveTabId
                 ? 'border-b-2 border-b-indigo-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-white'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700',
             ].join(' ')}
