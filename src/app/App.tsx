@@ -350,7 +350,7 @@ function App() {
             className="text-sm border-b border-gray-300 dark:border-gray-600 bg-transparent focus:outline-none focus:border-indigo-500 text-gray-700 dark:text-gray-200 w-36"
           />
           <input ref={fileInputRef} type="file" accept=".json" onChange={handleFileChange} className="hidden" />
-          <SamplesMenu onLoad={handleLoad} serializeProject={serializeProject} />
+          <SamplesMenu onLoad={handleLoad} serializeProject={serializeProject} onSaved={() => { lastLoadedCodeRef.current = userCode; setIsDirty(false); }} />
         </div>
 
         {/* Center: pyodide status + timeline controls */}

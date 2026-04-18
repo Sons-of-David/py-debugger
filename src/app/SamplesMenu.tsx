@@ -8,6 +8,7 @@ const buttonNeutral = `${buttonBase} bg-gray-100 dark:bg-gray-700 hover:bg-gray-
 interface SamplesMenuProps {
   onLoad: (data: SaveFile, name: string) => void;
   serializeProject: () => { name: string; content: string };
+  onSaved: () => void;  // called after a successful Save to Samples so App can clear dirty flag
 }
 
 interface RowHandlers {
@@ -82,7 +83,7 @@ function TreeNodeView({ node, depth, handlers, folderOpen, setFolderOpen }: Tree
   return <SampleRow {...node} handlers={handlers} />;
 }
 
-export function SamplesMenu({ onLoad, serializeProject }: SamplesMenuProps) {
+export function SamplesMenu({ onLoad, serializeProject, onSaved }: SamplesMenuProps) {
   const [samplesOpen, setSamplesOpen] = useState(false);
   const [folderOpenMap, setFolderOpenMap] = useState<Record<string, boolean>>({});
   const folderOpen = useCallback((key: string) => folderOpenMap[key] ?? false, [folderOpenMap]);
@@ -99,12 +100,17 @@ export function SamplesMenu({ onLoad, serializeProject }: SamplesMenuProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, content }),
       });
-      setSaveSampleStatus(res.ok ? 'saved' : 'error');
+      if (res.ok) {
+        setSaveSampleStatus('saved');
+        onSaved();
+      } else {
+        setSaveSampleStatus('error');
+      }
     } catch {
       setSaveSampleStatus('error');
     }
     setTimeout(() => setSaveSampleStatus('idle'), 2000);
-  }, [serializeProject]);
+  }, [serializeProject, onSaved]);
 
   const copyToClipboard = useCallback((text: string, key: string) => {
     navigator.clipboard.writeText(text);
