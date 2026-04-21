@@ -1,0 +1,19 @@
+{
+  "editorState": {
+    "tabs": [
+      {
+        "id": "tab-1",
+        "name": "main",
+        "code": "print(5)\n# @viz\nr = Rect(x=15, y=5)\n# @end"
+      },
+      {
+        "id": "tab-1776756032207",
+        "name": "tab2",
+        "code": "a = 5"
+      }
+    ]
+  },
+  "visualPanel": {
+    "textBoxes": []
+  }
+}

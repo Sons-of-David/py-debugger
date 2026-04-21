@@ -41,7 +41,8 @@ import { executeCode, type TraceStageInfo } from '../python-engine/executor';
 import { setHandlers, hasAnyClickHandler } from '../visual-panel/handlersState';
 
 export interface SaveFile {
-  userCode: string;
+  editorState?: unknown;
+  userCode?: string;      // legacy field — migrated by Editor.load()
   visualPanel?: unknown;
 }
 
@@ -130,8 +131,8 @@ function App() {
     resetPythonState();
     resetTimeline();
     setProjectName('untitled');
-    setUserCode('');
     lastLoadedCodeRef.current = '';
+    editorRef.current?.load(null);  // fires onChange('') → setUserCode('')
     setIsDirty(false);
     gridAreaRef.current?.load({});
     handleEdit();
@@ -167,7 +168,7 @@ function App() {
     setIsAnalyzing(true);
     clearTerminal();
     try {
-      const result = await executeCode(userCode);
+      const result = await executeCode(userCode, (n) => editorRef.current?.resolveLineTab(n) ?? null);
       if (!result.error) {
         setIsEditable(false);
         startTrace(result);
@@ -197,12 +198,12 @@ function App() {
 
   const serializeProject = useCallback(() => {
     const name = projectName.trim() || 'untitled';
-    const content = JSON.stringify({ userCode, visualPanel: gridAreaRef.current?.serialize() ?? {} } satisfies SaveFile, null, 2);
+    const content = JSON.stringify({ editorState: editorRef.current?.serialize(), visualPanel: gridAreaRef.current?.serialize() ?? {} } satisfies SaveFile, null, 2);
     return { name, content };
-  }, [userCode, projectName]);
+  }, [projectName]);
 
   const handleSave = useCallback(() => {
-    lastLoadedCodeRef.current = userCode;
+    lastLoadedCodeRef.current = userCode;  // userCode is already the combined string from onChange
     setIsDirty(false);
     const { name, content } = serializeProject();
     const blob = new Blob([content], { type: 'application/json' });
@@ -218,16 +219,18 @@ function App() {
 
   // Internal load (no dirty check) — performs the full reset+load in one shot
   const doLoad = useCallback((data: SaveFile, name: string) => {
-    if (!data.userCode) {
-      appendError('Invalid file: missing userCode field');
+    const editorState = data.editorState ?? data.userCode;
+    if (!editorState) {
+      appendError('Invalid file: missing editor content');
       return;
     }
     resetPythonState();
     resetTimeline();
     handleEdit();
     setProjectName(name);
-    setUserCode(data.userCode);
-    lastLoadedCodeRef.current = data.userCode;
+    // Suppress dirty check while the editor fires onChange during load
+    lastLoadedCodeRef.current = null;
+    editorRef.current?.load(editorState);
     setIsDirty(false);
     gridAreaRef.current?.load(data.visualPanel ?? {});
     pendingPostLoadRef.current = true;
@@ -243,10 +246,11 @@ function App() {
     }
   }, [isDirty, doLoad]);
 
-  // After a load, fold viz blocks and optionally auto-analyze
+  // After a load, capture the loaded code as the baseline, fold viz blocks, optionally auto-analyze
   useEffect(() => {
     if (!pendingPostLoadRef.current || !userCode.trim()) return;
     pendingPostLoadRef.current = false;
+    lastLoadedCodeRef.current = userCode;
     requestAnimationFrame(() => editorRef.current?.foldVizBlocks());
     if (AUTO_ANALYZE_ON_LOAD) handleAnalyze();
   }, [userCode, handleAnalyze]);
@@ -346,7 +350,7 @@ function App() {
             className="text-sm border-b border-gray-300 dark:border-gray-600 bg-transparent focus:outline-none focus:border-indigo-500 text-gray-700 dark:text-gray-200 w-36"
           />
           <input ref={fileInputRef} type="file" accept=".json" onChange={handleFileChange} className="hidden" />
-          <SamplesMenu onLoad={handleLoad} serializeProject={serializeProject} />
+          <SamplesMenu onLoad={handleLoad} serializeProject={serializeProject} onSaved={() => { lastLoadedCodeRef.current = userCode; setIsDirty(false); }} />
         </div>
 
         {/* Center: pyodide status + timeline controls */}

@@ -158,11 +158,30 @@ type RawResult = {
   console?: string;
 };
 
+/** Maps a combined-code line number to the originating tab name and local line. */
+export type LineResolver = (combinedLine: number) => { tabName: string; localLine: number } | null;
+
+/** Set once at executeCode time; valid for the lifetime of the current analysis session. */
+let _lineResolver: LineResolver | undefined;
+
+function remapError(error: string): string {
+  if (!_lineResolver) return error;
+  return error.replace(/File "<user_code>", line (\d+)/g, (orig, n) => {
+    const info = _lineResolver!(parseInt(n, 10));
+    return info ? `File "${info.tabName}", line ${info.localLine}` : orig;
+  });
+}
+
 /**
  * Execute Python code (with # @viz / # @end blocks) and return
  * a timeline of snapshots, one per # @end marker.
+ *
+ * resolveLineFn is stored for the lifetime of this analysis session so that
+ * all subsequent handler calls (click, drag, input) automatically remap
+ * `File "<user_code>", line N` to the originating tab name and local line.
  */
-export async function executeCode(code: string): Promise<TraceStageInfo> {
+export async function executeCode(code: string, resolveLineFn?: LineResolver): Promise<TraceStageInfo> {
+  _lineResolver = resolveLineFn;
   try {
     const py = await initializePythonEngine(code);
     const preprocessed = preprocess(code);
@@ -173,7 +192,7 @@ export async function executeCode(code: string): Promise<TraceStageInfo> {
     if (result.console) console.log(result.console);
     return { timeline: parseRawTimeline(result.timeline), handlers: result.handlers };
   } catch (error) {
-    return { timeline: [], handlers: {}, error: cleanPythonError(error instanceof Error ? error.message : String(error)) };
+    return { timeline: [], handlers: {}, error: remapError(cleanPythonError(error instanceof Error ? error.message : String(error))) };
   }
 }
 
@@ -193,7 +212,7 @@ export async function executeInputChanged(
     const result = JSON.parse(resultJson) as RawResult;
     return { timeline: parseRawTimeline(result.timeline), handlers: result.handlers };
   } catch (error) {
-    return { timeline: [], handlers: {}, error: cleanPythonError(error instanceof Error ? error.message : String(error)) };
+    return { timeline: [], handlers: {}, error: remapError(cleanPythonError(error instanceof Error ? error.message : String(error))) };
   }
 }
 
@@ -216,7 +235,7 @@ export async function executeDragHandler(
     const result = JSON.parse(resultJson) as RawResult;
     return { timeline: parseRawTimeline(result.timeline), handlers: result.handlers };
   } catch (error) {
-    return { timeline: [], handlers: {}, error: cleanPythonError(error instanceof Error ? error.message : String(error)) };
+    return { timeline: [], handlers: {}, error: remapError(cleanPythonError(error instanceof Error ? error.message : String(error))) };
   }
 }
 
@@ -240,6 +259,6 @@ export async function executeClickHandler(
     const result = JSON.parse(resultJson) as RawResult;
     return { timeline: parseRawTimeline(result.timeline), handlers: result.handlers };
   } catch (error) {
-    return { timeline: [], handlers: {}, error: cleanPythonError(error instanceof Error ? error.message : String(error)) };
+    return { timeline: [], handlers: {}, error: remapError(cleanPythonError(error instanceof Error ? error.message : String(error))) };
   }
 }
