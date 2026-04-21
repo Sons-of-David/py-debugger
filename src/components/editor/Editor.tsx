@@ -52,6 +52,7 @@ export interface EditorHandle {
   foldVizBlocks: () => void;
   serialize: () => unknown;
   load: (state: unknown) => void;
+  resolveLineTab: (combinedLine: number) => { tabName: string; localLine: number } | null;
 }
 
 interface EditorProps {
@@ -422,6 +423,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
       });
     },
     serialize: () => ({ tabs }),
+    resolveLineTab: (combinedLine) => {
+      const info = getTabForLine(combinedLine, tabs);
+      return info ? { tabName: info.tab.name, localLine: info.localLine } : null;
+    },
     load: (state: unknown) => {
       let newTabs: Tab[];
       if (state && typeof state === 'object' && 'tabs' in state && Array.isArray((state as { tabs: unknown }).tabs)) {

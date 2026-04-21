@@ -168,7 +168,7 @@ function App() {
     setIsAnalyzing(true);
     clearTerminal();
     try {
-      const result = await executeCode(userCode);
+      const result = await executeCode(userCode, (n) => editorRef.current?.resolveLineTab(n) ?? null);
       if (!result.error) {
         setIsEditable(false);
         startTrace(result);
