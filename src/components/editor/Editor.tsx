@@ -84,15 +84,27 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
   const [renamingTabId, setRenamingTabId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
 
-  // activeTab / activeCode are derived after effectiveActiveTabId (see below)
+  const currentLineInfo = currentLine != null ? getTabForLine(currentLine, tabs) : null;
+  const effectiveActiveTabId = currentLineInfo ? currentLineInfo.tab.id : activeTabId;
+  const localCurrentLine = currentLineInfo?.localLine ?? null;
+  const activeTab = tabs.find(t => t.id === effectiveActiveTabId) ?? tabs[0];
+  const activeCode = activeTab.code;
+
+  // Store effectiveActiveTabId in a ref so handleTabCodeChange always reads the
+  // latest value, even if @monaco-editor/react holds a stale closure of the handler.
+  const effectiveActiveTabIdRef = useRef(effectiveActiveTabId);
+  effectiveActiveTabIdRef.current = effectiveActiveTabId;
 
   const handleTabCodeChange = useCallback((newCode: string) => {
+    const targetId = effectiveActiveTabIdRef.current;
     setTabs(prev => {
-      const updated = prev.map(t => t.id === activeTabId ? { ...t, code: newCode } : t);
+      const current = prev.find(t => t.id === targetId);
+      if (current?.code === newCode) return prev; // Monaco reflecting current state — skip
+      const updated = prev.map(t => t.id === targetId ? { ...t, code: newCode } : t);
       onChange(combineTabs(updated));
       return updated;
     });
-  }, [activeTabId, onChange]);
+  }, [onChange]); // stable: reads targetId from ref, onChange never changes
 
   const handleTabSelect = useCallback((id: string) => {
     setActiveTabId(id);
@@ -131,16 +143,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
     setRenamingTabId(null);
   }, [renamingTabId, renameValue]);
 
-  // Map the combined-code line number from the tracer to a tab + local line.
-  // During a trace, the tab that contains currentLine wins over the user-selected tab,
-  // so the editor follows execution without a setState-in-effect.
-  const currentLineInfo = currentLine != null ? getTabForLine(currentLine, tabs) : null;
-  const localCurrentLine = currentLineInfo?.localLine ?? null;
-  // During a trace the tab containing currentLine takes precedence over the user selection,
-  // so the editor follows execution without a setState-in-effect.
-  const effectiveActiveTabId = currentLineInfo ? currentLineInfo.tab.id : activeTabId;
-  const activeTab = tabs.find(t => t.id === effectiveActiveTabId) ?? tabs[0];
-  const activeCode = activeTab.code;
   // ──────────────────────────────────────────────────────────────────────────
 
   // Update viz block decorations whenever active tab code changes
