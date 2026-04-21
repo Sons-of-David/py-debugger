@@ -84,6 +84,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
   const [activeTabId, setActiveTabId] = useState('tab-1');
   const [renamingTabId, setRenamingTabId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const dragSrcIdRef = useRef<string | null>(null);
+  const dropIndexRef = useRef<number | null>(null);
+  const [dropIndex, setDropIndex] = useState<number | null>(null);
 
   const currentLineInfo = currentLine != null ? getTabForLine(currentLine, tabs) : null;
   const effectiveActiveTabId = currentLineInfo ? currentLineInfo.tab.id : activeTabId;
@@ -143,6 +146,45 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
     }
     setRenamingTabId(null);
   }, [renamingTabId, renameValue]);
+
+  const handleDragStart = useCallback((id: string) => {
+    dragSrcIdRef.current = id;
+  }, []);
+
+  const handleDragOverTab = useCallback((e: React.DragEvent, tabIndex: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const idx = e.clientX < rect.left + rect.width / 2 ? tabIndex : tabIndex + 1;
+    dropIndexRef.current = idx;
+    setDropIndex(idx);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const srcId = dragSrcIdRef.current;
+    const idx = dropIndexRef.current;
+    dragSrcIdRef.current = null;
+    dropIndexRef.current = null;
+    setDropIndex(null);
+    if (srcId === null || idx === null) return;
+    setTabs(prev => {
+      const from = prev.findIndex(t => t.id === srcId);
+      if (from === -1) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      const insertAt = idx > from ? idx - 1 : idx;
+      next.splice(insertAt, 0, moved);
+      onChange(combineTabs(next));
+      return next;
+    });
+  }, [onChange]);
+
+  const handleDragEnd = useCallback(() => {
+    dragSrcIdRef.current = null;
+    dropIndexRef.current = null;
+    setDropIndex(null);
+  }, []);
 
   // ──────────────────────────────────────────────────────────────────────────
 
@@ -447,10 +489,23 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
   return (
     <div className="flex flex-col h-full bg-white dark:bg-gray-900">
       {/* Tab bar */}
-      <div className="flex-shrink-0 h-10 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-700 flex items-stretch overflow-x-auto">
-        {tabs.map(tab => (
+      <div
+        className="flex-shrink-0 h-10 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-700 flex items-stretch overflow-x-auto"
+        onDrop={handleDrop}
+        onDragOver={e => e.preventDefault()}
+        onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropIndex(null); }}
+      >
+        {tabs.flatMap((tab, i) => [
+          <div
+            key={`di-${i}`}
+            className={`w-0.5 self-stretch shrink-0 transition-colors ${dropIndex === i ? 'bg-indigo-500' : ''}`}
+          />,
           <div
             key={tab.id}
+            draggable
+            onDragStart={() => handleDragStart(tab.id)}
+            onDragOver={e => handleDragOverTab(e, i)}
+            onDragEnd={handleDragEnd}
             onClick={() => handleTabSelect(tab.id)}
             onDoubleClick={() => handleRenameStart(tab)}
             className={[
@@ -483,8 +538,12 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
                 title="Close tab"
               >×</button>
             )}
-          </div>
-        ))}
+          </div>,
+        ])}
+        <div
+          key="di-last"
+          className={`w-0.5 self-stretch shrink-0 transition-colors ${dropIndex === tabs.length ? 'bg-indigo-500' : ''}`}
+        />
         <button
           onClick={handleTabAdd}
           className="px-3 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 text-lg leading-none shrink-0"
