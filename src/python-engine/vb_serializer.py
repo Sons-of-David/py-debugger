@@ -112,6 +112,24 @@ def __viz_end__(_):
 
 _VIZ_END_CODE = __viz_end__.__code__
 
+_skip_next_viz_frame: bool = False
+
+def no_trace():
+    """Suppress the trace frame that would normally be added when a viz block ends.
+
+    Call anywhere inside a # @viz ... # @end block to prevent that block from
+    producing a timeline step. Useful when a viz block is used purely for its
+    visual side-effects (e.g. setting up initial state) without needing a step.
+
+    Example:
+        # @viz
+        elements = build_grid()
+        no_trace()   # don't add a frame for this setup block
+        # @end
+    """
+    global _skip_next_viz_frame
+    _skip_next_viz_frame = True
+
 
 def _make_tracer(viz_ranges, on_snap):
     """Return (tracer, last_line).
@@ -129,6 +147,7 @@ def _make_tracer(viz_ranges, on_snap):
         return any(start <= lineno <= end for start, end in viz_ranges)
 
     def _trace(frame, event, arg):
+        global _skip_next_viz_frame
         guard(frame, event, arg)
         if event == 'call' and frame.f_code is _VIZ_END_CODE:
             caller = frame.f_back
@@ -138,7 +157,10 @@ def _make_tracer(viz_ranges, on_snap):
                     current = _collect_v_values()
                     last_v.clear()
                     last_v.update(current)
-                on_snap(caller, caller.f_lineno, is_viz=True)
+                if _skip_next_viz_frame:
+                    _skip_next_viz_frame = False
+                else:
+                    on_snap(caller, caller.f_lineno, is_viz=True)
             return None
         if frame.f_code.co_filename != '<user_code>':
             return None
@@ -177,6 +199,7 @@ def _init_namespace(viz_ranges_json: str):
     _namespace['__builtins__'] = __builtins__
     _namespace['__viz_begin__'] = lambda: None  # no-op: tracer uses in_viz() to skip viz block lines
     _namespace['__viz_end__'] = __viz_end__  # tracer intercepts its call event
+    _namespace['no_trace'] = no_trace  # suppress frame for the current viz block
 
 
 # ── Timeline execution ────────────────────────────────────────────────────────
