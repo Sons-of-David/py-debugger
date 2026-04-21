@@ -87,6 +87,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
   const dragSrcIdRef = useRef<string | null>(null);
   const dropIndexRef = useRef<number | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
+  // Tabs that have a pending viz-block fold (populated by foldVizBlocks, drained as tabs become active)
+  const pendingFoldTabsRef = useRef<Set<string>>(new Set());
 
   const currentLineInfo = currentLine != null ? getTabForLine(currentLine, tabs) : null;
   const effectiveActiveTabId = currentLineInfo ? currentLineInfo.tab.id : activeTabId;
@@ -444,25 +446,38 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
     };
   }, []);
 
+  // Fold viz blocks for the code currently shown in Monaco
+  const foldActiveVizBlocks = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const vizRanges = getVizRanges(activeCode);
+    if (vizRanges.length === 0) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const foldingController = editor.getContribution<any>('editor.contrib.folding');
+    foldingController?.getFoldingModel?.()?.then((foldingModel: any) => {
+      if (!foldingModel) return;
+      const toCollapse: unknown[] = [];
+      for (const r of vizRanges) {
+        const region = foldingModel.getRegionAtLine(r.startLine);
+        if (region && !region.isCollapsed) toCollapse.push(region);
+      }
+      if (toCollapse.length > 0) foldingModel.toggleCollapseState(toCollapse);
+    });
+  }, [activeCode]);
+
+  // When the active tab changes, fold its viz blocks if it has a pending fold
+  useEffect(() => {
+    if (!pendingFoldTabsRef.current.has(effectiveActiveTabId)) return;
+    pendingFoldTabsRef.current.delete(effectiveActiveTabId);
+    requestAnimationFrame(() => foldActiveVizBlocks());
+  }, [effectiveActiveTabId, foldActiveVizBlocks, editorMountKey]);
+
   useImperativeHandle(ref, () => ({
     foldVizBlocks: () => {
-      const editor = editorRef.current;
-      if (!editor) return;
-      const vizRanges = getVizRanges(activeCode);
-      if (vizRanges.length === 0) return;
-      // Access the folding model directly instead of using editor.trigger('fold'),
-      // which is async and loses the correct selection by the time it runs.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const foldingController = editor.getContribution<any>('editor.contrib.folding');
-      foldingController?.getFoldingModel?.()?.then((foldingModel: any) => {
-        if (!foldingModel) return;
-        const toCollapse: unknown[] = [];
-        for (const r of vizRanges) {
-          const region = foldingModel.getRegionAtLine(r.startLine);
-          if (region && !region.isCollapsed) toCollapse.push(region);
-        }
-        if (toCollapse.length > 0) foldingModel.toggleCollapseState(toCollapse);
-      });
+      // Mark every tab as pending so they each fold when first viewed
+      for (const t of tabs) pendingFoldTabsRef.current.add(t.id);
+      // Fold the currently visible tab immediately
+      foldActiveVizBlocks();
     },
     serialize: () => ({ tabs }),
     resolveLineTab: (combinedLine) => {
@@ -484,7 +499,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
       // Fire onChange so App.tsx userCode stays in sync
       onChange(combineTabs(newTabs));
     },
-  }), [activeCode, tabs, onChange]);
+  }), [tabs, onChange, foldActiveVizBlocks]);
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-gray-900">
@@ -502,12 +517,12 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
           />,
           <div
             key={tab.id}
-            draggable
-            onDragStart={() => handleDragStart(tab.id)}
-            onDragOver={e => handleDragOverTab(e, i)}
-            onDragEnd={handleDragEnd}
+            draggable={isEditable}
+            onDragStart={() => isEditable && handleDragStart(tab.id)}
+            onDragOver={e => isEditable && handleDragOverTab(e, i)}
+            onDragEnd={isEditable ? handleDragEnd : undefined}
             onClick={() => handleTabSelect(tab.id)}
-            onDoubleClick={() => handleRenameStart(tab)}
+            onDoubleClick={() => isEditable && handleRenameStart(tab)}
             className={[
               'flex items-center gap-1 px-3 cursor-pointer select-none border-r border-gray-300 dark:border-gray-700 shrink-0',
               tab.id === effectiveActiveTabId
@@ -531,7 +546,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
             ) : (
               <span className="text-sm">{tab.name}</span>
             )}
-            {tabs.length > 1 && (
+            {isEditable && tabs.length > 1 && (
               <button
                 className="ml-1 text-xs leading-none text-gray-400 hover:text-red-400 dark:hover:text-red-400"
                 onClick={e => { e.stopPropagation(); handleTabDelete(tab.id); }}
@@ -544,11 +559,13 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
           key="di-last"
           className={`w-0.5 self-stretch shrink-0 transition-colors ${dropIndex === tabs.length ? 'bg-indigo-500' : ''}`}
         />
-        <button
-          onClick={handleTabAdd}
-          className="px-3 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 text-lg leading-none shrink-0"
-          title="Add tab"
-        >+</button>
+        {isEditable && (
+          <button
+            onClick={handleTabAdd}
+            className="px-3 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 text-lg leading-none shrink-0"
+            title="Add tab"
+          >+</button>
+        )}
         {!isEditable && (
           <div className="ml-auto flex items-center pr-3">
             <span className="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded">Read-only</span>
