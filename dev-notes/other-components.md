@@ -121,37 +121,29 @@ Projects are saved as JSON files. Loading a project restores the combined code e
 
 ```json
 {
-  "combinedCode": "arr = [5,3,8,1]\n# @viz\npanel = Panel(row=0, col=0)\n# @end\n...",
-  "textBoxes": [
-    {
-      "id": "text-1234",
-      "row": 1, "col": 2,
-      "widthCells": 8, "heightCells": 3,
-      "bgColor": "#ffffff",
-      "content": {
-        "type": "doc",
-        "content": [
-          {
-            "type": "paragraph",
-            "content": [
-              {
-                "type": "text",
-                "text": "Title",
-                "marks": [
-                  { "type": "bold" },
-                  { "type": "textStyle", "attrs": { "fontSize": "18px", "color": "#111827" } }
-                ]
-              }
-            ]
-          }
-        ]
+  "editorState": {
+    "tabs": [
+      { "id": "tab-1", "name": "main", "code": "arr = [5,3,8,1]\n# @viz\npanel = Panel(row=0, col=0)\n# @end\n..." }
+    ]
+  },
+  "visualPanel": {
+    "textBoxes": [
+      {
+        "id": "text-1234",
+        "row": 1, "col": 2,
+        "widthCells": 8, "heightCells": 3,
+        "bgColor": "#ffffff",
+        "content": {
+          "type": "doc",
+          "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Title" }] }]
+        }
       }
-    }
-  ]
+    ]
+  }
 }
 ```
 
-**Old format (two-editor):** saves with `builderCode` + `debuggerCode` + `breakpoints` fields are no longer generated. Old files can be migrated manually — there is no automatic migration path currently.
+**Old format (`combinedCode`):** saves with a top-level `combinedCode: string` or `userCode: string` field are still loaded — App.tsx passes the string to `Editor.load()` which wraps it in a single `main` tab.
 
 **Old format (pre-rich-text text boxes):** saves with `text`/`fontSize`/`color` fields at the box level are automatically migrated to `content: JSONContent` via `migrateTextBox()` on load.
 
@@ -159,8 +151,8 @@ Projects are saved as JSON files. Loading a project restores the combined code e
 
 | Field | Type | Notes |
 |-------|------|-------|
-| `combinedCode` | `string` | Combined Code editor content |
-| `textBoxes` | `TextBox[]` | Defaults to `[]` for saves that predate this field; old format auto-migrated |
+| `editorState` | `{ tabs: Tab[] }` | Editor tab state. Each `Tab = { id, name, code }`. Combined code = tabs reversed + joined. |
+| `visualPanel.textBoxes` | `TextBox[]` | Defaults to `[]`; old format auto-migrated |
 
 ### Local Save Mode
 
@@ -176,16 +168,17 @@ The app header always shows a project name input (`projectName` state in `App.ts
 
 ### Samples
 
-Bundled sample projects live in `src/samples/*.json`. They are loaded and registered by `src/app/sampleRegistry.ts`:
+Bundled sample projects live in `src/samples/` organized into subfolders:
 
-```typescript
-// Naming conventions:
-// feature-* → Features category
-// local-*   → only visible in DEV mode (localhost)
-// anything else → Algorithms category
-```
+| Folder | Visibility | Description |
+|--------|-----------|-------------|
+| `algorithms/` | Always | Sorting, searching, graph algorithm demos |
+| `data-structures/` | Always | Stack, queue, tree, etc. demos |
+| `features/` | Always | Feature showcase (shapes, panels, interaction, etc.) |
+| `local/` | DEV only | Local-dev samples, not shown in production |
+| `test/` | DEV only | Test samples, not shown in production |
 
-`SAMPLES` is exported from `sampleRegistry.ts` and used by App.tsx to populate the sample dropdown.
+`sampleRegistry.ts` loads all `src/samples/**/*.json` via `import.meta.glob` and builds a `TreeNode` tree (`FolderNode | SampleEntry`). Folders become collapsible groups in `SamplesMenu.tsx`. Any subfolder named `local` or `test` is `localOnly = true`.
 
 ### Key Files
 

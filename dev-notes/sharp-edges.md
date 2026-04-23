@@ -61,15 +61,15 @@ Code that reads the ID from a **hydrated TypeScript instance** must use `_elemId
 
 `Label`, `Array1D`, `Array2D` extend `VisualBuilderElementBase` directly in TypeScript — they do not go through `BasicShape`. Their `_elemId` property is never set (remains `undefined`).
 
-Even if you define `on_click` on a `Label` in Python, it will appear in `_serialize_combined_handlers()`, but `loadVisualBuilderObjects()` checks `(el as any)._elemId != null` before assembling `clickData` — so the check fails and no click listener is attached.
+Even if you define `on_click` on a `Label` in Python, it will appear in `_serialize_handlers()`, but `buildGridObjects()` checks `elemId != null` before assembling `clickData` — so the check fails and no click listener is attached.
 
 ---
 
-### Positions Are Always Absolute in Serialized JSON
+### Positions in Serialized JSON Are Panel-Relative; TypeScript Resolves Them
 
-Panel-relative coordinates are resolved to absolute grid coordinates **by the Python DFS traversal** before serialization. The raw JSON `position` field for every element (including panel children) is an absolute grid coordinate.
+Panel children store coordinates **relative to their parent panel's top-left corner** in the Python serialized JSON. TypeScript's `buildGridObjects()` resolves these to absolute grid coordinates during the DFS tree traversal.
 
-TypeScript's `loadVisualBuilderObjects()` no longer needs a two-pass algorithm to resolve parent offsets — all positions are absolute in the hydrated instances too. Do not add panel-offset resolution logic in TypeScript; it would double-apply the offset.
+Do not attempt to resolve panel offsets anywhere else in TypeScript — `absElement.x`/`absElement.y` on every `GridObject` already carry the resolved absolute coordinates after `buildGridObjects` runs. Adding a second resolution step would double-apply the offset.
 
 ---
 

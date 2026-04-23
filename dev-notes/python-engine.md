@@ -110,7 +110,7 @@ All shapes use schema-driven serialization via `_ShapeBase`. Constructor args ar
 
 ### `Panel`
 
-Container element. Children store positions relative to the panel's top-left corner in Python serialization. TypeScript resolves them to absolute grid coordinates in `loadVisualBuilderObjects()`. See [visual-elements.md](./visual-elements.md).
+Container element. Children store positions relative to the panel's top-left corner in Python serialization. TypeScript's `buildGridObjects()` resolves them to absolute grid coordinates during the DFS traversal. See [visual-elements.md](./visual-elements.md).
 
 ### `no_debug(fn)` Decorator
 
@@ -121,6 +121,17 @@ def my_helper():
 ```
 
 Marks a function so the viz-aware interactive tracer skips local tracing for it. Useful for functions defined inside viz blocks that should not produce trace steps when called from click handlers. Implemented by setting `fn._no_debug = True`; the interactive tracer checks `co_firstlineno` against viz ranges to achieve the same effect without needing this decorator explicitly.
+
+### `no_trace()`
+
+```python
+# @viz
+no_trace()   # suppress the timeline step for this viz block
+panel = Panel(row=0, col=10, width=5, height=5)
+# @end
+```
+
+Call `no_trace()` inside a viz block to prevent `__viz_end__` from recording a timeline snapshot for that block. Useful for setup blocks that initialize visual state but should not appear as a step the user can navigate to. Defined in `vb_serializer.py`; injected into `_namespace` at init time.
 
 ### Serialization
 
@@ -249,14 +260,29 @@ Optional import files live in `src/python-engine/imports/` (`array_utils.py`, `g
 
 **Tracer behavior:** The V() tracer only records steps for frames where `co_filename == '<user_code>'`. Functions from import files have a real filepath and are silently skipped — they execute normally but produce no trace steps.
 
+### Python Tests
+
+The `src/python-engine/tests/` directory contains a `pytest` suite that runs directly against the Python files (no browser/Pyodide needed). Use it for fast iteration on Python-engine logic.
+
+| File | What it tests |
+|------|--------------|
+| `conftest.py` | Path setup; `reset_engine` autouse fixture; `run_code` fixture |
+| `test_basic.py` | Element creation, deletion, registry, panel membership |
+| `test_event_handlers.py` | Click, drag, and input handler dispatch; return shapes |
+| `test_snapshots.py` | Full vs delta snapshots; V() counting; dirty flags |
+| `test_full_program.py` | End-to-end trace regression tests against sample files |
+
+`conftest.py` adds `src/python-engine/` and `src/python-engine/imports/` to `sys.path`, so tests can `import _vb_engine`, `import user_api`, and `import vb_serializer` directly.
+
 ### Key Files Summary
 
 | File | Type | Purpose |
 |------|------|---------|
 | `src/python-engine/_vb_engine.py` | VFS module | Hidden engine types: `VisualElem` (+ `_dirty`/`_set_v_attr`), `V` (+ `_count`), `R`, `TrackedDict`, `PopupException` |
-| `src/python-engine/user_api.py` | VFS module | User-facing API: `Panel`, shapes, `Input`, `no_debug` |
-| `src/python-engine/vb_serializer.py` | exec'd | Execution, delta snapshot recording, interactive dispatch; `_namespace`, `_init_namespace`, `_exec_code`, `_reset_snap_state` |
+| `src/python-engine/user_api.py` | VFS module | User-facing API: `Panel`, shapes, `Input`, `no_debug`, `no_trace` |
+| `src/python-engine/vb_serializer.py` | exec'd | Execution, delta snapshot recording, `no_trace()`, interactive dispatch; `_namespace`, `_init_namespace`, `_exec_code`, `_reset_snap_state` |
 | `src/python-engine/executor.ts` | TypeScript | All TypeScript↔Pyodide calls; code preprocessing; exports `RawVisual`, `VisualDelta` types |
+| `src/python-engine/usePyodideLoader.ts` | TypeScript hook | `pyodideReady` / `pyodideLoading` state; wraps `pyodide-runtime.ts` |
 | `src/python-engine/viz-block-parser.ts` | TypeScript | Parse & validate # @viz / # @end blocks |
-| `src/python-engine/pyodide-runtime.ts` | TypeScript | Pyodide singleton: `loadPyodide()`, `isPyodideLoaded()`, `resetPythonState()` |
-| `src/python-engine/profiler.py` | dev tool | Python-side performance profiling (not loaded in production) |
+| `src/python-engine/pyodide-runtime.ts` | TypeScript | Pyodide singleton: `loadPyodide()`, `isPyodideLoaded()` |
+| `src/python-engine/profiler.py` | dev tool | Python-side performance profiling; also used by `tests/conftest.py` |
