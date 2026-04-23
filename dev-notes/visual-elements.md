@@ -8,8 +8,9 @@ The pipeline that takes a Python element object to a rendered, clickable cell on
 Python VisualElem
   → _serialize_visual_builder() → full array OR delta {is_delta, changed, deleted}
     → setVisualTimeline() → hydrated timeline (Map-based, delta-aware)
-      → loadVisualBuilderObjects() → grid cell map
-        → user click → executeClickHandler() → Python _exec_click_traced()
+      → buildGridObjects() → Map<gridId, GridObject> with absolute positions
+        → user click/drag → executeClickHandler() / executeDragHandler()
+          → Python _exec_click_traced() / _exec_drag_traced()
 ```
 
 ---
@@ -23,11 +24,13 @@ Every visual element has one stable ID:
 
 At each traced line, `_serialize_visual_builder()` produces either a **full snapshot** (first call, or when V() bindings are present) or a **delta** (subsequent calls when `V._count == 0`). See [python-engine.md](./python-engine.md) for details on the delta system.
 
+Python serializes element positions as **panel-relative** coordinates — children store `(x, y)` relative to their parent panel's top-left corner. TypeScript's `buildGridObjects()` resolves these to absolute grid coordinates during the DFS traversal. See [grid-rendering.md](./grid-rendering.md) for the full layout algorithm.
+
 ### Renderers
 
 TypeScript has a class hierarchy mirroring the Python shapes:
 - **`BasicShape`** (`src/visual-panel/render-objects/BasicShape.ts`) — base for all clickable shapes. Its constructor copies `el._elem_id` → `this._elemId` (the only snake→camelCase bridge).
-- `Rect`, `Circle`, `Arrow` extend `BasicShape` → they get `_elemId` → they can be clickable.
+- `Rect`, `Circle`, `Arrow` extend `BasicShape` → they get `_elemId` → they can be clickable/draggable.
 - `Line`, `Label`, `Array1D`, `Array2D` implement `VisualBuilderElementBase` directly → they do **not** get `_elemId` → they are never clickable, even if `on_click` is defined in Python.
 
 ### Registration
@@ -50,7 +53,7 @@ Each TypeScript shape class registers itself by type string: `registerVisualElem
 
 #### `_serialize_visual_builder()`
 
-Serializes the element registry as a full snapshot or delta. Positions are resolved to **absolute grid coordinates** by the Python DFS traversal before serialization. TypeScript never needs to add panel offsets.
+Serializes the element registry as a full snapshot or delta. Positions in the serialized JSON are **panel-relative** — children store coordinates relative to their parent panel's top-left corner. TypeScript's `buildGridObjects()` resolves these to absolute grid coordinates during the DFS traversal.
 
 #### `_exec_click_traced(elem_id, row, col)` / `_exec_drag_traced(...)` / `_exec_input_changed(...)`
 
@@ -107,73 +110,59 @@ This is the **only place** the Python `_elem_id` is transferred to TypeScript. S
 
 ---
 
-### Grid Hydration: `loadVisualBuilderObjects()`
+### Grid Hydration: `buildGridObjects()` / `loadGridObjects()`
 
 **File:** `src/visual-panel/hooks/useGridState.ts`
 
-Takes an array of hydrated TypeScript element instances and populates the grid cell map.
+`buildGridObjects(elements)` is a **pure function** (exported for testing) that takes an array of hydrated TypeScript element instances and returns a `Map<gridId, GridObject>`. `loadGridObjects(elements)` is the hook entry point that calls it and stores the result.
 
-**All positions are now absolute.** The Python side (DFS traversal in `vb_serializer.py`) resolves panel-relative coordinates to absolute grid coordinates before serialization. TypeScript no longer needs to add panel offsets — `element.position` in every hydrated instance is already an absolute grid coordinate.
-
-#### Algorithm (single pass)
-
-```
-For each element (sorted by z-order):
-  → element.position is already absolute
-  → Call element.draw() → RenderableObjectData
-  → Assemble clickData / dragData (see below)
-  → Store in objects map
-```
-
-Panels still appear as elements in the list (for occupancy/auto-sizing), but children do not need a parent lookup for position resolution.
+Positions in the hydrated elements are **panel-relative** (as serialized by Python). `buildGridObjects` resolves them to absolute grid coordinates via a DFS panel-tree traversal. See [grid-rendering.md](./grid-rendering.md) for the full algorithm.
 
 #### Interaction Data Assembly
 
-Both `clickData` and `dragData` use the shared `InteractionData` type (`src/visual-panel/types/grid.ts`):
+`buildGridObjects` attaches interaction data to leaf elements only. The `InteractionData` type (`src/visual-panel/types/grid.ts`):
 
 ```typescript
 export interface InteractionData {
   elemId: number;
-  position: [number, number];  // top-left cell of the element (absolute)
+  x: number;   // panel-relative x of the element
+  y: number;   // panel-relative y of the element
 }
 ```
 
 ```typescript
-const elemId = (el as any)._elemId as number | undefined;
-
-const clickData: InteractionData | undefined = elemId != null && hasHandler(elemId, 'on_click')
-    ? { elemId, position: el.position as [number, number] }
-    : undefined;
-
-const hasDrag = elemId != null && (
-    hasHandler(elemId, 'on_drag_start') || hasHandler(elemId, 'on_drag') || hasHandler(elemId, 'on_drag_end')
-);
-const dragData: InteractionData | undefined = hasDrag
-    ? { elemId: elemId!, position: el.position as [number, number] }
-    : undefined;
+const clickData = elemId != null && hasHandler(elemId, 'on_click')
+    ? { elemId, x: el.x, y: el.y } : undefined;
+const dragData = elemId != null && hasHandler(elemId, 'on_drag')
+    ? { elemId, x: el.x, y: el.y } : undefined;
+const inputData = elemId != null && hasHandler(elemId, 'input_changed')
+    ? { elemId, x: el.x, y: el.y } : undefined;
 ```
 
-Cells with `clickData` get `cursor-pointer`; cells with `dragData` get `cursor-grab`. A cell can have both.
+`x`/`y` store the element's panel-relative coordinates. `GridSingleObject` uses them to derive the panel's absolute origin, then converts all subsequent mouse events to panel-relative coordinates before calling Python handlers. Elements with `clickData` render with `cursor-pointer`; those with `dragData` with `cursor-grab`.
 
 ---
 
 ### Click Dispatch Chain
 
-**Files:** `Grid.tsx` → `GridArea.tsx` → `executor.ts` → `vb_serializer.py`
+**Files:** `GridSingleObject.tsx` → `Grid.tsx` → `GridArea.tsx` → `executor.ts` → `vb_serializer.py`
 
 ```
-Grid.tsx (GridSingleObject):
-  onClick → onElementClick(clickData.elemId, [row, col])
+GridSingleObject.tsx:
+  onClick → compute (x, y) = clickData.{x,y} + floor(offsetX/CELL_SIZE)
+         → onElementClick(clickData.elemId, x, y)   ← panel-relative coordinates
 
-GridArea.tsx (handleElementClick → applyEventResult):
-  result = await executeClickHandler(elemId, row, col)
+Grid.tsx → GridArea.tsx (handleElementClick → applyEventResult):
+  result = await executeClickHandler(elemId, x, y)
   hydrate steps → setVisualTimeline(result.steps.map(s => s.visual))
   enter trace mode with mini-timeline
 
 executor.ts (executeClickHandler):
-  1. _exec_click_traced(elemId, row, col)  ← single Python call returns full result
+  1. _exec_click_traced(elemId, x, y)  ← single Python call returns full result
   return { steps, handlers }
 ```
+
+Coordinates passed to `on_click(x, y)` in Python are **panel-relative** — the cell within the element's parent panel that was clicked. For root-level elements (no panel), panel-relative equals absolute grid.
 
 **Why handlers are re-fetched on every event:** Elements created inside handlers accumulate in `_registry` and may have their own handlers. `_serialize_handlers()` is called inside `_exec_click_traced` — re-fetching ensures dynamically created elements are immediately interactive. See [sharp-edges.md](./sharp-edges.md).
 
@@ -181,32 +170,33 @@ executor.ts (executeClickHandler):
 
 ### Drag Dispatch Chain
 
-**Files:** `Grid.tsx` → `GridArea.tsx` → `pythonExecutor.ts` → `event_handling.py`
+**Files:** `GridSingleObject.tsx` → `Grid.tsx` → `GridArea.tsx` → `executor.ts` → `vb_serializer.py`
 
 ```
-Grid.tsx (GridSingleObject):
-  onMouseDown → onElementDragStart(dragData.elemId, [row, col])
+GridSingleObject.tsx:
+  onMouseDown → onElementDragStart(elemId, x, y, panelOriginCol, panelOriginRow)
+    where panelOriginCol = absMouseCol - dragData.x  (absolute grid col of panel origin)
 
 Grid.tsx (container onMouseMove):
   if dragStateRef set and cell changed and no call in flight:
-    onElementDrag(elemId, [row, col])   ← fires on each new cell
+    col = absMouseCol - panelOriginCol   ← convert to panel-relative
+    row = absMouseRow - panelOriginRow
+    onElementDrag(elemId, col, row, 'mid')
     dragCallInFlightRef = true until Promise resolves
 
 window mouseup listener (Grid useEffect):
-  onElementDragEnd(elemId, [lastRow, lastCol])
+  onElementDrag(elemId, lastCol, lastRow, 'end')
   clear dragStateRef
 
-GridArea.tsx (handleElementDrag{Start,/,End} → applyEventResult):
-  result = await executeEventHandler('on_drag_{start|/|end}', elemId, row, col)
-  hydrate snapshot → loadVisualBuilderObjects(hydrated)
+GridArea.tsx (applyEventResult on each drag callback):
+  result = await executeDragHandler(elemId, col, row, dragType)
+  hydrate steps → setVisualTimeline(result.steps.map(s => s.visual))
 
-pythonExecutor.ts (executeEventHandler):
-  1. _handle_event_with_output(eventName, elemId, row, col)
-  2. _serialize_visual_builder()
-  3. _serialize_handlers_json()
+executor.ts (executeDragHandler):
+  _exec_drag_traced(elemId, col, row, dragType)  ← returns full result
 ```
 
-**`position` semantics:** All three drag handlers receive the **absolute grid cell `(row, col)`** under the mouse — the same type as `on_click`. It is not relative to the element's origin.
+**Coordinate semantics:** All drag events (`'start'`, `'mid'`, `'end'`) deliver **panel-relative** `(col, row)` — the same coordinate space as `on_click`. For root-level elements, panel-relative equals absolute grid.
 
 **In-flight guard:** `dragCallInFlightRef` prevents queuing multiple simultaneous Pyodide calls during fast drags. If the mouse moves through several cells before the previous `on_drag` call returns, intermediate cells are skipped. The final position is always captured by `on_drag_end`.
 
@@ -257,11 +247,11 @@ In Jump mode (animation off), all transitions are disabled for instant updates.
 
 1. `_elem_id` (Python `int`) === `_elemId` (TypeScript `number`) — the only stable identity
 2. `BasicShape` subclasses (`Rect`, `Circle`, `Arrow`) are clickable/draggable; `Line`, `Label`, `Array` are not
-3. All positions in the serialized JSON are **absolute grid coordinates** — Python resolves panel-relative offsets before serialization
+3. Positions in serialized JSON are **panel-relative**; `buildGridObjects()` resolves them to absolute in TypeScript
 4. `_serialize_handlers()` returns a JSON string — called inside `_exec_click_traced` and returned as part of the result
 5. Handlers are re-fetched after every event to support dynamically created elements
 6. Lower `z` = closer to viewer = rendered on top
-7. All event handlers (`on_click`, `on_drag_*`) receive absolute grid `(row, col)` — same type, same coordinate space
+7. All event handlers (`on_click`, `on_drag`) receive **panel-relative** `(x, y)` — for root-level elements this equals absolute grid; for panel children it is relative to the panel's top-left corner
 
 ---
 
@@ -271,13 +261,15 @@ In Jump mode (animation off), all transitions are disabled for instant updates.
 |------|---------|
 | `src/python-engine/_vb_engine.py` | `VisualElem` (`_dirty`, `__setattr__` patch), `V` (`_count`), `R`, shapes |
 | `src/python-engine/user_api.py` | User-facing shapes: `Rect`, `Circle`, `Arrow`, `Line`, `Label`, `Array`, `Array2D`, `Input` |
-| `src/python-engine/vb_serializer.py` | `_serialize_visual_builder` (delta/full), `_serialize_handlers`, `_exec_click_traced`, etc. |
+| `src/python-engine/vb_serializer.py` | `_serialize_visual_builder` (delta/full), `_serialize_handlers`, `_exec_click_traced`, `_exec_drag_traced` |
 | `src/python-engine/executor.ts` | `executeClickHandler`/`executeDragHandler`/`executeInputChanged`; exports `RawVisual`, `VisualDelta` |
-| `src/visual-panel/render-objects/BasicShape.ts` | `_elemId` bridge; clickable base class |
+| `src/visual-panel/render-objects/BasicShape.ts` | `_elemId` bridge; clickable/draggable base class |
 | `src/visual-panel/render-objects/line/Line.ts` | `Line` TypeScript class (implements `VisualBuilderElementBase`, not `BasicShape`) |
 | `src/visual-panel/types/elementRegistry.ts` | Constructor registry by type string |
-| `src/timeline/timelineState.ts` | `setVisualTimeline` (delta-aware Map-based hydration); `hydrateTimelineFromArray` / `hydrateTimelineFromJson` |
-| `src/visual-panel/hooks/useGridState.ts` | `loadVisualBuilderObjects`; single-pass (positions are absolute); `clickData`/`dragData` assembly; z-sort |
+| `src/visual-panel/types/grid.ts` | `GridObject`, `ExtraGridInfo`, `InteractionData` |
+| `src/timeline/timelineState.ts` | `setVisualTimeline` (delta-aware Map-based hydration); `getChangedIdsAt` |
+| `src/visual-panel/hooks/useGridState.ts` | `buildGridObjects` (pure, exported); DFS tree traversal; panel-relative → absolute; interaction data |
+| `src/visual-panel/components/GridSingleObject.tsx` | Click/drag/input event handling; panel-relative coordinate conversion |
 | `src/visual-panel/handlersState.ts` | `setHandlers`; `hasHandler` |
 | `src/app/GridArea.tsx` | Click + drag dispatch; `applyEventResult` snapshot re-hydration helper |
 | `src/animation/animationContext.tsx` | `AnimationContext` boolean; Animated/Jump toggle |
