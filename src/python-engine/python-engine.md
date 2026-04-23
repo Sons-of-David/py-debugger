@@ -1,6 +1,6 @@
 # Python Engine
 
-[← dev-notes](./dev-notes.md)
+[← dev-notes](../../dev-notes/dev-notes.md)
 
 Python runs entirely in-browser via **Pyodide** (WebAssembly, loaded once per page session). There is no server-side Python.
 
@@ -110,7 +110,7 @@ All shapes use schema-driven serialization via `_ShapeBase`. Constructor args ar
 
 ### `Panel`
 
-Container element. Children store positions relative to the panel's top-left corner in Python serialization. TypeScript's `buildGridObjects()` resolves them to absolute grid coordinates during the DFS traversal. See [visual-elements.md](./visual-elements.md).
+Container element. Children store positions relative to the panel's top-left corner in Python serialization. TypeScript's `buildGridObjects()` resolves them to absolute grid coordinates during the DFS traversal. See [visual-elements.md](../visual-panel/visual-elements.md).
 
 ### `no_debug(fn)` Decorator
 

@@ -195,4 +195,4 @@ The engine filters the raw event stream to build its two timelines:
 | Notify builder of returns | On `'return'`: forward return value to `function_exit()` hook |
 | Stop tracing inside a builder hook | `sys.settrace(None)` before calling the hook, restore after |
 
-See [python-engine.md](./python-engine.md) for the full architecture.
+See [python-engine.md](../src/python-engine/python-engine.md) for the full architecture.

@@ -15,10 +15,11 @@ Current hub files: `App.tsx`, `GridArea.tsx`, `Grid.tsx`, `executor.ts`.
 
 ## Architectural Changes
 
-Before making any significant architectural change, find and read the relevant file in `dev-notes/`:
+Before making any significant architectural change, find and read the relevant file:
 
 - `dev-notes/dev-notes.md` — component layout, app modes, data flow, directory structure
-- `dev-notes/python-engine.md` — Python tracer, builder classes, Pyodide bridge
-- `dev-notes/visual-elements.md` — element serialization, hydration, click dispatch
+- `src/python-engine/python-engine.md` — Python tracer, builder classes, Pyodide bridge
+- `src/visual-panel/visual-elements.md` — element serialization, hydration, click dispatch
+- `src/visual-panel/grid-rendering.md` — buildGridObjects, GridObject, DFS layout, GridSingleObject
 - `dev-notes/other-components.md` — text boxes, save/load, output terminal, API panel
 - `dev-notes/sharp-edges.md` — known issues and quirks (always check before touching Python/TS boundary)

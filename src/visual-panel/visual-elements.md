@@ -1,6 +1,6 @@
 # Visual Elements
 
-[← dev-notes](./dev-notes.md)
+[← dev-notes](../../dev-notes/dev-notes.md)
 
 The pipeline that takes a Python element object to a rendered, clickable cell on the grid.
 
@@ -22,7 +22,7 @@ Python VisualElem
 Every visual element has one stable ID:
 - **`_elem_id`** — stable integer assigned at construction. The only identity that holds across serialization calls, Python/TS boundary, and timeline steps.
 
-At each traced line, `_serialize_visual_builder()` produces either a **full snapshot** (first call, or when V() bindings are present) or a **delta** (subsequent calls when `V._count == 0`). See [python-engine.md](./python-engine.md) for details on the delta system.
+At each traced line, `_serialize_visual_builder()` produces either a **full snapshot** (first call, or when V() bindings are present) or a **delta** (subsequent calls when `V._count == 0`). See [python-engine.md](../python-engine/python-engine.md) for details on the delta system.
 
 Python serializes element positions as **panel-relative** coordinates — children store `(x, y)` relative to their parent panel's top-left corner. TypeScript's `buildGridObjects()` resolves these to absolute grid coordinates during the DFS traversal. See [grid-rendering.md](./grid-rendering.md) for the full layout algorithm.
 
@@ -164,7 +164,7 @@ executor.ts (executeClickHandler):
 
 Coordinates passed to `on_click(x, y)` in Python are **panel-relative** — the cell within the element's parent panel that was clicked. For root-level elements (no panel), panel-relative equals absolute grid.
 
-**Why handlers are re-fetched on every event:** Elements created inside handlers accumulate in `_registry` and may have their own handlers. `_serialize_handlers()` is called inside `_exec_click_traced` — re-fetching ensures dynamically created elements are immediately interactive. See [sharp-edges.md](./sharp-edges.md).
+**Why handlers are re-fetched on every event:** Elements created inside handlers accumulate in `_registry` and may have their own handlers. `_serialize_handlers()` is called inside `_exec_click_traced` — re-fetching ensures dynamically created elements are immediately interactive. See [sharp-edges.md](../../dev-notes/sharp-edges.md).
 
 ---
 

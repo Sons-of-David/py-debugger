@@ -1,6 +1,6 @@
 # Grid Rendering
 
-[← dev-notes](./dev-notes.md)
+[← dev-notes](../../dev-notes/dev-notes.md)
 
 How the visual panel goes from Python element objects to an interactive, animated canvas.
 
