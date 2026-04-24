@@ -23,10 +23,6 @@ The **interactive mode** (`on_click`, click-traced sub-runs) is the core differe
 
 Bugs and robustness gaps that should be fixed. Ordered roughly by severity.
 
-### Pyodide namespace not reset between Analyze runs *(easy fix)*
-
-`_namespace` is not cleared at the start of `_exec_code` — a second Analyze in the same session can see stale functions from the previous run. `_clear_registry()` resets the visual elements, but not the Python variable namespace. Fix: clear `_namespace` at the top of `_exec_code` (it's reseeded from `user_api` exports anyway, so this is safe). Tracked in [sharp-edges.md](./sharp-edges.md).
-
 ### Delta snapshots can miss in-place mutations *(no simple fix yet)*
 
 The delta snapshot system uses `__setattr__` to detect changed elements. In-place mutations like `arr[0] = x` on a list that a `V()` expression reads bypass `__setattr__`, so the element is not marked dirty and the mutation is silently dropped from the delta. Full snapshots (`V._count > 0`) are not affected. No clear fix identified yet — recording dirty state at `V()` eval time is one direction, but adds overhead on every snapshot.

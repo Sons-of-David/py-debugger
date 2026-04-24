@@ -10,17 +10,6 @@ Non-obvious behaviors, gotchas, and constraints. Read this before touching the P
 
 These are imperfections worth fixing at some point.
 
-### Persistent Namespace Not Reset Between Analyze Runs
-
-Running Analyze twice in the same page session does **not** clear `_namespace`. Variables and functions from the previous run remain until overwritten by the new run. `VisualElem._clear_registry()` resets the visual elements, but not the Python variable namespace.
-
-In practice this is usually harmless because `exec(code)` re-defines most variables. The risk is with **functions removed from the code** — if you had `def temp(): ...` in a previous run and deleted it, `temp` is still callable in the new session. Also any module-level side effects from the previous run persist.
-
-**Workaround:** Reload the page for a completely clean state.
-**Fix direction:** Reset `_namespace` at the start of `_exec_code` each Analyze. The namespace is re-seeded from `user_api` exports anyway, so this is safe.
-
----
-
 ### `GridCell` Must Not Have a Border When Rendering Elements
 
 `GridCell` renders inside a `CELL_SIZE × CELL_SIZE` container. When an element is present, the cell div must have **no border**. A `1px` border with `box-sizing: border-box` (Tailwind default) shrinks the usable content area from 40×40 to 38×38 px, causing the SVG inside to render at a 0.95 scale. Shape coordinates then drift from their intended cell-center positions — the start point of a line may still land correctly by coincidence (the 1px border offset and scale reduction cancel at `offset=0.5`), but the end point drifts by `~2px × delta_cells`.
