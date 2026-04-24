@@ -19,10 +19,40 @@ The **interactive mode** (`on_click`, click-traced sub-runs) is the core differe
 
 ---
 
+## Known Issues
+
+Bugs and robustness gaps that should be fixed. Ordered roughly by severity.
+
+### Pyodide namespace not reset between Analyze runs *(easy fix)*
+
+`_namespace` is not cleared at the start of `_exec_code` — a second Analyze in the same session can see stale functions from the previous run. `_clear_registry()` resets the visual elements, but not the Python variable namespace. Fix: clear `_namespace` at the top of `_exec_code` (it's reseeded from `user_api` exports anyway, so this is safe). Tracked in [sharp-edges.md](./sharp-edges.md).
+
+### Delta snapshots can miss in-place mutations *(no simple fix yet)*
+
+The delta snapshot system uses `__setattr__` to detect changed elements. In-place mutations like `arr[0] = x` on a list that a `V()` expression reads bypass `__setattr__`, so the element is not marked dirty and the mutation is silently dropped from the delta. Full snapshots (`V._count > 0`) are not affected. No clear fix identified yet — recording dirty state at `V()` eval time is one direction, but adds overhead on every snapshot.
+
+### No browser-side tests *(big gap, high priority when time allows)*
+
+The `pytest` suite covers Python engine logic well. The TypeScript rendering pipeline — especially `buildGridObjects` DFS traversal, `GridSingleObject` coordinate math, and timeline hydration — has no automated tests. A misbehaving DFS or off-by-one in panel-relative coordinate conversion can only be caught manually today. Next testing push should add `@testing-library/react` tests for `buildGridObjects` and `GridSingleObject`.
+
+### Error attribution not wired to editor *(lower priority)*
+
+When Python throws an exception, the executor already parses the traceback and extracts the line number. That line number is not wired to the Monaco editor's decoration API, so the offending line is not highlighted. Connecting them would make debugging significantly faster. The plumbing for editor decorations exists (viz-block highlighting uses it).
+
+### Viz-block nesting not validated at parse time
+
+An unclosed `# @viz` block (missing `# @end`) causes a confusing runtime failure rather than a clear parse error. `viz-block-parser.ts` runs before execution — it could flag unmatched markers with an actionable message before Pyodide is even called.
+
+### Element registry unbounded growth in long interactive sessions
+
+`VisualElem._registry` grows indefinitely if handlers create new elements on every click. In a long interactive session this can cause visible slowdown. A simple cap (e.g. warn or raise `PopupException` past N elements) would prevent OOM in the browser tab.
+
+---
+
 ## Up Next
 
-1. **Search tree hero sample** — BST/AVL with interactive search, insert, delete, rotations via click tracing
-2. **Merge tutorial-pages** and update tutorials for combined editor
+1. ~~**Search tree hero sample** — BST/AVL with interactive search, insert, delete, rotations via click tracing~~
+2.~~ **Merge tutorial-pages** and update tutorials for combined editor~~
 3. **More interactive examples** — heap insert, ~~graph BFS click-to-start~~
 4. ~~**Rename** Math-Insight → AlgoPlay across codebase and tutorials~~
 5. **Beta launch** (see Beta Launch section below)
@@ -34,6 +64,30 @@ The **interactive mode** (`on_click`, click-traced sub-runs) is the core differe
 - ~~**Input elements** — Button, TextInput, Slider as first-class visual elements~~
   **Done:** `Input` element shipped with `input_changed(text)` handler and `get_input()`.
 - **More emphasis on interactive mode UI** — larger "Finish & Interact" button, in-app discovery hint for new users
+
+### Breakpoints *(medium priority)*
+
+We had breakpoints before and removed them because visuals only update at viz-block exits and V() change events — pausing at an arbitrary line doesn't correspond to a visual snapshot. Re-add them as a timeline filter: a breakpoint at line N shows only the steps whose source line is ≤ N (i.e. navigate to the last snapshot recorded before that line was reached). The timeline is already pre-built, so no re-execution is needed — it's purely a navigation filter.
+
+### Shareable / persistent links *(wanted, implementation unclear)*
+
+Users want to share their work in blog posts, Discord, forum answers. Two options, both with problems:
+- **Encode state in URL** — base64 of the save JSON. Produces URLs hundreds of characters long; practically unshareable.
+- **Store programs online** — requires a backend, user accounts, and moderation.
+
+No solution chosen yet. Keep as a high-want, blocked-on-approach item.
+
+### Composite / template objects *(medium priority)*
+
+A way to build higher-level visual components from the primitive shapes (Rect, Arrow, Label, etc.). Examples: a graph node with edges, a complexity counter widget, a heap visualizer. Near-term plan: ship them as **sample files** users can copy from (a `graph-template.json` users start from). Longer-term: promote to first-class Python classes in `user_api.py` or as a new import library (e.g. `graphs.py` already does this for graph structure; the rendering side needs the same treatment).
+
+### Playback speed slider *(low priority)*
+
+A 0.5× / 1× / 2× / max speed control in the header. The self-correcting playback timer already exists — exposing speed as a user control is a small UI addition. Useful for demos and recordings.
+
+### "Explain this step" LLM integration *(future, paid tier only)*
+
+At each timeline step, call the Claude API with the current snapshot + code and return a one-sentence natural-language explanation. Only viable when the app has enough users to justify a paid plan — costs real money at scale.
 
 ---
 
@@ -94,7 +148,7 @@ The **interactive mode** (`on_click`, click-traced sub-runs) is the core differe
 
 - **emphasize end trace:** When in trace mode and the user try to click some object in the grid that should start another trace, do some effect on the end trace button.
 
-- **add more tabs to the python code**
+- ~~**add more tabs to the python code**~~ **Done:** named tabs with add/delete/rename/drag shipped.
 
 - ~~**collapsible blocks in python** ~~
 
@@ -107,7 +161,7 @@ The **interactive mode** (`on_click`, click-traced sub-runs) is the core differe
 - **Python-defined import schemas:** Builder/debugger import files (`array_utils.py`, `graphs.py`, `list_helpers.py`) currently have their ObjDoc schemas hand-written in separate `.schema.ts` files. These should be defined in the Python files themselves (e.g. as a `SCHEMA` dict) and extracted/generated into TypeScript at build time, so the single source of truth for each library lives with its implementation.
 
 - **Unify userZ + zOrder:** Consider merging `userZ` and `zOrder` in `RenderableObjectData` into a single `depth: [number, number]` tuple — they always travel and sort together in `Grid.tsx`.
-- **Unify event-handler position relativity:** `on_click` position is relative to the shape's containing panel (or the grid if top-level), but `on_drag` position is the absolute grid cell. Decide whether to unify them (both panel-relative is the more consistent choice).
+- ~~**Unify event-handler position relativity:** `on_click` position is relative to the shape's containing panel (or the grid if top-level), but `on_drag` position is the absolute grid cell.~~ **Done:** both `on_click` and `on_drag` now deliver panel-relative coordinates.
 - ~~**Clear editors button** ~~
 
 - ~~**R instance caching:** `R.__new__` now returns a cached instance per `orig_id` via `R._instance_cache`, so the same original object always maps to the same `R` Python object across steps. Builder code can use `R` objects as dict keys. Cache is cleared in `_reset_exec_state()`. Dev notes (`python-engine.md`) should be updated to document this guarantee.~~
@@ -158,11 +212,11 @@ These were identified while profiling the A* sample (`perf-delta-snapshots` bran
 
 These were identified while working on A* playback speed (March 2026). The timer and animation-skip improvements helped, but the per-frame render cost is still the dominant bottleneck.
 
-- **Incremental `loadVisualBuilderObjects`.** Today the entire `objects` Map is rebuilt from scratch on every step, even though most elements are unchanged. `getChangedIdsAt()` now tells us exactly which elem IDs changed. An incremental path would clone the previous Map and only update/delete entries for changed elements, leaving all other entries with their existing JS object references.
+- **Incremental `buildGridObjects`.** Today the entire `objects` Map is rebuilt from scratch on every step, even though most elements are unchanged. `getChangedIdsAt()` now tells us exactly which elem IDs changed. An incremental path would clone the previous Map and only update/delete entries for changed elements, leaving all other entries with their existing JS object references.
 
-- **Stable `RenderableObjectData` references unblock React.memo.** `GridSingleObject` is wrapped in `memo`, but it always receives a new `obj` (the `cells` Map is rebuilt). If unchanged elements kept the same `RenderableObjectData` reference across steps, `memo` would bail out entirely — skipping not just Framer Motion but the entire React reconciliation for those components.
+- **Stable `GridObject` references unblock React.memo.** `GridSingleObject` is wrapped in `memo`, but it always receives a new `obj` reference (the Map is rebuilt by `buildGridObjects`). If unchanged elements kept the same `GridObject` reference across steps, `memo` would bail out entirely — skipping not just Framer Motion but the entire React reconciliation for those components.
 
-- **Stable `cells` Map unblocks downstream memos.** `panelAutoSizes`, `cells`/`overlayCells`, and `occupancyMap` are all re-derived via `useMemo` because `objects` is always a new Map. Stable references in `objects` would let these memos short-circuit on unchanged steps.
+- **Stable `objects` Map unblocks downstream memos.** Derived memos in `useGridState` re-run on every step because `objects` is always a new Map. Stable references would let these memos short-circuit on unchanged steps.
 
 - **Cache `objectsToRender` sort order.** The `O(n log n)` sort in `Grid.tsx` runs every frame. For most steps in A* the z-order doesn't change. Could track a dirty flag on `userZ`/`zOrder` and skip the sort when neither changed.
 
