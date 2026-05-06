@@ -1,0 +1,457 @@
+{
+  "editorState": {
+    "tabs": [
+      {
+        "id": "tab-1",
+        "name": "main",
+        "code": "# ── Bounded Subset Sum ────────────────────────────────────────────────────────\n# Trace-mode. Click Analyze, then step through the timeline.\n#\n# table[i][s] = minimum elements from arr[:i] needed to reach sum s\n#   (inf if impossible)\n#\n# taking item i:  table[i-1][s - arr[i-1]] + 1       (green, if count <= k)\n# skipping item:  table[i-1][s]                       (inherit from above)\n#\n# After filling, traceback from table[n][S] highlights chosen items (orange).\n# ─────────────────────────────────────────────────────────────────────────────\n\n# ── Algorithm state ───────────────────────────────────────────────────────────\narr = [3, 1, 4, 2, 5]\nS = 8\nk = 3\nn = len(arr)\nINF = n + 1\n\ntable = [[INF] * (S + 1) for _ in range(n + 1)]\ntable[0][0] = 0\nchosen = []\n\n# ── Visualization setup ───────────────────────────────────────────────────────\n# @viz\n\nDARK       = (35, 40, 52)\nOVER_COLOR = (70, 70, 110)\nPATH_COLOR = (235, 155, 45)\nGOLD       = (255, 185, 65)\n\ndef cell_color(v):\n    if v >= INF:\n        return DARK\n    if v <= k:\n        t = v / k if k > 0 else 1.0\n        return (int(25 + t * 80), int(120 + t * 60), int(55 + t * 25))\n    return OVER_COLOR\n\npanel = Panel(x=2, y=2)\n\n# column labels\nfor s in range(S + 1):\n    panel.add(Label(label=str(s), x=s, y=-1, font_size=13, color=GOLD, z=3))\n\n# row labels\npanel.add(Label(label='—', x=-1, y=0, font_size=13, color=GOLD, z=3))\nfor i, v in enumerate(arr):\n    panel.add(Label(label=str(v), x=-1, y=i+1, font_size=13, color=GOLD, z=3))\n\nviz_table = [[None] * (S + 1) for _ in range(n + 1)]\nfor i in range(n + 1):\n    for s in range(S + 1):\n        v0  = table[i][s]\n        viz_table[i][s] = LabeledRect(\n            x = s, y = i,\n            label = str(v0) if v0 < INF else 'inf',\n            color = cell_color(v0),\n            font_size=11,\n            z=5\n        )\n        panel.add(viz_table[i][s])\n\ncursor = Panel(\n    x=0, y=1\n)\nsec_cursor_line = Line(end=(-1,0), animate = False)\nsec_cursor_line.alpha = 0\ncursor.add(\n    Rect(color=(255, 250, 100), alpha=0.35, z=2, animate=False),\n    Line(end=(-1, 0)),\n    sec_cursor_line\n)\nresult_lbl = Label(label='', x=0, y=n+2, width=S+1, font_size=14, color=PATH_COLOR, z=3)\npanel.add(cursor, result_lbl)\n\n# @end\n\n# ── Fill the table ────────────────────────────────────────────────────────────\nfor i in range(0, n):\n    # @viz\n    sec_cursor_line.end=(-1,-arr[i])\n    no_trace()\n    # @end\n    for s in range(S + 1):\n        # @viz\n        cursor.x = s\n        cursor.y = i+1\n        sec_cursor_line.alpha = 1 if s>=arr[i] else 0\n        # @end\n        v = table[i][s]\n        if s >= arr[i] and table[i][s - arr[i]] < INF:\n            v = min(v, table[i][s - arr[i]] + 1)\n        table[i+1][s] = v\n        # @viz\n        viz_table[i+1][s].rect.color  = cell_color(v)\n        viz_table[i+1][s].label.label = str(v) if v < INF else 'inf'\n        no_trace()\n        # @end\n\n# @viz\ncursor.alpha = 0\n# @end\n\n# ── Traceback ─────────────────────────────────────────────────────────────────\nans = table[n][S]\nif ans <= k:\n    ti, ts = n, S\n    first = True\n    while ti > 0:\n        if table[ti][ts] != table[ti-1][ts]:\n            chosen.append(arr[ti - 1])\n            prev_ts = ts - arr[ti-1]\n            # @viz\n            if first:\n                cursor.alpha = 0\n                first = False\n            viz_table[ti][ts].rect.color = PATH_COLOR\n            panel.add(\n                Line(start=(ti, ts), end=(ti-1, ts - arr[ti-1]),\n                     color=(255, 210, 90), stroke_weight=3, end_cap='arrow')\n            )\n            # @end\n            ts = ts - arr[ti-1]\n        ti -= 1\n\n    items = sorted(chosen)\n    print(f'Answer: YES  —  min {ans} items needed,  subset: {items}')\n    # @viz\n    result_lbl.label = f'Yes!  {ans} items: {items}'\n    # @end\nelse:\n    print(f'Answer: NO')\n    # @viz\n    result_lbl.label = f'No: cannot reach {S} with <= {k} items'\n    # @end\n"
+      },
+      {
+        "id": "tab-1778099405281",
+        "name": "Labeled Rect",
+        "code": "# @viz  \nclass LabeledRect(Panel):\n    def __init__(self, label: str ='', font_size=11, color = (150,100,230), **kwargs):\n        super().__init__(**kwargs)\n        width = kwargs.get('width', 1)\n        self.rect = Rect(color=color, width=width)\n        self.label = Label(label=label, width=width, font_size = font_size)\n        self.add(\n            self.rect, self.label\n        )\n# @end"
+      }
+    ]
+  },
+  "visualPanel": {
+    "textBoxes": [
+      {
+        "id": "text-bss-explain",
+        "row": 1,
+        "col": 14,
+        "widthCells": 11,
+        "heightCells": 11,
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#ffb43f",
+                        "fontSize": "24px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Bounded Subset Sum"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#ff8c82",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Problem"
+                },
+                {
+                  "type": "text",
+                  "text": ":"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "Can we pick a subset of arr (with nonnegative numbers) summing to exactly S, using at most k elements?"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "Here: "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "arr=[3,1,4,2,5]"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": ",  S=8,  k=3."
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#96d35f",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Solution"
+                },
+                {
+                  "type": "text",
+                  "text": ":"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "table[i][s]"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": " = min elements from arr[:i] to reach sum s "
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "                     (inf = impossible)."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#e392fe",
+                        "fontSize": "16px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Initial condition"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "rgb(214, 214, 214)",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": ":"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "rgb(116, 167, 254)",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "    table[0][s]"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": " = 1 if s=0 , inf otherwise"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "rgb(227, 146, 254)",
+                        "fontSize": "16px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Recursion relation:"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "Minimum between:"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "   - Skip item i-1: "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "table[i-1][s]"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "   - Take item i-1: "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "table[i-1][s-arr[i-1]] + 1"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "Final Answer: "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "table[n][S] <= k"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "."
+                }
+              ]
+            }
+          ]
+        },
+        "bgColor": "#444444"
+      }
+    ]
+  }
+}
