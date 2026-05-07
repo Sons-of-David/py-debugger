@@ -202,6 +202,27 @@ function App() {
     return { name, content };
   }, [projectName]);
 
+  // Auto-save to autosave/ when the HMR WebSocket drops (dev only — Codespace sleep, etc.)
+  const isDirtyRef = useRef(isDirty);
+  useEffect(() => { isDirtyRef.current = isDirty; }, [isDirty]);
+  const serializeProjectRef = useRef(serializeProject);
+  useEffect(() => { serializeProjectRef.current = serializeProject; }, [serializeProject]);
+  useEffect(() => {
+    if (!import.meta.env.DEV || !import.meta.hot) return;
+    const handler = () => {
+      if (!isDirtyRef.current) return;
+      const { name, content } = serializeProjectRef.current();
+      const baseName = name.split('/').pop() ?? name;
+      void fetch('/api/save-sample', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: `autosave/${baseName}`, content }),
+      }).catch(() => {});
+    };
+    import.meta.hot.on('vite:ws:disconnect', handler);
+    return () => { import.meta.hot?.off('vite:ws:disconnect', handler); };
+  }, []);
+
   const handleSave = useCallback(() => {
     lastLoadedCodeRef.current = userCode;  // userCode is already the combined string from onChange
     setIsDirty(false);
