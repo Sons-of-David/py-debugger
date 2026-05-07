@@ -65,6 +65,31 @@ export function setVisualTimeline(
         changed.add(hydrated._elemId ?? -1);
       }
       for (const id of delta.deleted) current.delete(id);
+
+      // TODO: add a unit test for this block — verify that children of a moved
+      // panel are included in changedIds, and that deeply nested panels propagate.
+      // Children of a moved panel inherit a new absolute position, so they must
+      // animate too even though they didn't change relative to their parent.
+      const movedPanelIds = new Set<string>();
+      for (const id of changed) {
+        const el = current.get(id);
+        if (el?.type === 'panel') movedPanelIds.add(String(id));
+      }
+      if (movedPanelIds.size > 0) {
+        let foundNew = true;
+        while (foundNew) {
+          foundNew = false;
+          for (const el of current.values()) {
+            const elId = el._elemId ?? -1;
+            if (!changed.has(elId) && el.panelId != null && movedPanelIds.has(el.panelId)) {
+              changed.add(elId);
+              if (el.type === 'panel') movedPanelIds.add(String(elId));
+              foundNew = true;
+            }
+          }
+        }
+      }
+
       ids.push(changed);
     }
     steps.push(Array.from(current.values()));
