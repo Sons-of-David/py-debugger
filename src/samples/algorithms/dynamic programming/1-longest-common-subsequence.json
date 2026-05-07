@@ -15,7 +15,7 @@
         "row": 1,
         "col": 12,
         "widthCells": 13,
-        "heightCells": 11,
+        "heightCells": 13,
         "content": {
           "type": "doc",
           "content": [
@@ -582,6 +582,61 @@
                     }
                   ],
                   "text": " steps from bottom-right — each diagonal is one character of the LCS."
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "rgb(255, 165, 125)",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Improvement:"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "rgb(214, 214, 214)",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "To fill in the i-th row we only use the i-1 row. Hence we can reduce the extra space to "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#ebebeb",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "Θ(min(|s1|, |s2|)."
                 }
               ]
             }
