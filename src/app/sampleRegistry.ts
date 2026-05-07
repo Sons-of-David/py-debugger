@@ -26,7 +26,7 @@ export type FolderNode = {
 export type TreeNode = SampleEntry | FolderNode;
 
 function isLocalPath(parts: string[]): boolean {
-  return parts.some(p => p === 'local' || p === 'test');
+  return parts.some(p => p === 'local' || p === 'test' || p === 'autosave');
 }
 
 function formatFolderName(name: string): string {

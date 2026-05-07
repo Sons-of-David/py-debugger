@@ -24,6 +24,9 @@ __pycache__/
 # Generated test fixture files (gitignored — run src/samples/test/generate_fixtures.py to create)
 src/samples/test/fixtures/
 
+# Dev auto-saves written on HMR disconnect when a sample is dirty
+src/samples/autosave/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
