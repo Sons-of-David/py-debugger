@@ -30,10 +30,12 @@ PY_DIR      = os.path.join(ROOT, 'src', 'python-engine')
 IMPORTS_DIR = os.path.join(PY_DIR, 'imports')
 sys.path.insert(0, PY_DIR)
 sys.path.insert(0, IMPORTS_DIR)
+sys.path.insert(0, HERE)
 
 import profiler as _profiler
 import vb_serializer as _ser
 import _vb_engine as _engine
+from sample_loader import load_sample_code
 
 TEST_SAMPLES_DIR = HERE
 FIXTURES_DIR     = os.path.join(HERE, 'fixtures')
@@ -60,8 +62,7 @@ def generate(sample_paths: list[str]):
     for sample_path in sample_paths:
         name = os.path.basename(sample_path)
         try:
-            with open(sample_path) as f:
-                user_code = json.load(f)['userCode']
+            user_code = load_sample_code(sample_path)
             result = _run_sample(user_code)
             fixture_path = os.path.join(FIXTURES_DIR, name)
             with open(fixture_path, 'w') as f:

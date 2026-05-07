@@ -14,6 +14,7 @@ Tests are skipped when no fixture files are present yet.
 """
 
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -24,6 +25,9 @@ import vb_serializer as _ser
 ROOT             = Path(__file__).parent.parent.parent.parent
 TEST_SAMPLES_DIR = ROOT / 'src' / 'samples' / 'test'
 FIXTURES_DIR     = TEST_SAMPLES_DIR / 'fixtures'
+
+sys.path.insert(0, str(TEST_SAMPLES_DIR))
+from sample_loader import load_sample_code
 
 
 def _fixture_paths():
@@ -63,8 +67,7 @@ def test_full_program(fixture_path):
         f"(fixture: {fixture_path})"
     )
 
-    with open(sample_path) as f:
-        user_code = json.load(f)['userCode']
+    user_code = load_sample_code(str(sample_path))
 
     with open(fixture_path) as f:
         expected = json.load(f)
