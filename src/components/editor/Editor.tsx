@@ -16,6 +16,7 @@ export interface Tab {
   id: string;
   name: string;
   code: string;
+  hidden?: boolean; // if true: executes but shows as a narrow strip in the tab bar; trace skips it
 }
 
 export interface TabLineInfo {
@@ -515,45 +516,66 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
             key={`di-${i}`}
             className={`w-0.5 self-stretch shrink-0 transition-colors ${dropIndex === i ? 'bg-indigo-500' : ''}`}
           />,
-          <div
-            key={tab.id}
-            draggable={isEditable}
-            onDragStart={() => isEditable && handleDragStart(tab.id)}
-            onDragOver={e => isEditable && handleDragOverTab(e, i)}
-            onDragEnd={isEditable ? handleDragEnd : undefined}
-            onClick={() => handleTabSelect(tab.id)}
-            onDoubleClick={() => isEditable && handleRenameStart(tab)}
-            className={[
-              'flex items-center gap-1 px-3 cursor-pointer select-none border-r border-gray-300 dark:border-gray-700 shrink-0',
-              tab.id === effectiveActiveTabId
-                ? 'border-b-2 border-b-indigo-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-white'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700',
-            ].join(' ')}
-          >
-            {renamingTabId === tab.id ? (
-              <input
-                autoFocus
-                className="w-20 text-sm bg-transparent outline outline-1 outline-indigo-400 rounded px-1"
-                value={renameValue}
-                onChange={e => setRenameValue(e.target.value)}
-                onBlur={handleRenameCommit}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') handleRenameCommit();
-                  if (e.key === 'Escape') setRenamingTabId(null);
-                }}
-                onClick={e => e.stopPropagation()}
-              />
-            ) : (
-              <span className="text-sm">{tab.name}</span>
-            )}
-            {isEditable && tabs.length > 1 && (
-              <button
-                className="ml-1 text-xs leading-none text-gray-400 hover:text-red-400 dark:hover:text-red-400"
-                onClick={e => { e.stopPropagation(); handleTabDelete(tab.id); }}
-                title="Close tab"
-              >×</button>
-            )}
-          </div>,
+          tab.hidden ? (
+            // Hidden tab — narrow strip, clickable, name rotated vertically
+            <div
+              key={tab.id}
+              onClick={() => handleTabSelect(tab.id)}
+              title={tab.name}
+              className={[
+                'flex items-center justify-center w-5 cursor-pointer select-none border-r border-gray-300 dark:border-gray-700 shrink-0',
+                tab.id === effectiveActiveTabId
+                  ? 'border-b-2 border-b-indigo-500 bg-white dark:bg-gray-900'
+                  : 'hover:bg-gray-200 dark:hover:bg-gray-700',
+              ].join(' ')}
+            >
+              <span
+                className="text-gray-400 dark:text-gray-500"
+                style={{ fontSize: 9, writingMode: 'vertical-rl', transform: 'rotate(180deg)', lineHeight: 1 }}
+              >{tab.name}</span>
+            </div>
+          ) : (
+            // Normal tab
+            <div
+              key={tab.id}
+              draggable={isEditable}
+              onDragStart={() => isEditable && handleDragStart(tab.id)}
+              onDragOver={e => isEditable && handleDragOverTab(e, i)}
+              onDragEnd={isEditable ? handleDragEnd : undefined}
+              onClick={() => handleTabSelect(tab.id)}
+              onDoubleClick={() => isEditable && handleRenameStart(tab)}
+              className={[
+                'flex items-center gap-1 px-3 cursor-pointer select-none border-r border-gray-300 dark:border-gray-700 shrink-0',
+                tab.id === effectiveActiveTabId
+                  ? 'border-b-2 border-b-indigo-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-white'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700',
+              ].join(' ')}
+            >
+              {renamingTabId === tab.id ? (
+                <input
+                  autoFocus
+                  className="w-20 text-sm bg-transparent outline outline-1 outline-indigo-400 rounded px-1"
+                  value={renameValue}
+                  onChange={e => setRenameValue(e.target.value)}
+                  onBlur={handleRenameCommit}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') handleRenameCommit();
+                    if (e.key === 'Escape') setRenamingTabId(null);
+                  }}
+                  onClick={e => e.stopPropagation()}
+                />
+              ) : (
+                <span className="text-sm">{tab.name}</span>
+              )}
+              {isEditable && tabs.length > 1 && (
+                <button
+                  className="ml-1 text-xs leading-none text-gray-400 hover:text-red-400 dark:hover:text-red-400"
+                  onClick={e => { e.stopPropagation(); handleTabDelete(tab.id); }}
+                  title="Close tab"
+                >×</button>
+              )}
+            </div>
+          ),
         ])}
         <div
           key="di-last"
