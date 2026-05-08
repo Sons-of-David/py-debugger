@@ -1,0 +1,470 @@
+{
+  "editorState": {
+    "tabs": [
+      {
+        "id": "tab-1",
+        "name": "main",
+        "code": "# ── Egg Drop ──────────────────────────────────────────────────────────────────\n# Trace-mode then interactive. Click Analyze, step through the fill,\n# then click any cell to trace its worst-case path from that state.\n#\n# min_drops[e][f] = min drops (worst case) with e eggs and f floors to test.\n#\n# recurrence:  try dropping at floor x (1..f):\n#   egg breaks  -> must check x-1 floors below, with e-1 eggs\n#   egg survives -> must check f-x floors above, with e   eggs\n#   worst case  -> max of the two;  pick x that minimises the worst case\n#\n# Row 1 fills linearly (1 egg: must test every floor from the bottom).\n# Row 2 is dramatically smaller — one extra egg, far fewer drops needed.\n# Gold numbers show the optimal floor to try first at each state.\n# ─────────────────────────────────────────────────────────────────────────────\n\n# ── Algorithm state ───────────────────────────────────────────────────────────\nE = 3\nF = 14\nINF = F + 1\n\nmin_drops = [[0] * (F + 1) for _ in range(E + 1)]\nbest_floor = [[0] * (F + 1) for _ in range(E + 1)]\n\nfor f in range(1, F + 1):\n    min_drops[0][f] = INF\n\nfor f in range(1, F + 1):\n    min_drops[1][f] = f\n    best_floor[1][f] = 1\n\n# ── Visualization setup ───────────────────────────────────────────────────────\n# @viz\n\nDARK       = (35, 40, 52)\nPATH_COLOR = (235, 155, 45)\nGOLD       = (255, 185, 65)\n\ndef cell_color(v):\n    if v == 0 or v >= INF:\n        return DARK\n    t = 1.0 - (v - 1) / (F - 1)\n    t = max(0.0, min(1.0, t))\n    return (int(25 + t * 80), int(120 + t * 60), int(55 + t * 25))\n\npanel = Panel(x=2, y=2)\n\n\nviz_table = VizTable(\n    col_labels = list(range(F+1)),\n    col_equals = '= floors',\n    row_labels = list(range(1, E+1)),\n    row_equals = '= eggs',\n    label_color = GOLD,\n\n    cell_fill  = 0,\n    cell_color = cell_color(0)\n)\n\nfor f in range(1, F+1):\n    cell = viz_table[0,f]\n    cell.rect.color = cell_color(f)\n    cell.label.label = f\n\n\ncursor = Rect(color=(255, 250, 100), alpha=0.35, z=2, animate=False)\n\nbreaks_line = Line(end=(-1, 0), animate=False)\nsurvives_line = Line(end=(0, -1), animate=False)\nbreaks_line.alpha = 0\nsurvives_line.alpha = 0\n\nresult_lbl = Label(label='', x=0, y=E+1, width=F+1, font_size=14, color=PATH_COLOR, z=3)\npanel.add(viz_table, cursor, result_lbl, breaks_line, survives_line)\n\ndef drop_msg(e: int, f: int):\n    best_floor_drop = best_floor[e][f]\n    return f'floor={f}, eggs={e}, drop at {best_floor_drop} → breaks ({best_floor[e-1][best_floor_drop-1]}) vs survives ({best_floor[e][f-best_floor_drop]})'\n\nno_trace()\n# @end\n\n# ── Fill rows e=2..E ─────────────────────────────────────────────────────────\n\nfor e in range(2, E + 1):\n    for f in range(1, F + 1):\n        best_drop_count = INF\n        best_floor_drop = 1\n        for floor_throw in range(1, f + 1):\n            drop_count = max(min_drops[e-1][floor_throw-1], min_drops[e][f-floor_throw])\n            if drop_count < best_drop_count:\n                best_drop_count = drop_count\n                best_floor_drop = floor_throw\n        min_drops[e][f] = best_drop_count + 1\n        best_floor[e][f] = best_floor_drop\n        # @viz\n        cursor.x = f\n        cursor.y = e - 1\n        breaks_line.alpha = 1\n        survives_line.alpha = 1\n        breaks_line.start = (e-1,f)\n        survives_line.start = (e-1,f)\n        breaks_line.end = (e-2,best_floor_drop - 1)\n        survives_line.end = (e-1, f - best_floor_drop)\n        result_lbl.label = drop_msg(e,f)\n        # @end\n        # @viz\n        viz_table[e-1, f].rect.color = cell_color(min_drops[e][f])\n        viz_table[e-1, f].label.label = str(min_drops[e][f])\n        no_trace()\n        # @end\n\n# @viz\ncursor.alpha = 0\nbreaks_line.alpha = 0\nsurvives_line.alpha = 0\n# @end\n\n\n# ── Interactive: click any cell to trace its worst-case path ─────────────────\n# @viz\npath_lines = []\npath_labels = []\npath_cells = []\n\ndef clear_path():\n    for line in path_lines:\n        line.delete()\n    for lbl in path_labels:\n        lbl.delete()\n    for (ce, cf) in path_cells:\n        viz_table[ce-1, cf].rect.color = cell_color(min_drops[ce][cf])\n    path_lines.clear()\n    path_labels.clear()\n    path_cells.clear()\n\ndef do_traceback(start_e, start_f):\n    clear_path()\n    e, f = start_e, start_f\n    label_y = E + 2\n    while f > 0:\n        x = best_floor[e][f]\n        breaks_v = min_drops[e-1][x-1]\n        survives_v = min_drops[e][f-x]\n        if breaks_v >= survives_v:\n            next_e, next_f = e - 1, x - 1\n        else:\n            next_e, next_f = e, f - x\n        viz_table[e-1, f].rect.color = PATH_COLOR\n        path_cells.append((e, f))\n        if next_f > 0:\n            line = Line(start=(e-1, f), end=(next_e-1, next_f),\n                       color=(255, 210, 90), stroke_weight=3, end_cap='arrow')\n            panel.add(line)\n            path_lines.append(line)\n        lbl = Label(label=drop_msg(e, f), x=0, y=label_y, width=F+1, font_size=14, color=PATH_COLOR, z=3)\n        panel.add(lbl)\n        path_labels.append(lbl)\n        label_y += 1\n        e, f = next_e, next_f\n\ndef make_handler(clicked_e, clicked_f):\n    def handler(x, y):\n        no_debug(do_traceback)(clicked_e, clicked_f)\n    return handler\n\nfor e in range(1, E + 1):\n    for f in range(1, F + 1):\n        if f > 0:\n            viz_table[e-1, f].rect.on_click = make_handler(e, f)\n\ncursor.alpha = 0\nfor e in range(1, E + 1):\n    for f in range(1, F + 1):\n        viz_table[e-1, f].label.label = str(best_floor[e][f])\n        viz_table[e-1, f].label.color = (0,0,0)\npanel.add(\n    Label(label='Numbers show best floor for first drop', x=0, y=E, width=F+1, font_size=14, color=PATH_COLOR, z=3))\nresult_lbl.label = 'Click any cell to trace its worst-case path'\n# @end"
+      },
+      {
+        "id": "tab-labeled-rect",
+        "name": "UI components",
+        "code": "# @viz  \nclass LabeledRect(Panel):\n    def __init__(self, label: str ='', font_size=11, color = (150,100,230), **kwargs):\n        super().__init__(**kwargs)\n        width = kwargs.get('width', 1)\n        self.rect = Rect(color=color, width=width)\n        self.label = Label(label=label, width=width, font_size = font_size)\n        self.add(\n            self.rect, self.label\n        )\n\nclass VizTable(Panel):\n    def __init__(self, \n        row_labels: list[str],\n        col_labels: list[str],\n        label_color: tuple[int, int, int] = (255,255,255),\n\n        cell_fill: str = '', \n        cell_color: tuple[int, int, int] = (30,30,80),\n\n        font_size: int = 13,\n        row_equals: str = '',\n        col_equals: str = '',\n        **kwargs):\n\n        super().__init__(**kwargs)\n\n        self.row_count = len(row_labels)\n        for i, row_label in enumerate(row_labels):\n            self.add(Label(label=row_label, x=-1, y=i, font_size=font_size, color=label_color))\n        if len(row_equals) > 0:\n            self.add(Label(label=row_equals, x=-1, y=self.row_count, font_size=font_size, color=label_color))\n\n        self.col_count = len(col_labels)\n\n        self.col_count = len(col_labels)\n        for i, col_label in enumerate(col_labels):\n            self.add(Label(label=col_label, x=i, y=-1, font_size=font_size, color=label_color))\n        if len(col_equals) > 0:\n            self.add(Label(label=col_equals, x=self.col_count, y=-1, font_size=font_size, color=label_color))\n\n        self._table = [[None] * self.col_count for _ in range(self.row_count)]\n\n        for row in range(self.row_count):\n            for col in range(self.col_count):\n                self._table[row][col] = LabeledRect(\n                    x=col, y=row,\n                    label=cell_fill,\n                    color=cell_color,\n                    font_size=font_size-2,\n                )\n                self.add(self._table[row][col])\n\n    def __getitem__(self, pos: tuple[int, int]):\n        row, col = pos\n        return self._table[row][col]\n\nno_trace()\n# @end"
+      }
+    ]
+  },
+  "visualPanel": {
+    "textBoxes": [
+      {
+        "id": "text-egg-drop-explain",
+        "row": 1,
+        "col": 19,
+        "widthCells": 12,
+        "heightCells": 17,
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#ffb43f",
+                        "fontSize": "24px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Egg Drop"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#ff8c82",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Problem"
+                },
+                {
+                  "type": "text",
+                  "text": ":"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "You have "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "E"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": " eggs and a building with "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "F"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": " floors. There is a critical floor: eggs survive drops from it or below, and break from any floor above. Find the minimum drops that "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "guarantees"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": " finding it — regardless of which floor it is."
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#96d35f",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Algorithm"
+                },
+                {
+                  "type": "text",
+                  "text": ":"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "min_drops[e][f]"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": " = min drops with e eggs and f floors remaining."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "Try floor x — take the worst outcome, pick x that minimises it:"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "  breaks → "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "min_drops[e-1][x-1]"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "  survives → "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "min_drops[e][f-x]"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "rgb(214, 214, 214)",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "The two lines on the cursor show the two DP dependencies: the "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "rgb(116, 167, 254)",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "breaks"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "rgb(214, 214, 214)",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": " case (row above) and the "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "rgb(116, 167, 254)",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "survives"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "rgb(214, 214, 214)",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": " case (same row, to the left)."
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#ffb943",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "cell numbers at the end"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": " — optimal floor to try (row 1: always 1; row 2: not always the middle!)"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#ff8c82",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Try it"
+                },
+                {
+                  "type": "text",
+                  "text": ":"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "After the table fills, click any cell to trace the optimal worst-case strategy from that (eggs, floors) state. Compare row 1 vs row 2 for the same column."
+                }
+              ]
+            }
+          ]
+        },
+        "bgColor": "#444444"
+      }
+    ]
+  }
+}
