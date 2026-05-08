@@ -54,6 +54,7 @@ export interface EditorHandle {
   serialize: () => unknown;
   load: (state: unknown) => void;
   resolveLineTab: (combinedLine: number) => { tabName: string; localLine: number } | null;
+  isLineHidden: (combinedLine: number) => boolean;
 }
 
 interface EditorProps {
@@ -93,8 +94,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
   const pendingFoldTabsRef = useRef<Set<string>>(new Set());
 
   const currentLineInfo = currentLine != null ? getTabForLine(currentLine, tabs) : null;
-  const effectiveActiveTabId = currentLineInfo ? currentLineInfo.tab.id : activeTabId;
-  const localCurrentLine = currentLineInfo?.localLine ?? null;
+  const isCurrentLineHidden = currentLineInfo?.tab.hidden ?? false;
+  const effectiveActiveTabId = (currentLineInfo && !isCurrentLineHidden) ? currentLineInfo.tab.id : activeTabId;
+  const localCurrentLine = (currentLineInfo && !isCurrentLineHidden) ? currentLineInfo.localLine : null;
   const activeTab = tabs.find(t => t.id === effectiveActiveTabId) ?? tabs[0];
   const activeCode = activeTab.code;
 
@@ -499,6 +501,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
     resolveLineTab: (combinedLine) => {
       const info = getTabForLine(combinedLine, tabs);
       return info ? { tabName: info.tab.name, localLine: info.localLine } : null;
+    },
+    isLineHidden: (combinedLine) => {
+      const info = getTabForLine(combinedLine, tabs);
+      return info?.tab.hidden ?? false;
     },
     load: (state: unknown) => {
       let newTabs: Tab[];
