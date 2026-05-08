@@ -88,6 +88,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
   const dragSrcIdRef = useRef<string | null>(null);
   const dropIndexRef = useRef<number | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
+  const [tabContextMenu, setTabContextMenu] = useState<{ tabId: string; x: number; y: number } | null>(null);
   // Tabs that have a pending viz-block fold (populated by foldVizBlocks, drained as tabs become active)
   const pendingFoldTabsRef = useRef<Set<string>>(new Set());
 
@@ -149,6 +150,20 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
     }
     setRenamingTabId(null);
   }, [renamingTabId, renameValue]);
+
+  const handleToggleHidden = useCallback((id: string) => {
+    setTabs(prev => {
+      const newTabs = prev.map(t => t.id === id ? { ...t, hidden: !t.hidden } : t);
+      onChange(combineTabs(newTabs));
+      return newTabs;
+    });
+    setTabContextMenu(null);
+  }, [onChange]);
+
+  const handleTabContextMenu = useCallback((e: React.MouseEvent, tabId: string) => {
+    e.preventDefault();
+    setTabContextMenu({ tabId, x: e.clientX, y: e.clientY });
+  }, []);
 
   const handleDragStart = useCallback((id: string) => {
     dragSrcIdRef.current = id;
@@ -517,23 +532,23 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
             className={`w-0.5 self-stretch shrink-0 transition-colors ${dropIndex === i ? 'bg-indigo-500' : ''}`}
           />,
           tab.hidden ? (
-            // Hidden tab — narrow strip, clickable, name rotated vertically
+            // Hidden tab — narrow patterned strip, no label
             <div
               key={tab.id}
               onClick={() => handleTabSelect(tab.id)}
-              title={tab.name}
+              onContextMenu={e => handleTabContextMenu(e, tab.id)}
               className={[
-                'flex items-center justify-center w-5 cursor-pointer select-none border-r border-gray-300 dark:border-gray-700 shrink-0',
+                'w-4 cursor-pointer select-none border-r border-gray-300 dark:border-gray-700 shrink-0',
                 tab.id === effectiveActiveTabId
-                  ? 'border-b-2 border-b-indigo-500 bg-white dark:bg-gray-900'
-                  : 'hover:bg-gray-200 dark:hover:bg-gray-700',
+                  ? 'border-b-2 border-b-indigo-500'
+                  : '',
               ].join(' ')}
-            >
-              <span
-                className="text-gray-400 dark:text-gray-500"
-                style={{ fontSize: 9, writingMode: 'vertical-rl', transform: 'rotate(180deg)', lineHeight: 1 }}
-              >{tab.name}</span>
-            </div>
+              style={{
+                background: tab.id === effectiveActiveTabId
+                  ? 'repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(99,102,241,0.15) 3px, rgba(99,102,241,0.15) 6px)'
+                  : 'repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(150,150,150,0.15) 3px, rgba(150,150,150,0.15) 6px)',
+              }}
+            />
           ) : (
             // Normal tab
             <div
@@ -544,6 +559,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
               onDragEnd={isEditable ? handleDragEnd : undefined}
               onClick={() => handleTabSelect(tab.id)}
               onDoubleClick={() => isEditable && handleRenameStart(tab)}
+              onContextMenu={e => handleTabContextMenu(e, tab.id)}
               className={[
                 'flex items-center gap-1 px-3 cursor-pointer select-none border-r border-gray-300 dark:border-gray-700 shrink-0',
                 tab.id === effectiveActiveTabId
@@ -641,6 +657,31 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
           border-left: 3px solid #facc15 !important;
         }
       `}</style>
+
+      {/* Tab context menu */}
+      {tabContextMenu && (() => {
+        const ctxTab = tabs.find(t => t.id === tabContextMenu.tabId);
+        if (!ctxTab) return null;
+        return (
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onMouseDown={() => setTabContextMenu(null)}
+            />
+            <div
+              className="fixed z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded shadow-lg py-1 text-sm"
+              style={{ left: tabContextMenu.x, top: tabContextMenu.y }}
+            >
+              <button
+                className="w-full text-left px-4 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200"
+                onMouseDown={e => { e.preventDefault(); handleToggleHidden(tabContextMenu.tabId); }}
+              >
+                {ctxTab.hidden ? 'Show tab' : 'Hide tab'}
+              </button>
+            </div>
+          </>
+        );
+      })()}
     </div>
   );
 });
