@@ -67,6 +67,7 @@ interface EditorProps {
   currentLine?: number;
   sampleNames?: string[];
   loadSample?: (name: string) => unknown;
+  onImportChange?: (sampleName: string | null) => void;
 }
 
 export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
@@ -77,6 +78,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
   currentLine,
   sampleNames,
   loadSample,
+  onImportChange,
 }: EditorProps, ref) {
   const { darkMode } = useTheme();
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -106,6 +108,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
   const localCurrentLine = (currentLineInfo && !isCurrentLineHidden) ? currentLineInfo.localLine : null;
   const activeTab = tabs.find(t => t.id === effectiveActiveTabId) ?? tabs[0];
   const activeCode = activeTab.code;
+  const isActiveTabImport = activeTab?.fromImport ?? false;
 
   // Store effectiveActiveTabId in a ref so handleTabCodeChange always reads the
   // latest value, even if @monaco-editor/react holds a stale closure of the handler.
@@ -131,7 +134,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
   const handleTabAdd = useCallback(() => {
     const newId = `tab-${Date.now()}`;
     setTabs(prev => {
-      const newTabs = [...prev, { id: newId, name: `tab${prev.length + 1}`, code: '' }];
+      const importTabs = prev.filter(t => t.fromImport);
+      const userTabs = prev.filter(t => !t.fromImport);
+      const newTabs = [...userTabs, { id: newId, name: `tab${userTabs.length + 1}`, code: '' }, ...importTabs];
       onChange(combineTabs(newTabs));
       return newTabs;
     });
@@ -140,10 +145,15 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
 
   const handleTabDelete = useCallback((id: string) => {
     setTabs(prev => {
+      const tab = prev.find(t => t.id === id);
+      if (tab?.fromImport) return prev;
       if (prev.length <= 1) return prev;
       const newTabs = prev.filter(t => t.id !== id);
       onChange(combineTabs(newTabs));
-      if (activeTabId === id) setActiveTabId(newTabs[newTabs.length - 1].id);
+      if (activeTabId === id) {
+        const nextTab = newTabs.filter(t => !t.fromImport).at(-1) ?? newTabs[0];
+        setActiveTabId(nextTab.id);
+      }
       return newTabs;
     });
   }, [activeTabId, onChange]);
@@ -171,22 +181,40 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
       ? (editorState as { tabs: Tab[] }).tabs
       : [];
     if (rawTabs.length === 0) return;
-    const newTabs = rawTabs.map(t => ({ ...t, id: `import-${t.id}` }));
+    const importedTabs = rawTabs.map(t => ({
+      ...t,
+      id: `import-${t.id}`,
+      fromImport: true as const,
+      importSource: name,
+    }));
     setTabs(prev => {
-      const combined = [...prev, ...newTabs];
+      const userTabs = prev.filter(t => !t.fromImport);
+      const combined = [...userTabs, ...importedTabs];
       onChange(combineTabs(combined));
       return combined;
     });
-  }, [loadSample, onChange]);
+    onImportChange?.(name);
+  }, [loadSample, onChange, onImportChange]);
 
   const handleToggleHidden = useCallback((id: string) => {
     setTabs(prev => {
+      if (prev.find(t => t.id === id)?.fromImport) return prev;
       const newTabs = prev.map(t => t.id === id ? { ...t, hidden: !t.hidden } : t);
       onChange(combineTabs(newTabs));
       return newTabs;
     });
     setTabContextMenu(null);
   }, [onChange]);
+
+  const handleRemoveImport = useCallback(() => {
+    setTabs(prev => {
+      const newTabs = prev.filter(t => !t.fromImport);
+      onChange(combineTabs(newTabs));
+      return newTabs;
+    });
+    setTabContextMenu(null);
+    onImportChange?.(null);
+  }, [onChange, onImportChange]);
 
   const handleTabContextMenu = useCallback((e: React.MouseEvent, tabId: string) => {
     e.preventDefault();
@@ -572,18 +600,18 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
               onContextMenu={e => handleTabContextMenu(e, tab.id)}
               className={[
                 'w-4 cursor-pointer select-none border-r border-gray-300 dark:border-gray-700 shrink-0',
-                tab.id === effectiveActiveTabId
-                  ? 'border-b-2 border-b-indigo-500'
-                  : '',
+                tab.id === effectiveActiveTabId ? 'border-b-2 border-b-indigo-500' : '',
               ].join(' ')}
               style={{
-                background: tab.id === effectiveActiveTabId
+                background: tab.fromImport
                   ? 'repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(99,102,241,0.15) 3px, rgba(99,102,241,0.15) 6px)'
-                  : 'repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(150,150,150,0.15) 3px, rgba(150,150,150,0.15) 6px)',
+                  : (tab.id === effectiveActiveTabId
+                    ? 'repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(99,102,241,0.15) 3px, rgba(99,102,241,0.15) 6px)'
+                    : 'repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(150,150,150,0.15) 3px, rgba(150,150,150,0.15) 6px)'),
               }}
             />
           ) : (
-            // Normal tab
+            // Normal or import tab — same container, conditional label/icon/close
             <div
               key={tab.id}
               draggable={isEditable}
@@ -591,7 +619,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
               onDragOver={e => isEditable && handleDragOverTab(e, i)}
               onDragEnd={isEditable ? handleDragEnd : undefined}
               onClick={() => handleTabSelect(tab.id)}
-              onDoubleClick={() => isEditable && handleRenameStart(tab)}
+              onDoubleClick={() => isEditable && !tab.fromImport && handleRenameStart(tab)}
               onContextMenu={e => handleTabContextMenu(e, tab.id)}
               className={[
                 'flex items-center gap-1 px-3 cursor-pointer select-none border-r border-gray-300 dark:border-gray-700 shrink-0',
@@ -600,7 +628,11 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700',
               ].join(' ')}
             >
-              {renamingTabId === tab.id ? (
+              {tab.fromImport ? (
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="opacity-50 flex-shrink-0">
+                  <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                </svg>
+              ) : renamingTabId === tab.id ? (
                 <input
                   autoFocus
                   className="w-20 text-sm bg-transparent outline outline-1 outline-indigo-400 rounded px-1"
@@ -613,10 +645,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
                   }}
                   onClick={e => e.stopPropagation()}
                 />
-              ) : (
-                <span className="text-sm">{tab.name}</span>
-              )}
-              {isEditable && tabs.length > 1 && (
+              ) : null}
+              <span className="text-sm">{tab.name}</span>
+              {isEditable && !tab.fromImport && tabs.filter(t => !t.fromImport).length > 1 && (
                 <button
                   className="ml-1 text-xs leading-none text-gray-400 hover:text-red-400 dark:hover:text-red-400"
                   onClick={e => { e.stopPropagation(); handleTabDelete(tab.id); }}
@@ -661,7 +692,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
           onChange={(value) => handleTabCodeChange(value || '')}
           onMount={handleEditorDidMount}
           options={{
-            readOnly: !isEditable,
+            readOnly: !isEditable || isActiveTabImport,
             minimap: { enabled: false },
             fontSize: 14,
             lineNumbers: 'on',
@@ -734,12 +765,21 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
               className="fixed z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded shadow-lg py-1 text-sm"
               style={{ left: tabContextMenu.x, top: tabContextMenu.y }}
             >
-              <button
-                className="w-full text-left px-4 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200"
-                onMouseDown={e => { e.preventDefault(); handleToggleHidden(tabContextMenu.tabId); }}
-              >
-                {ctxTab.hidden ? 'Show tab' : 'Hide tab'}
-              </button>
+              {ctxTab.fromImport ? (
+                <button
+                  className="w-full text-left px-4 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-red-500 dark:text-red-400"
+                  onMouseDown={e => { e.preventDefault(); handleRemoveImport(); }}
+                >
+                  Remove import
+                </button>
+              ) : (
+                <button
+                  className="w-full text-left px-4 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200"
+                  onMouseDown={e => { e.preventDefault(); handleToggleHidden(tabContextMenu.tabId); }}
+                >
+                  {ctxTab.hidden ? 'Show tab' : 'Hide tab'}
+                </button>
+              )}
             </div>
           </>
         );
