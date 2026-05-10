@@ -498,6 +498,8 @@ function App() {
                       ? timeline[currentStep]?.line
                       : undefined
                   }
+                  sampleNames={SAMPLES.map(s => s.rawName)}
+                  loadSample={(name) => SAMPLES.find(s => s.rawName === name)?.data ?? null}
               />
             </div>
           </Panel>

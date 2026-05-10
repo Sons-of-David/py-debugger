@@ -17,6 +17,8 @@ export interface Tab {
   name: string;
   code: string;
   hidden?: boolean; // if true: executes but shows as a narrow strip in the tab bar; trace skips it
+  fromImport?: boolean; // read-only, not persisted, removed as a group
+  importSource?: string; // rawName of the source sample (set when fromImport)
 }
 
 export interface TabLineInfo {
@@ -63,6 +65,8 @@ interface EditorProps {
   isEditable: boolean;
   currentStep?: number;
   currentLine?: number;
+  sampleNames?: string[];
+  loadSample?: (name: string) => unknown;
 }
 
 export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
@@ -71,6 +75,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
   isEditable,
   currentStep,
   currentLine,
+  sampleNames,
+  loadSample,
 }: EditorProps, ref) {
   const { darkMode } = useTheme();
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -90,6 +96,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
   const dropIndexRef = useRef<number | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
   const [tabContextMenu, setTabContextMenu] = useState<{ tabId: string; x: number; y: number } | null>(null);
+  const [importMenuPos, setImportMenuPos] = useState<{ x: number; y: number } | null>(null);
   // Tabs that have a pending viz-block fold (populated by foldVizBlocks, drained as tabs become active)
   const pendingFoldTabsRef = useRef<Set<string>>(new Set());
 
@@ -152,6 +159,25 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
     }
     setRenamingTabId(null);
   }, [renamingTabId, renameValue]);
+
+  const handleImportSample = useCallback((name: string) => {
+    setImportMenuPos(null);
+    const data = loadSample?.(name);
+    const editorState = (data && typeof data === 'object' && 'editorState' in data)
+      ? (data as { editorState: unknown }).editorState
+      : data;
+    const rawTabs = (editorState && typeof editorState === 'object' && 'tabs' in editorState
+      && Array.isArray((editorState as { tabs: unknown }).tabs))
+      ? (editorState as { tabs: Tab[] }).tabs
+      : [];
+    if (rawTabs.length === 0) return;
+    const newTabs = rawTabs.map(t => ({ ...t, id: `import-${t.id}` }));
+    setTabs(prev => {
+      const combined = [...prev, ...newTabs];
+      onChange(combineTabs(combined));
+      return combined;
+    });
+  }, [loadSample, onChange]);
 
   const handleToggleHidden = useCallback((id: string) => {
     setTabs(prev => {
@@ -525,6 +551,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-gray-900">
+      
       {/* Tab bar */}
       <div
         className="flex-shrink-0 h-10 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-700 flex items-stretch overflow-x-auto"
@@ -606,8 +633,15 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
         {isEditable && (
           <button
             onClick={handleTabAdd}
+            onContextMenu={e => {
+              e.preventDefault();
+              if (sampleNames?.length) {
+                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                setImportMenuPos({ x: rect.left, y: rect.bottom });
+              }
+            }}
             className="px-3 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 text-lg leading-none shrink-0"
-            title="Add tab"
+            title={sampleNames?.length ? 'Add tab (right-click to import)' : 'Add tab'}
           >+</button>
         )}
         {!isEditable && (
@@ -663,6 +697,28 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
           border-left: 3px solid #facc15 !important;
         }
       `}</style>
+
+      {/* Import sample menu */}
+      {importMenuPos && sampleNames && (
+        <>
+          <div className="fixed inset-0 z-40" onMouseDown={() => setImportMenuPos(null)} />
+          <div
+            className="fixed z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded shadow-lg py-1 text-sm max-h-64 overflow-y-auto"
+            style={{ left: importMenuPos.x, top: importMenuPos.y }}
+          >
+            <div className="px-4 py-1 text-xs text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-gray-700 mb-1">Import tabs from sample</div>
+            {sampleNames.map(name => (
+              <button
+                key={name}
+                className="w-full text-left px-4 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200"
+                onMouseDown={e => { e.preventDefault(); handleImportSample(name); }}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Tab context menu */}
       {tabContextMenu && (() => {
