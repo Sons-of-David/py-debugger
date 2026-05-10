@@ -99,6 +99,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
   const [dropIndex, setDropIndex] = useState<number | null>(null);
   const [tabContextMenu, setTabContextMenu] = useState<{ tabId: string; x: number; y: number } | null>(null);
   const [importMenuPos, setImportMenuPos] = useState<{ x: number; y: number } | null>(null);
+  // Keep loadSample in a ref so useImperativeHandle.load() always has the latest version
+  const loadSampleRef = useRef(loadSample);
+  useEffect(() => { loadSampleRef.current = loadSample; }, [loadSample]);
+
   // Tabs that have a pending viz-block fold (populated by foldVizBlocks, drained as tabs become active)
   const pendingFoldTabsRef = useRef<Set<string>>(new Set());
 
@@ -551,7 +555,13 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
       // Fold the currently visible tab immediately
       foldActiveVizBlocks();
     },
-    serialize: () => ({ tabs }),
+    serialize: () => ({
+      tabs: tabs.map(t =>
+        t.fromImport
+          ? { id: t.id, name: t.name, fromImport: true, importSource: t.importSource, hidden: t.hidden }
+          : t
+      ),
+    }),
     resolveLineTab: (combinedLine) => {
       const info = getTabForLine(combinedLine, tabs);
       return info ? { tabName: info.tab.name, localLine: info.localLine } : null;
@@ -561,18 +571,43 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
       return info?.tab.hidden ?? false;
     },
     load: (state: unknown) => {
-      let newTabs: Tab[];
+      let parsedTabs: Tab[];
       if (state && typeof state === 'object' && 'tabs' in state && Array.isArray((state as { tabs: unknown }).tabs)) {
-        newTabs = (state as { tabs: Tab[] }).tabs;
+        parsedTabs = (state as { tabs: Tab[] }).tabs;
       } else if (typeof state === 'string') {
-        // Legacy: plain userCode string
-        newTabs = [{ id: 'tab-1', name: 'main', code: state }];
+        parsedTabs = [{ id: 'tab-1', name: 'main', code: state }];
       } else {
-        newTabs = [{ id: 'tab-1', name: 'main', code: '' }];
+        parsedTabs = [{ id: 'tab-1', name: 'main', code: '' }];
       }
+
+      // Resolve any fromImport tabs that have no code (saved as references)
+      const importSources = [...new Set(
+        parsedTabs.filter(t => t.fromImport && t.importSource && !t.code).map(t => t.importSource!)
+      )];
+      const injectedTabs: Tab[] = importSources.flatMap(source => {
+        const data = loadSampleRef.current?.(source);
+        const editorState = (data && typeof data === 'object' && 'editorState' in data)
+          ? (data as { editorState: unknown }).editorState
+          : data;
+        const srcTabs = (editorState && typeof editorState === 'object' && 'tabs' in editorState
+          && Array.isArray((editorState as { tabs: unknown }).tabs))
+          ? (editorState as { tabs: Tab[] }).tabs
+          : [];
+        return srcTabs.map(t => ({
+          ...t,
+          id: `import-${t.id}`,
+          fromImport: true as const,
+          importSource: source,
+          hidden: parsedTabs.find(s => s.importSource === source && s.name === t.name)?.hidden ?? t.hidden ?? false,
+        }));
+      });
+
+      const newTabs = importSources.length > 0
+        ? [...parsedTabs.filter(t => !t.fromImport), ...injectedTabs]
+        : parsedTabs;
+
       setTabs(newTabs);
-      setActiveTabId(newTabs[0].id);
-      // Fire onChange so App.tsx userCode stays in sync
+      setActiveTabId((newTabs.find(t => !t.fromImport) ?? newTabs[0]).id);
       onChange(combineTabs(newTabs));
     },
   }), [tabs, onChange, foldActiveVizBlocks]);
