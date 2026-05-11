@@ -1,5 +1,13 @@
 {
-  "userCode": "\n\n# @viz\n\narr = Array2D(cells=[[1,2],[3,4]], show_index=False, z=-1)\nrect = Rect()\n\n# @end\n",
+  "editorState": {
+    "tabs": [
+      {
+        "id": "tab-1",
+        "name": "main",
+        "code": "\n\n# @viz\n\narr = Array2D(cells=[[1,2],[3,4]], show_index=False, z=-1)\nrect = Rect()\n\n# @end\n"
+      }
+    ]
+  },
   "visualPanel": {
     "textBoxes": []
   }
