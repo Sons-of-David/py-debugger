@@ -498,7 +498,10 @@ function App() {
                       ? timeline[currentStep]?.line
                       : undefined
                   }
-                  sampleNames={SAMPLES.map(s => s.rawName)}
+                  sampleNames={SAMPLES.filter(s => {
+                    const es = s.data.editorState;
+                    return es != null && typeof es === 'object' && Array.isArray((es as { tabs?: unknown }).tabs);
+                  }).map(s => s.rawName)}
                   loadSample={(name) => SAMPLES.find(s => s.rawName === name)?.data ?? null}
               />
             </div>
