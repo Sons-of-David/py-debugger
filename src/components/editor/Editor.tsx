@@ -202,7 +202,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
 
   const handleToggleHidden = useCallback((id: string) => {
     setTabs(prev => {
-      if (prev.find(t => t.id === id)?.fromImport) return prev;
       const newTabs = prev.map(t => t.id === id ? { ...t, hidden: !t.hidden } : t);
       onChange(combineTabs(newTabs));
       return newTabs;
@@ -800,19 +799,18 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
               className="fixed z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded shadow-lg py-1 text-sm"
               style={{ left: tabContextMenu.x, top: tabContextMenu.y }}
             >
-              {ctxTab.fromImport ? (
+              <button
+                className="w-full text-left px-4 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200"
+                onMouseDown={e => { e.preventDefault(); handleToggleHidden(tabContextMenu.tabId); }}
+              >
+                {ctxTab.hidden ? 'Show tab' : 'Hide tab'}
+              </button>
+              {ctxTab.fromImport && (
                 <button
                   className="w-full text-left px-4 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-red-500 dark:text-red-400"
                   onMouseDown={e => { e.preventDefault(); handleRemoveImport(); }}
                 >
                   Remove import
-                </button>
-              ) : (
-                <button
-                  className="w-full text-left px-4 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200"
-                  onMouseDown={e => { e.preventDefault(); handleToggleHidden(tabContextMenu.tabId); }}
-                >
-                  {ctxTab.hidden ? 'Show tab' : 'Hide tab'}
                 </button>
               )}
             </div>
