@@ -1,0 +1,19 @@
+{
+  "editorState": {
+    "tabs": [
+      {
+        "id": "tab-1",
+        "name": "main",
+        "code": "# @viz\nno_trace()\n# @end\nrect = Rect()\nrect.on_click = lambda x, y: print('click')\n\ndef hello():\n    pass\n\n# no_debug(hello)()\n"
+      },
+      {
+        "id": "tab-1778570402272",
+        "name": "tab2",
+        "code": "# @viz\nno_trace()\n# @end"
+      }
+    ]
+  },
+  "visualPanel": {
+    "textBoxes": []
+  }
+}
