@@ -260,7 +260,11 @@ def _exec_traced(execute_fn):
         if capture.getvalue()[last_stdout_pos[0]:] or has_dirty or len(steps) == 0:
             # If last_line is None, no non-viz line was ever traced — all executed code
             # was inside viz blocks (e.g. a click handler defined in a viz block).
-            snap(final_scope, last_line[0], is_viz=last_line[0] is None)
+            # When there are no prior steps, use line=None so this snap doesn't count
+            # as a visible algorithm step — avoids spuriously entering trace mode for
+            # setup-only code (e.g. Rect() + no V() changes).
+            final_line = last_line[0] if len(steps) > 0 else None
+            snap(final_scope, final_line, is_viz=final_line is None)
     finally:
         _sys.stdout = old_stdout
 
