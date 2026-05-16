@@ -43,6 +43,335 @@
     ]
   },
   "visualPanel": {
-    "textBoxes": []
+    "textBoxes": [
+      {
+        "id": "text-tarjan-1",
+        "row": 2,
+        "col": 14,
+        "widthCells": 15,
+        "heightCells": 15,
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "SCCs \u2014 Tarjan's Algorithm",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#ffb43f",
+                        "fontSize": "24px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": ""
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Problem",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#ff8c82",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": ":"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Find all strongly connected components in a directed graph with a single DFS pass.",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": ""
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Algorithm",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#96d35f",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": ":"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Each node gets a discovery time and a low-link \u2014 the earliest discovery time reachable via back edges within the current DFS subtree.",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "A node whose low-link equals its discovery time is an SCC root: pop all nodes above it from the stack \u2014 they form one SCC.",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Node label: ",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": "discovery,low",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Press SCC to start.",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": ""
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "  \u25a0 ",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#f5c542",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": "visiting  ",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": "  \u25a0 ",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#50d28c",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": "SCC root (component popped)  ",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Note: ",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": "v_low",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": " is updated from all neighbors regardless of stack membership",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": " \u2014 see on_stack fix for strict correctness.",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "bgColor": "#444444"
+      }
+    ]
   }
 }

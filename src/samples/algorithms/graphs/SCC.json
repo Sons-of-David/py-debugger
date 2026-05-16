@@ -43,6 +43,309 @@
     ]
   },
   "visualPanel": {
-    "textBoxes": []
+    "textBoxes": [
+      {
+        "id": "text-scc-1",
+        "row": 2,
+        "col": 14,
+        "widthCells": 15,
+        "heightCells": 14,
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "SCCs \u2014 Kosaraju's Algorithm",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#ffb43f",
+                        "fontSize": "24px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": ""
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Problem",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#ff8c82",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": ":"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Find all groups of nodes where every member can reach every other member (strongly connected components).",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": ""
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Algorithm",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#96d35f",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": ":"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Two-pass DFS:",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Pass 1",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": ": forward DFS \u2014 record nodes in reverse finish order.",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Pass 2",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": ": DFS on reversed edges, in that order \u2014 each DFS tree is one SCC.",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Press Run SCC to start.",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": ""
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "  \u25a0 ",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#f5c542",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": "visiting  ",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": "  \u25a0 ",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#50d28c",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": "finished  ",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Reversed arrowheads appear during pass 2.",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "bgColor": "#444444"
+      }
+    ]
   }
 }

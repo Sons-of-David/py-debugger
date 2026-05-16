@@ -44,6 +44,299 @@
     ]
   },
   "visualPanel": {
-    "textBoxes": []
+    "textBoxes": [
+      {
+        "id": "text-dfs-1",
+        "row": 2,
+        "col": 14,
+        "widthCells": 14,
+        "heightCells": 13,
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Depth-First Search",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#ffb43f",
+                        "fontSize": "24px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": ""
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Problem",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#ff8c82",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": ":"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Traverse a directed graph recursively. Each node records an entry time (first visit) and an exit time (once all descendants are explored).",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": ""
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Algorithm",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#96d35f",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": ":"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Click Analyze, then click any node to run DFS from it.",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Node label: ",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": "entry:exit",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": " timestamps.",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Reset DFS clears colors and timestamps so you can pick a new root.",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": ""
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "  \u25a0 ",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#f5c542",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": "visiting  ",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": "  \u25a0 ",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#50d28c",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": "fully explored  ",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": "  \u25a0 ",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#3a4560",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": "already visited (back edge)  ",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "bgColor": "#444444"
+      }
+    ]
   }
 }
