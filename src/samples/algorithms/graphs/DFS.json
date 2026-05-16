@@ -4,31 +4,321 @@
       {
         "id": "tab-1",
         "name": "main",
-        "code": "# @viz\n\nfrom math import sqrt\n\n# Palette 1\n# NODE_BASE_COLOR      = (170, 185, 200)\n# NODE_VISIT_COLOR     = (  0, 200, 220)\n# NODE_FINISH_COLOR    = ( 50, 220, 120)\n# NODE_QUEUE_COLOR     = (160,  90, 255)\n# NODE_DRAG_COLOR      = (255, 220,   0)\n# NODE_EMPHASIZE_COLOR = (255,  70,  90)\n\n# EDGE_BASE_COLOR      = (120, 145, 170)\n# EDGE_VISIT_COLOR     = (  0, 180, 210)\n# EDGE_FINISH_COLOR    = ( 40, 170,  90)\n# EDGE_UNUSED_COLOR    = ( 60,  75,  95)\n\n# Palette 2\nNODE_BASE_COLOR      = (210, 115, 135)\nNODE_VISIT_COLOR     = (255, 185,  50)\nNODE_FINISH_COLOR    = ( 80, 210, 140)\nNODE_QUEUE_COLOR     = (190, 100, 240)\nNODE_DRAG_COLOR      = ( 80, 160, 255)\nNODE_EMPHASIZE_COLOR = (255,  75,  75)\n\nEDGE_BASE_COLOR      = (120, 130, 150)\nEDGE_VISIT_COLOR     = (240, 140,  40)\nEDGE_FINISH_COLOR    = ( 60, 170, 110)\nEDGE_UNUSED_COLOR    = ( 50,  65,  90)\n\ngenerate_mode = False\nlast_dragged_node = None\ndfs_count = 0\n\nclass VizNode(Panel):\n    def __init__(self, node: Node, color=NODE_BASE_COLOR, label:str = '', **kwargs):\n        super().__init__(animate = False, **kwargs)\n\n        self.node = node\n\n        self.components = Panel()\n        self.circle = Circle(color = color, animate = False)\n        self.label = Label(label=label, animate = False, color=(20,20,20))\n        self.components.add(\n            self.circle, self.label\n        )\n\n        self.dragger = Circle(alpha=0, z=-1)\n        self.dragger.on_drag = self._on_drag\n        self.dragger.on_click = self._on_click\n\n        self.add(self.components, self.dragger)\n\n        self.outgoing = []\n        self.ingoing = []\n\n    def _on_click(self, x: int, y: int):\n        if dfs_count > 0:\n            dfs_mode = False\n            graph.dfs(self.node)\n\n    def _on_drag(self, x: int, y: int, drag_type: str):\n        if generate_mode:\n            generate_mode_drag(self.node, self.x + x, self.y + y, drag_type)\n            return\n\n        global last_dragged_node\n        last_dragged_node = self.node\n        self.components.x = x\n        self.components.y = y\n\n        for edge in self.outgoing:\n            edge.set_start(self.x + x, self.y + y)\n        for edge in self.ingoing:\n            edge.set_end(self.x + x, self.y + y)\n\n        if drag_type == 'end':\n            self.components.x = 0\n            self.components.y = 0\n            self.x += x\n            self.y += y\n\n    def set_color(self, color: tuple[int, int, int]):\n        self.circle.color = color\n\n    def set_label(self, label: str):\n        self.label.label = label\n\nclass VizEdge(Panel):\n    def __init__(self, edge: Edge, label:str = '', **kwargs):\n        super().__init__(animate=False)\n        self.line = Line(**kwargs, color = EDGE_BASE_COLOR, animate=False, stroke_weight=4)\n        self.label = Label(label=label, animate=False)\n        self._update_arrow()\n\n        self.add(self.line, self.label)\n\n        from_node = edge.from_node._viz\n        to_node = edge.to_node._viz\n        from_node.outgoing.append(self)\n        to_node.ingoing.append(self)\n        self.set_start(from_node.x, from_node.y)\n        self.set_end(to_node.x, to_node.y)\n\n        self.edge = edge\n\n    def set_color(self, color):\n        self.line.color = color\n\n    def set_start(self, x: int, y: int):\n        self.line.start = (y,x)\n        self._update_arrow()\n\n    def set_end(self, x: int, y: int):\n        self.line.end = (y,x)\n        self._update_arrow()\n\n    def _update_arrow(self):\n        dy = self.line.end[0] - self.line.start[0]\n        dx = self.line.end[1] - self.line.start[1]\n        self.label.x = self.line.start[1] + dx/2\n        self.label.y = self.line.start[0] + dy/2\n        if dx == dy == 0:\n            return\n        d = sqrt(dx*dx + dy*dy)\n        dx /= (2*d)\n        dy /= (2*d)\n        self.line.end_offset = (0.5-dx, 0.5-dy)\n\n# ----------------- Buttons -----------------\n\nrun_dfs_btn = LabeledRect(label='Run DFS')\ndef start_dfs():\n    graph.init_dfs()\n    global dfs_count\n    dfs_count = len(graph.nodes)\nrun_dfs_btn.rect.on_click = lambda x, y: start_dfs()\n            \nserialize_btn = LabeledRect(label='serialize', color=(190,130,130), x=6)\nserialize_btn.rect.on_click = lambda x, y: serialize(graph)\n\ngenerate_btn = LabeledRect(label='generate', color=(50,180,130), x=3)\ndef generate_btn_on_click(x, y):\n    global generate_mode\n    generate_mode = not generate_mode\n    generate_btn.label.label = 'drag' if generate_mode else 'generate' \ngenerate_btn.rect.on_click = generate_btn_on_click\n\ngraph = no_debug(create_graph)()\nlast_dragged_node = graph.nodes[0]\n\n\nclear_btn = LabeledRect(label='clear', color=(100,130,190), x=9)\ndef clear_graph():\n    root = graph.nodes[0]\n    for node in graph.nodes[1:]:\n        node._viz.delete()\n    for edge in graph.edges:\n        edge._viz.delete()\n    graph.nodes = [root]\n    graph.edges = []\n    root.ingoing = []\n    root.outgoing = []\nclear_btn.rect.on_click = lambda x, y: clear_graph()\n\n# @end\n\n# graph.dfs(graph.nodes[0])\n\n    \n\n\n"
+        "code": "# ── Depth-First Search — directed graph traversal with timestamps ───────────────────\n# Interactive mode. Click Analyze, then click a node to run DFS from it.\n#\n#  • Click a node    → DFS from that node (node label: entry:exit time)\n#  • Reset DFS btn   → clear all timestamps and colors; pick a new root\n# ─────────────────────────────────────────────────────────────────────────────\n\n# Creating the graph in visual mode\n\n# @viz\n\ndef create_graph():\n\tgraph = Graph()\n \n\tnodes_info=[None, None, None, None, None, None, None, None, None, None, None]\n\tnodes = [graph.add_node(info) for info in nodes_info]\n \n\tpositions = [(3,3), (3,6), (3,9), (7,12), (3,12), (7,9), (12,9), (9,6), (12,6), (9,3), (6,3)]\n\tfor node, position in zip(nodes, positions):\n\t\tnode._viz.x, node._viz.y = position\n        \n\tconnections = [(0,1),(1,2),(2,3),(3,4),(4,2),(2,5),(5,3),(5,6),(1,7),(7,8),(8,6),(7,9),(0,10),(10,9)]\n\tedge_info =[None,None,None,None,None,None,None,None,None,None,None,None,None,None]\n\tfor (i,j), info in zip(connections, edge_info):\n\t\tedge = graph.add_edge(nodes[i], nodes[j], info)\n\t\tedge._viz.set_start(nodes[i]._viz.x, nodes[i]._viz.y)\n\t\tedge._viz.set_end(nodes[j]._viz.x, nodes[j]._viz.y)\n \n\treturn graph\n\ngraph = no_debug(create_graph)()\nno_trace()\n# @end\n\nclass DFSScanner:\n    def __init__(self, graph: Graph):\n        self.graph = graph\n        self.restart_dfs()\n\n    def restart_dfs(self):\n        self.dfs_visited = [False] * len(self.graph.nodes)\n        # @viz\n        for node in self.graph.nodes:\n            node._viz.set_color(NODE_BASE_COLOR)\n            node._viz.set_label('')\n        for edge in self.graph.edges:\n            edge._viz.set_color(EDGE_BASE_COLOR)\n        # @end\n\n    def run(self, root: Node):\n        if self.dfs_visited[root.index]:\n            return\n\n        def _dfs(node: Node, parent_edge: Edge | None):\n            if self.dfs_visited[node.index]:\n                # @viz\n                dfs_arrow.x, dfs_arrow.y = node._viz.x+1, node._viz.y+1\n                if parent_edge is not None:\n                    parent_edge._viz.set_color(EDGE_UNUSED_COLOR)\n                # @end\n                return\n            # @viz\n            dfs_arrow.x, dfs_arrow.y = node._viz.x+1, node._viz.y+1\n            node._viz.set_color(NODE_VISIT_COLOR)\n            cur_time = dfs_time[0]\n            dfs_time[0] += 1\n            node._viz.set_label(cur_time)\n            if parent_edge is not None:\n                parent_edge._viz.set_color(EDGE_VISIT_COLOR)\n            # @end\n            self.dfs_visited[node.index] = True\n            for edge in node.outgoing:\n                _dfs(edge.to_node, edge)\n                # @viz\n                dfs_arrow.x, dfs_arrow.y = node._viz.x+1, node._viz.y+1\n                # @end\n            # @viz\n            node._viz.set_color(NODE_FINISH_COLOR)\n            if parent_edge is not None:\n                parent_edge._viz.set_color(EDGE_FINISH_COLOR)\n\n            node._viz.set_label(f'{cur_time}:{dfs_time[0]}')\n            dfs_time[0] += 1\n            # @end\n        \n        # @viz\n        dfs_time = [0]\n        dfs_arrow = Arrow(x=root._viz.x+1, y=root._viz.y+1, angle=-45)\n        # @end\n        _dfs(root, None)\n        # @viz\n        dfs_arrow.delete()\n        # @end\n\nscanner = no_debug(DFSScanner)(graph)\n\n# @viz\n\ndef dfs_click(node: Node, x: int, y: int):\n    scanner.run(node)\n    return True\n\nVizNode.click_handlers.insert(0, dfs_click)\n\n# ----------------- Buttons -----------------\n\nbuttons_panel = create_buttons()\n\nrun_dfs_btn = LabeledRect(label='Reset DFS', x=9)\ndef start_dfs():\n    no_debug(scanner.restart_dfs)()\nrun_dfs_btn.rect.on_click = lambda x, y: start_dfs()\n\nbuttons_panel.add(run_dfs_btn)\n\nno_trace()\n# @end\n\n\n\n    \n\n\n"
       },
       {
-        "id": "tab-1776761021673",
+        "id": "import-tab-1778229140283",
+        "name": "buttons",
+        "fromImport": true,
+        "importSource": "algorithms/graphs/template",
+        "hidden": true
+      },
+      {
+        "id": "import-tab-1776761021673",
         "name": "graph generation UI",
-        "code": "# A user interface to create a graph\n\n\n# @viz\n\nvirtual_node = None\nvirtual_edge = None\n\ndef generate_mode_drag(orig_node: Node, x, y, drag_type): \n    global virtual_node, virtual_edge, last_dragged_node\n    if drag_type == 'start':\n        node = no_debug(graph.add_node)(info='virtual')\n        virtual_node = node._viz\n        virtual_node.x=x\n        virtual_node.y=y\n        virtual_node.set_color(NODE_DRAG_COLOR)\n\n        last_dragged_node = node\n\n        edge = no_debug(graph.add_edge)(orig_node, node, None)\n        virtual_edge = edge._viz\n        return\n    \n    virtual_node.x = x\n    virtual_node.y = y\n    virtual_edge.set_end(x, y)\n\n    if drag_type == 'end':\n        virtual_node.set_color(NODE_BASE_COLOR)\n        for node in graph.nodes:\n            viz_node = node._viz\n            if viz_node is virtual_node:\n                continue\n            if viz_node.x != virtual_node.x or viz_node.y != virtual_node.y:\n                continue\n\n            print('combine')\n            graph.nodes.pop()\n            virtual_node.delete()\n\n            last_dragged_node = node\n            edge = virtual_edge.edge\n            edge.to_node = node\n            node.ingoing.append(edge)\n            viz_node.ingoing.append(virtual_edge)\n\nnode_generator = Rect(width=50, height=50, alpha=0, z=10)\ndef create_new_node(x, y):\n    if not generate_mode:\n        return\n    node = no_debug(graph.add_node)(None)\n    node._viz.x = x\n    node._viz.y = y\nnode_generator.on_click = create_new_node\n\nno_trace()\n# @end"
+        "fromImport": true,
+        "importSource": "algorithms/graphs/template",
+        "hidden": true
       },
       {
-        "id": "tab-1776757478018",
+        "id": "import-tab-1776757478018",
         "name": "serialization",
-        "code": "# used to create the initial graph.\n# Calling serialize generates a function which creates the current graph,\n# including the position of all the vertices\n\nimport random\n\n# random.seed(100)\ndef generate_random_graph(num_nodes: int, num_edges: int):\n    graph = Graph()\n    for i in range(num_nodes):\n        graph.add_node(None)\n\n    edges_by_idx = [(random.randint(0,15), random.randint(0,15)) for _ in range(10 * num_edges)]\n    edges_by_idx = [tuple(sorted([i,j])) for i,j in edges_by_idx if i!=j]\n    edges_by_idx = set(edges_by_idx)\n    edges_by_idx = [(i,j) if random.random()<0.5 else (j,i) for i,j in edges_by_idx]    \n    for i, j in edges_by_idx[:num_edges]:\n        graph.add_edge(graph.nodes[i], graph.nodes[j], None)\n\n    return graph\n\n# @viz  \ndef serialize(graph: Graph):\n    print('def create_graph():')\n    print('\\tgraph = Graph()\\n')\n\n    info_str = ', '.join([repr(node.info) for node in graph.nodes])\n    print(f'\\tnodes_info=[{info_str}]')\n    print('\\tnodes = [graph.add_node(info) for info in nodes_info]')\n\n    positions_str = ', '.join(f'({node._viz.x},{node._viz.y})' for node in graph.nodes)\n    print(f'\\n\\tpositions = [{positions_str}]')\n    print('''\\tfor node, position in zip(nodes, positions):\n\\t\\tnode._viz.x, node._viz.y = position\n        ''')\n\n    edge_conn = ','.join([f'({edge.from_node.index},{edge.to_node.index})' for edge in graph.edges])\n    edge_info_str = ','.join([repr(edge.info) for edge in graph.edges])\n    print(f'\\tconnections = [{edge_conn}]')\n    print(f'\\tedge_info =[{edge_info_str}]')\n    print('''\\tfor (i,j), info in zip(connections, edge_info):\n\\t\\tedge = graph.add_edge(nodes[i], nodes[j], info)\n\\t\\tedge._viz.set_start(nodes[i]._viz.x, nodes[i]._viz.y)\n\\t\\tedge._viz.set_end(nodes[j]._viz.x, nodes[j]._viz.y)\n\n\\treturn graph''')\n\ndef create_graph():\n\tgraph = Graph()\n \n\tnodes_info=[None, None, None, None, None, None, None, None, None, None, None]\n\tnodes = [graph.add_node(info) for info in nodes_info]\n \n\tpositions = [(3,3), (3,6), (3,9), (7,12), (3,12), (7,9), (12,9), (9,6), (12,6), (9,3), (6,3)]\n\tfor node, position in zip(nodes, positions):\n\t\tnode._viz.x, node._viz.y = position\n        \n\tconnections = [(0,1),(1,2),(2,3),(3,4),(4,2),(2,5),(5,3),(5,6),(1,7),(7,8),(8,6),(7,9),(0,10),(10,9)]\n\tedge_info =[None,None,None,None,None,None,None,None,None,None,None,None,None,None]\n\tfor (i,j), info in zip(connections, edge_info):\n\t\tedge = graph.add_edge(nodes[i], nodes[j], info)\n\t\tedge._viz.set_start(nodes[i]._viz.x, nodes[i]._viz.y)\n\t\tedge._viz.set_end(nodes[j]._viz.x, nodes[j]._viz.y)\n \n\treturn graph\n\nno_trace()\n# @end"
+        "fromImport": true,
+        "importSource": "algorithms/graphs/template",
+        "hidden": true
       },
       {
-        "id": "tab-1776761586083",
-        "name": "UI components",
-        "code": "# @viz\nbuttons_panel = Panel(x=1,y=1)\n\nclass LabeledRect(Panel):\n    def __init__(self, label: str = '', color=(150,100,230), **kwargs):\n        super().__init__(**kwargs)\n        width = kwargs.get('width', 2)\n        self.rect = Rect(color=color, width=width)\n        self.label = Label(label=label, width=width)\n        self.add(\n            self.rect, self.label\n        )\n        buttons_panel.add(self)\n\nno_trace()\n# @end"
-      },
-      {
-        "id": "tab-1776760793334",
+        "id": "import-tab-1776760793334",
         "name": "code",
-        "code": "class Node:\n\n    def __init__(self, index: int, info):\n        self.index = index\n        self.info = info\n        self.ingoing = []\n        self.outgoing = []\n        # @viz\n        self._viz = VizNode(node=self)\n        # @end\n\nclass Edge:\n\n    def __init__(self, from_node: Node, to_node: Node, info):\n        self.from_node = from_node\n        self.to_node = to_node\n        self.info = info\n        # @viz\n        self._viz = VizEdge(edge=self, z=1)\n        # @end\n\nclass Graph:\n\n    def __init__(self):\n        self.nodes = []\n        self.edges = []\n        self.dfs_visited = [False] * len(self.nodes)\n\n    def add_node(self, info) -> Node:\n        node = Node(len(self.nodes), info)\n        self.nodes.append(node)\n        return node\n\n    def get_node(self, index: int) -> Node:\n        return self.nodes[index]\n\n    def add_edge(self, node1: Node, node2: Node, info) -> Edge:\n        edge = Edge(node1, node2, info)\n        self.edges.append(edge)\n        node1.outgoing.append(edge)\n        node2.ingoing.append(edge)     \n        return edge   \n\n    def init_dfs(self):\n        self.dfs_visited = [False] * len(self.nodes)\n        # @viz\n        for node in self.nodes:\n            node._viz.set_color(NODE_BASE_COLOR)\n            node._viz.set_label('')\n        for edge in self.edges:\n            edge._viz.set_color(EDGE_BASE_COLOR)\n        # @end\n\n    def dfs(self, root: Node):\n        if self.dfs_visited[root.index]:\n            return\n\n        def _dfs(node: Node, parent_edge: Edge | None):\n            if self.dfs_visited[node.index]:\n                # @viz\n                dfs_arrow.x, dfs_arrow.y = node._viz.x+1, node._viz.y+1\n                if parent_edge is not None:\n                    parent_edge._viz.set_color(EDGE_UNUSED_COLOR)\n                # @end\n                return\n            # @viz\n            dfs_arrow.x, dfs_arrow.y = node._viz.x+1, node._viz.y+1\n            node._viz.set_color(NODE_VISIT_COLOR)\n            cur_time = dfs_time[0]\n            dfs_time[0] += 1\n            node._viz.set_label(cur_time)\n            if parent_edge is not None:\n                parent_edge._viz.set_color(EDGE_VISIT_COLOR)\n            # @end\n            self.dfs_visited[node.index] = True\n            for edge in node.outgoing:\n                _dfs(edge.to_node, edge)\n                # @viz\n                dfs_arrow.x, dfs_arrow.y = node._viz.x+1, node._viz.y+1\n                # @end\n            # @viz\n            node._viz.set_color(NODE_FINISH_COLOR)\n            if parent_edge is not None:\n                parent_edge._viz.set_color(EDGE_FINISH_COLOR)\n\n            node._viz.set_label(f'{cur_time}:{dfs_time[0]}')\n            dfs_time[0] += 1\n            # @end\n        \n        # @viz\n        dfs_time = [0]\n        dfs_arrow = Arrow(x=root._viz.x+1, y=root._viz.y+1, angle=-45)\n        # @end\n        _dfs(root, None)\n        # @viz\n        dfs_arrow.delete()\n        # @end\n        "
+        "fromImport": true,
+        "importSource": "algorithms/graphs/template",
+        "hidden": false
+      },
+      {
+        "id": "import-tab-1776761586083",
+        "name": "UI components",
+        "fromImport": true,
+        "importSource": "algorithms/graphs/template",
+        "hidden": true
       }
     ]
   },
   "visualPanel": {
-    "textBoxes": []
+    "textBoxes": [
+      {
+        "id": "text-dfs-1",
+        "row": 3,
+        "col": 14,
+        "widthCells": 11,
+        "heightCells": 10,
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#ffb43f",
+                        "fontSize": "24px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Depth-First Search"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#ff8c82",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Problem"
+                },
+                {
+                  "type": "text",
+                  "text": ":"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "Traverse a directed graph recursively. Each node records an entry time (first visit) and an exit time (once all descendants are explored)."
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#96d35f",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Algorithm"
+                },
+                {
+                  "type": "text",
+                  "text": ":"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "Click Analyze, then click any node to start DFS from it."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "Node label: "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "entry:exit"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": " timestamps."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "Reset DFS clears colors and timestamps so you can pick a new root."
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#f5c542",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "■ "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "visiting   "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#50d28c",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "■ "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "fully explored   "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#3a4560",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "■ "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "back edge   "
+                }
+              ]
+            }
+          ]
+        },
+        "bgColor": "#444444"
+      }
+    ]
   }
 }

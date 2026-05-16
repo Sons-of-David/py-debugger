@@ -105,6 +105,20 @@ function App() {
     currentElements, changedIds, goToStep, setTimelineData, resetTimeline,
   } = useTimelineNavigation(appMode);
 
+  const navigateToStep = useCallback((targetStep: number) => {
+    const maxStep = Math.max(0, timeline.length - 1);
+    const direction = targetStep >= currentStep ? 1 : -1;
+    let step = Math.max(0, Math.min(maxStep, targetStep));
+    while (step >= 0 && step <= maxStep) {
+      const line = timeline[step]?.line;
+      if (line == null || !editorRef.current?.isLineHidden(line)) break;
+      const next = step + direction;
+      if (next < 0 || next > maxStep) return; // no visible step in this direction, stay put
+      step = next;
+    }
+    goToStep(step);
+  }, [goToStep, timeline, currentStep]);
+
   const { handleCreateGif, isCreatingGif } = useGifExport({ darkMode });
   const [flashInteractive, setFlashInteractive] = useState(false);
 
@@ -153,9 +167,12 @@ function App() {
     const interactive = hasAnyClickHandler();
     setTimelineData(result.timeline, interactive);
     setOutputTimeline(result.timeline.map(s => ({ text: s.output ?? '', isViz: s.isViz ?? false })));
-    const isOneFrame = (getMaxTime() === 0);
 
-    if (isOneFrame && interactive) {
+    const hasVisibleSteps = result.timeline.some(step =>
+      step.line != null && !editorRef.current?.isLineHidden(step.line)
+    );
+
+    if (!hasVisibleSteps && interactive) {
       commitSegment('----- end trace -----');
       setAppMode('interactive');
     } else {
@@ -430,7 +447,7 @@ function App() {
             currentStep={currentStep}
             stepCount={stepCount}
             flashInteractive={flashInteractive}
-            onGoToStep={goToStep}
+            onGoToStep={navigateToStep}
             appMode={appMode}
             onEnterInteractive={handleEnterInteractive}
             hasInteractiveElements={hasInteractiveElements}
@@ -481,6 +498,8 @@ function App() {
                       ? timeline[currentStep]?.line
                       : undefined
                   }
+                  sampleNames={SAMPLES.map(s => s.rawName)}
+                  loadSample={(name) => SAMPLES.find(s => s.rawName === name)?.data ?? null}
               />
             </div>
           </Panel>

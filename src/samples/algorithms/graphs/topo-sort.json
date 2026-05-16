@@ -1,6 +1,360 @@
 {
-  "userCode": "import random\n\nclass Node:\n\n    def __init__(self, index: int, info):\n        self.index = index\n        self.info = info\n        self.ingoing = []\n        self.outgoing = []\n        # @viz\n        self._viz = VizNode(node=self)\n        # @end\n\nclass Edge:\n\n    def __init__(self, from_node: Node, to_node: Node, info):\n        self.from_node = from_node\n        self.to_node = to_node\n        self.info = info\n        # @viz\n        self._viz = VizEdge(edge=self, z=1)\n        # @end\n\nclass Graph:\n\n    def __init__(self):\n        self.nodes = []\n        self.edges = []\n\n    def add_node(self, info) -> Node:\n        node = Node(len(self.nodes), info)\n        self.nodes.append(node)\n        return node\n\n    def get_node(self, index: int) -> Node:\n        return self.nodes[index]\n\n    def add_edge(self, node1: Node, node2: Node, info) -> Edge:\n        edge = Edge(node1, node2, info)\n        self.edges.append(edge)\n        node1.outgoing.append(edge)\n        node2.ingoing.append(edge)     \n        return edge   \n\n\n# @viz\n\nfrom math import sqrt\n\n# Palette 1\n# NODE_BASE_COLOR      = (170, 185, 200)\n# NODE_VISIT_COLOR     = (  0, 200, 220)\n# NODE_FINISH_COLOR    = ( 50, 220, 120)\n# NODE_QUEUE_COLOR     = (160,  90, 255)\n# NODE_DRAG_COLOR      = (255, 220,   0)\n# NODE_EMPHASIZE_COLOR = (255,  70,  90)\n\n# EDGE_BASE_COLOR      = (120, 145, 170)\n# EDGE_VISIT_COLOR     = (  0, 180, 210)\n# EDGE_FINISH_COLOR    = ( 40, 170,  90)\n# EDGE_UNUSED_COLOR    = ( 60,  75,  95)\n\n# Palette 2\nNODE_BASE_COLOR      = (210, 115, 135)\nNODE_VISIT_COLOR     = (255, 185,  50)\nNODE_FINISH_COLOR    = ( 80, 210, 140)\nNODE_QUEUE_COLOR     = (190, 100, 240)\nNODE_DRAG_COLOR      = ( 80, 160, 255)\nNODE_EMPHASIZE_COLOR = (255,  75,  75)\n\nEDGE_BASE_COLOR      = (120, 130, 150)\nEDGE_VISIT_COLOR     = (240, 140,  40)\nEDGE_FINISH_COLOR    = ( 60, 170, 110)\nEDGE_UNUSED_COLOR    = ( 50,  65,  90)\n\ngenerate_mode = False\nlast_dragged_node = None\n\nclass VizNode(Panel):\n    def __init__(self, node: Node, color=NODE_BASE_COLOR, label:str = '', **kwargs):\n        super().__init__(animate = False, **kwargs)\n\n        self.node = node\n\n        self.components = Panel()\n        self.circle = Circle(color = color, animate = False)\n        self.label = Label(label=label, animate = False, color=(20,20,20))\n        self.components.add(\n            self.circle, self.label\n        )\n\n        self.dragger = Circle(alpha=0, z=-1)\n        self.dragger.on_drag = self._on_drag\n        self.dragger.on_click = self._on_click\n\n        self.add(self.components, self.dragger)\n        self.used = False\n\n    def _on_drag(self, x: int, y: int, drag_type: str):\n        if generate_mode:\n            generate_mode_drag(self.node, self.x + x, self.y + y, drag_type)\n            return\n        global last_dragged_node\n        last_dragged_node = self.node\n        self.components.x = x\n        self.components.y = y\n\n        for edge in self.node.outgoing:\n            edge._viz.set_start(self.x + x, self.y + y)\n        for edge in self.node.ingoing:\n            edge._viz.set_end(self.x + x, self.y + y)\n\n        if drag_type == 'end':\n            self.components.x = 0\n            self.components.y = 0\n            self.x += x\n            self.y += y\n\n    def set_color(self, color: tuple[int, int, int]):\n        self.circle.color = color\n\n    def set_label(self, label: str):\n        self.label.label = label\n\n    def _on_click(self, x: int, y: int):\n        if self.used:\n            return\n        self.used = True\n        self.set_color(NODE_FINISH_COLOR)\n        for edge in self.node.outgoing:\n            node_viz = edge.to_node._viz\n            node_viz.count -= 1\n            node_viz.set_label(node_viz.count)\n            edge._viz.set_color(EDGE_FINISH_COLOR)\n            edge._viz.used = True\n\nclass VizEdge(Panel):\n    def __init__(self, edge: Edge, label:str = '', **kwargs):\n        super().__init__(animate=False)\n        self.used = False\n        self.line = Line(**kwargs, color = EDGE_BASE_COLOR, animate=False, stroke_weight=4)\n        self.label = Label(label=label, animate=False)\n        self._update_arrow()\n\n        self.add(self.line, self.label)\n\n        from_node = edge.from_node._viz\n        to_node = edge.to_node._viz\n        self.set_start(from_node.x, from_node.y)\n        self.set_end(to_node.x, to_node.y)\n\n        self.edge = edge\n\n    def set_color(self, color):\n        if self.used:\n            return\n        self.line.color = color\n\n    def set_start(self, x: int, y: int):\n        self.line.start = (y,x)\n        self._update_arrow()\n\n    def set_end(self, x: int, y: int):\n        self.line.end = (y,x)\n        self._update_arrow()\n\n    def _update_arrow(self):\n        dy = self.line.end[0] - self.line.start[0]\n        dx = self.line.end[1] - self.line.start[1]\n        self.label.x = self.line.start[1] + dx/2\n        self.label.y = self.line.start[0] + dy/2\n        if dx == dy == 0:\n            return\n        d = sqrt(dx*dx + dy*dy)\n        dx /= (2*d)\n        dy /= (2*d)\n        self.line.end_offset = (0.5-dx, 0.5-dy)\n\n        if dx > 0:\n            self.set_color((100, 100, 250))\n        elif dx < 0:\n            self.set_color((250, 250, 100))\n        else:\n            self.set_color(EDGE_BASE_COLOR)\n\nbuttons_panel = Panel(x=1,y=1)\n\nclass LabeledRect(Panel):\n    def __init__(self, label: str = '', color=(150,100,230), **kwargs):\n        super().__init__(**kwargs)\n        width = kwargs.get('width', 2)\n        self.rect = Rect(color=color, width=width)\n        self.label = Label(label=label, width=width)\n        self.add(\n            self.rect, self.label\n        )\n        buttons_panel.add(self)\n\ntopo_scan_btn = LabeledRect(label='Topo Scan')\ndef topo_scan():\n    for node in graph.nodes:\n        node._viz.count = len(node.ingoing)\n        node._viz.set_label(node._viz.count)\ntopo_scan_btn.rect.on_click = lambda x, y: topo_scan()\n\n# ----------------- Generation process -----------------\n\ngenerate_btn = LabeledRect(label='generate', color=(50,180,130), x=3)\ndef generate_btn_on_click(x, y):\n    global generate_mode\n    generate_mode = not generate_mode\n    generate_btn.label.label = 'drag' if generate_mode else 'generate' \ngenerate_btn.rect.on_click = generate_btn_on_click\n\nvirtual_node = None\nvirtual_edge = None\n\ndef generate_mode_drag(orig_node: Node, x, y, drag_type): \n    global virtual_node, virtual_edge, last_dragged_node\n    if drag_type == 'start':\n        node = no_debug(graph.add_node)(info='virtual')\n        virtual_node = node._viz\n        virtual_node.x=x\n        virtual_node.y=y\n        virtual_node.set_color(NODE_DRAG_COLOR)\n\n        last_dragged_node = node\n\n        edge = no_debug(graph.add_edge)(orig_node, node, None)\n        virtual_edge = edge._viz\n        return\n    \n    virtual_node.x = x\n    virtual_node.y = y\n    virtual_edge.set_end(x, y)\n\n    if drag_type == 'end':\n        virtual_node.set_color(NODE_BASE_COLOR)\n        for node in graph.nodes:\n            viz_node = node._viz\n            if viz_node is virtual_node:\n                continue\n            if viz_node.x != virtual_node.x or viz_node.y != virtual_node.y:\n                continue\n\n            print('combine')\n            graph.nodes.pop()\n            virtual_node.delete()\n\n            last_dragged_node = node\n            edge = virtual_edge.edge\n            edge.to_node = node\n            node.ingoing.append(edge)\n\nnode_generator = Rect(width=50, height=50, alpha=0, z=10)\ndef create_new_node(x, y):\n    if not generate_mode:\n        return\n    node = no_debug(graph.add_node)(None)\n    node._viz.x = x\n    node._viz.y = y\nnode_generator.on_click = create_new_node\n\n# ----------------- Serialization process -----------------\n            \nserialize_btn = LabeledRect(label='serialize', color=(190,130,130), x=6)\ndef serialize():\n    print('def create_graph():')\n    print('\\tgraph = Graph()\\n')\n\n    info_str = ', '.join([repr(node.info) for node in graph.nodes])\n    print(f'\\tnodes_info=[{info_str}]')\n    print('\\tnodes = [graph.add_node(info) for info in nodes_info]')\n\n    positions_str = ', '.join(f'({node._viz.x},{node._viz.y})' for node in graph.nodes)\n    print(f'\\n\\tpositions = [{positions_str}]')\n    print('''\\tfor node, position in zip(nodes, positions):\n\\t\\tnode._viz.x, node._viz.y = position\n        ''')\n\n    edge_conn = ','.join([f'({edge.from_node.index},{edge.to_node.index})' for edge in graph.edges])\n    edge_info_str = ','.join([repr(edge.info) for edge in graph.edges])\n    print(f'\\tconnections = [{edge_conn}]')\n    print(f'\\tedge_info =[{edge_info_str}]')\n    print('''\\tfor (i,j), info in zip(connections, edge_info):\n\\t\\tedge = graph.add_edge(nodes[i], nodes[j], info)\n\\t\\tedge._viz.set_start(nodes[i]._viz.x, nodes[i]._viz.y)\n\\t\\tedge._viz.set_end(nodes[j]._viz.x, nodes[j]._viz.y)\n\n\\treturn graph''')\n\nserialize_btn.rect.on_click = lambda x, y: serialize()\n\ndef create_graph():\n\tgraph = Graph()\n \n\tnodes_info=[None, 'virtual', 'virtual', 'virtual', None, 'virtual', 'virtual', 'virtual', 'virtual', 'virtual', 'virtual', 'virtual', 'virtual', 'virtual', 'virtual']\n\tnodes = [graph.add_node(info) for info in nodes_info]\n \n\tpositions = [(15,10), (11,9), (14,13), (18,8), (11,3), (14,3), (14,6), (8,9), (17,5), (19,12), (18,3), (22,9), (22,6), (22,3), (22,13)]\n\tfor node, position in zip(nodes, positions):\n\t\tnode._viz.x, node._viz.y = position\n        \n\tconnections = [(0,1),(0,2),(0,3),(4,1),(4,5),(5,6),(1,7),(3,8),(2,9),(8,6),(8,10),(9,11),(8,12),(12,11),(12,13),(13,10),(11,14),(3,1)]\n\tedge_info =[None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None]\n\tfor (i,j), info in zip(connections, edge_info):\n\t\tedge = graph.add_edge(nodes[i], nodes[j], info)\n\t\tedge._viz.set_start(nodes[i]._viz.x, nodes[i]._viz.y)\n\t\tedge._viz.set_end(nodes[j]._viz.x, nodes[j]._viz.y)\n \n\treturn graph\n\ngraph = no_debug(create_graph)()\nlast_dragged_node = graph.nodes[0]\n\n\nclear_btn = LabeledRect(label='clear', color=(100,130,190), x=9)\ndef clear_graph():\n    root = graph.nodes[0]\n    for node in graph.nodes[1:]:\n        node._viz.delete()\n    for edge in graph.edges:\n        edge._viz.delete()\n    graph.nodes = [root]\n    graph.edges = []\n    root.ingoing = []\n    root.outgoing = []\nclear_btn.rect.on_click = lambda x, y: clear_graph()\n\n\n\n# @end\n\n# graph.dfs(graph.nodes[0])\n\n    \n\n\n",
+  "editorState": {
+    "tabs": [
+      {
+        "id": "tab-1",
+        "name": "main",
+        "code": "# ── Topological Sort — Kahn's BFS algorithm ─────────────────────────────────\n# Interactive mode. Click Analyze, then press Topo Scan.\n#\n#  • Topo Scan button → Kahn's: process zero-in-degree nodes first\n#  • Node label: current in-degree → #position when processed\n#  • Prints 'The graph has cycles' if the ordering is incomplete\n# ─────────────────────────────────────────────────────────────────────────────\n\n# Creating the graph in visual mode\n\n# @viz\n\ndef create_graph():\n\tgraph = Graph()\n \n\tnodes_info=[None, None, None, None, None, None, None, None, None, None, None, None, None, None, None]\n\tnodes = [graph.add_node(info) for info in nodes_info]\n \n\tpositions = [(4,13), (4,9), (10,13), (10,9), (4,3), (7,3), (7,6), (1,9), (10,6), (13,13), (10,3), (13,9), (13,6), (13,3), (16,9)]\n\tfor node, position in zip(nodes, positions):\n\t\tnode._viz.x, node._viz.y = position\n        \n\tconnections = [(0,1),(0,2),(0,3),(4,1),(4,5),(5,6),(1,7),(3,8),(2,9),(8,6),(8,10),(9,11),(8,12),(12,11),(12,13),(13,10),(11,14),(3,1)]\n\tedge_info =[None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None]\n\tfor (i,j), info in zip(connections, edge_info):\n\t\tedge = graph.add_edge(nodes[i], nodes[j], info)\n\t\tedge._viz.set_start(nodes[i]._viz.x, nodes[i]._viz.y)\n\t\tedge._viz.set_end(nodes[j]._viz.x, nodes[j]._viz.y)\n \n\treturn graph\n\ngraph = no_debug(create_graph)()\nscanner_arrow = Arrow(x=0, y=0, angle=-45, alpha=0)\nno_trace()\n# @end\n\nfrom collections import deque\n\nclass TopoScanner:\n    def __init__(self, graph: Graph):\n        self.graph = graph\n\n    def run(self):\n\n        node_in_deg = {node: len(node.ingoing) for node in self.graph.nodes}\n        q = deque([node for node, count in node_in_deg.items() if count == 0])\n        # @viz\n        for edge in graph.edges:\n            edge._viz.set_color(EDGE_BASE_COLOR)\n        for node, count in node_in_deg.items():\n            node._viz.set_label(count)\n            node._viz.set_color(NODE_VISIT_COLOR if count>0 else NODE_QUEUE_COLOR)\n        # @end\n        \n        order = []\n        while len(q) > 0:\n            node = q.popleft()\n            # @viz\n            scanner_arrow.x = node._viz.x+1\n            scanner_arrow.y = node._viz.y+1\n            scanner_arrow.alpha = 1\n            # @end\n\n            for edge in node.outgoing:\n                to_node = edge.to_node\n                node_in_deg[to_node] -= 1\n                # @viz\n                edge._viz.set_color(EDGE_FINISH_COLOR)\n                to_node._viz.set_label(node_in_deg[to_node])\n                # @end\n                if node_in_deg[to_node] == 0:\n                    q.append(to_node)\n                    # @viz\n                    to_node._viz.set_color(NODE_QUEUE_COLOR)\n                    # @end\n            \n            order.append(node)\n            # @viz\n            node._viz.set_color(NODE_FINISH_COLOR)\n            node._viz.set_label(f'#{len(order)}')\n            # @end\n\n        # @viz\n        scanner_arrow.alpha = 0\n        no_trace()\n        # @end\n        if len(order)<len(graph.nodes):\n            print('The graph has cycles')\n            \n\nscanner = no_debug(TopoScanner)(graph)\n\n\n# @viz\nbuttons_panel = create_buttons()\n\ntopo_scan_btn = LabeledRect(label='Topo Scan', x=9)\nbuttons_panel.add(topo_scan_btn)\ndef topo_scan():\n    scanner.run()\ntopo_scan_btn.rect.on_click = lambda x, y: topo_scan()\n\nno_trace()\n# @end\n\n\n    \n\n\n"
+      },
+      {
+        "id": "import-tab-1778229140283",
+        "name": "buttons",
+        "fromImport": true,
+        "importSource": "algorithms/graphs/template",
+        "hidden": true
+      },
+      {
+        "id": "import-tab-1776761021673",
+        "name": "graph generation UI",
+        "fromImport": true,
+        "importSource": "algorithms/graphs/template",
+        "hidden": true
+      },
+      {
+        "id": "import-tab-1776757478018",
+        "name": "serialization",
+        "fromImport": true,
+        "importSource": "algorithms/graphs/template",
+        "hidden": true
+      },
+      {
+        "id": "import-tab-1776760793334",
+        "name": "code",
+        "fromImport": true,
+        "importSource": "algorithms/graphs/template",
+        "hidden": false
+      },
+      {
+        "id": "import-tab-1776761586083",
+        "name": "UI components",
+        "fromImport": true,
+        "importSource": "algorithms/graphs/template",
+        "hidden": true
+      }
+    ]
+  },
   "visualPanel": {
-    "textBoxes": []
+    "textBoxes": [
+      {
+        "id": "text-topo-1",
+        "row": 3,
+        "col": 18,
+        "widthCells": 11,
+        "heightCells": 12,
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#ffb43f",
+                        "fontSize": "24px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Topological Sort — Kahn's"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#ff8c82",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Problem"
+                },
+                {
+                  "type": "text",
+                  "text": ":"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "Order nodes so every directed edge goes forward. Only possible if the graph has no cycles (DAG)."
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#96d35f",
+                        "fontSize": "18px"
+                      }
+                    },
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "Algorithm"
+                },
+                {
+                  "type": "text",
+                  "text": ":"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "Track in-degree (incoming edges) per node. Enqueue all zero-in-degree nodes."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "For each dequeued node, decrement neighbors' in-degrees and enqueue newly-zero ones."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "If some nodes are never dequeued, a cycle exists."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "Press Topo Scan to start."
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "Node label: "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "in-degree"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": " while waiting → "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#74a7fe",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "#position"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": " when processed."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#f5c542",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "■ "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "in queue   "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#50d28c",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "■ "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "textStyle",
+                      "attrs": {
+                        "color": "#d6d6d6",
+                        "fontSize": "16px"
+                      }
+                    }
+                  ],
+                  "text": "processed   "
+                }
+              ]
+            }
+          ]
+        },
+        "bgColor": "#444444"
+      }
+    ]
   }
 }
