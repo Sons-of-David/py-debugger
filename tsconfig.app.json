@@ -8,8 +8,6 @@
     "types": ["vite/client"],
     "skipLibCheck": true,
 
-    "baseUrl": "./src",
-
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,

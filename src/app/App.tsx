@@ -23,7 +23,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useGifExport } from '../capture/useGifExport';
 
 import { Group, Panel, Separator } from 'react-resizable-panels';
-import { Editor, DEFAULT_SAMPLE, type EditorHandle } from '../components/editor/Editor';
+import { Editor, type EditorHandle } from '../components/editor/Editor';
 import { useTheme } from '../contexts/ThemeContext';
 import { AnimationContext } from '../animation/animationContext';
 import { resetPythonState } from '../python-engine/pyodide-runtime';
@@ -87,7 +87,7 @@ function App() {
   const [animationDuration, setAnimationDuration] = useState(200); // ms
 
   // editor state
-  const [userCode, setUserCode] = useState(DEFAULT_SAMPLE);
+  const [userCode, setUserCode] = useState('');
   const handleCodeChange = useCallback((code: string) => {
     setUserCode(code);
     if (lastLoadedCodeRef.current !== null) {

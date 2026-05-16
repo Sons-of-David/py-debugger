@@ -6,9 +6,12 @@ import { VISUAL_ELEM_SCHEMA } from '../../api/visualBuilder';
 import { OutputTerminal } from '../../output-terminal/OutputTerminal';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getVizRanges, getVizBadRanges, computeFoldingRanges } from '../../python-engine/viz-block-parser';
-import sampleCode from './sample.py?raw';
 
-export const DEFAULT_SAMPLE = sampleCode;
+interface FoldingModel {
+  onDidChange(listener: () => void): { dispose(): void };
+  getRegionAtLine(line: number): { isCollapsed: boolean } | null | undefined;
+  toggleCollapseState(regions: unknown[]): void;
+}
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
@@ -37,7 +40,7 @@ function combineTabs(tabs: Tab[]): string {
  *
  * Returns null only if combinedLine is out of range (shouldn't happen in practice).
  */
-export function getTabForLine(combinedLine: number, tabs: Tab[]): TabLineInfo | null {
+function getTabForLine(combinedLine: number, tabs: Tab[]): TabLineInfo | null {
   let offset = 0;
   for (const tab of [...tabs].reverse()) {
     const tabLineCount = tab.code.split('\n').length;
@@ -117,7 +120,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
   // Store effectiveActiveTabId in a ref so handleTabCodeChange always reads the
   // latest value, even if @monaco-editor/react holds a stale closure of the handler.
   const effectiveActiveTabIdRef = useRef(effectiveActiveTabId);
-  effectiveActiveTabIdRef.current = effectiveActiveTabId;
+  useEffect(() => { effectiveActiveTabIdRef.current = effectiveActiveTabId; });
 
   const handleTabCodeChange = useCallback((newCode: string) => {
     const targetId = effectiveActiveTabIdRef.current;
@@ -367,8 +370,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
     const foldingController = editorInstance.getContribution<any>('editor.contrib.folding');
     const modelPromise = foldingController?.getFoldingModel?.();
     if (modelPromise) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      modelPromise.then((foldingModel: any) => {
+      modelPromise.then((foldingModel: FoldingModel | null) => {
         if (foldingModel) {
           disposablesRef.current.push(foldingModel.onDidChange(() => {
             // Defer until after HiddenRangeModel has processed the change and the
@@ -570,7 +572,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
     if (vizRanges.length === 0) return;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const foldingController = editor.getContribution<any>('editor.contrib.folding');
-    foldingController?.getFoldingModel?.()?.then((foldingModel: any) => {
+    foldingController?.getFoldingModel?.()?.then((foldingModel: FoldingModel | null) => {
       if (!foldingModel) return;
       const toCollapse: unknown[] = [];
       for (const r of vizRanges) {
