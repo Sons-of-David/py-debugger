@@ -581,12 +581,18 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
     });
   }, [activeCode]);
 
+  // Keep a ref so the pending-fold effect always calls the latest version without
+  // taking foldActiveVizBlocks as a dependency (which would cause the effect to
+  // re-run on every code edit and re-collapse a manually opened viz block).
+  const foldActiveVizBlocksRef = useRef(foldActiveVizBlocks);
+  useEffect(() => { foldActiveVizBlocksRef.current = foldActiveVizBlocks; }, [foldActiveVizBlocks]);
+
   // When the active tab changes, fold its viz blocks if it has a pending fold
   useEffect(() => {
     if (!pendingFoldTabsRef.current.has(effectiveActiveTabId)) return;
     pendingFoldTabsRef.current.delete(effectiveActiveTabId);
-    requestAnimationFrame(() => foldActiveVizBlocks());
-  }, [effectiveActiveTabId, foldActiveVizBlocks, editorMountKey]);
+    requestAnimationFrame(() => foldActiveVizBlocksRef.current());
+  }, [effectiveActiveTabId, editorMountKey]);
 
   useImperativeHandle(ref, () => ({
     foldVizBlocks: () => {
