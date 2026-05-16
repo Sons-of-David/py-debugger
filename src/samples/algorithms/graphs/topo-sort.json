@@ -49,7 +49,7 @@
         "row": 2,
         "col": 25,
         "widthCells": 14,
-        "heightCells": 14,
+        "heightCells": 13,
         "content": {
           "type": "doc",
           "content": [
@@ -58,7 +58,6 @@
               "content": [
                 {
                   "type": "text",
-                  "text": "Topological Sort \u2014 Kahn's",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -70,25 +69,19 @@
                     {
                       "type": "bold"
                     }
-                  ]
+                  ],
+                  "text": "Topological Sort \u2014 Kahn's"
                 }
               ]
+            },
+            {
+              "type": "paragraph"
             },
             {
               "type": "paragraph",
               "content": [
                 {
                   "type": "text",
-                  "text": ""
-                }
-              ]
-            },
-            {
-              "type": "paragraph",
-              "content": [
-                {
-                  "type": "text",
-                  "text": "Problem",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -100,7 +93,8 @@
                     {
                       "type": "bold"
                     }
-                  ]
+                  ],
+                  "text": "Problem"
                 },
                 {
                   "type": "text",
@@ -113,7 +107,6 @@
               "content": [
                 {
                   "type": "text",
-                  "text": "Order nodes so every directed edge goes from an earlier to a later node. Only possible in a DAG (no cycles).",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -122,25 +115,19 @@
                         "fontSize": "16px"
                       }
                     }
-                  ]
+                  ],
+                  "text": "Order nodes so every directed edge goes forward. Only possible if the graph has no cycles (DAG)."
                 }
               ]
+            },
+            {
+              "type": "paragraph"
             },
             {
               "type": "paragraph",
               "content": [
                 {
                   "type": "text",
-                  "text": ""
-                }
-              ]
-            },
-            {
-              "type": "paragraph",
-              "content": [
-                {
-                  "type": "text",
-                  "text": "Algorithm",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -152,7 +139,8 @@
                     {
                       "type": "bold"
                     }
-                  ]
+                  ],
+                  "text": "Algorithm"
                 },
                 {
                   "type": "text",
@@ -165,7 +153,6 @@
               "content": [
                 {
                   "type": "text",
-                  "text": "Track in-degree (number of incoming edges) per node.",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -174,7 +161,8 @@
                         "fontSize": "16px"
                       }
                     }
-                  ]
+                  ],
+                  "text": "Track in-degree (incoming edges) per node. Enqueue all zero-in-degree nodes."
                 }
               ]
             },
@@ -183,7 +171,6 @@
               "content": [
                 {
                   "type": "text",
-                  "text": "Enqueue all zero-in-degree nodes. For each dequeued node, decrement neighbors' in-degrees and enqueue any that hit zero.",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -192,7 +179,8 @@
                         "fontSize": "16px"
                       }
                     }
-                  ]
+                  ],
+                  "text": "For each dequeued node, decrement neighbors' in-degrees and enqueue newly-zero ones."
                 }
               ]
             },
@@ -201,7 +189,6 @@
               "content": [
                 {
                   "type": "text",
-                  "text": "If some nodes are never dequeued, the graph has a cycle.",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -210,7 +197,8 @@
                         "fontSize": "16px"
                       }
                     }
-                  ]
+                  ],
+                  "text": "If some nodes are never dequeued, a cycle exists."
                 }
               ]
             },
@@ -219,7 +207,6 @@
               "content": [
                 {
                   "type": "text",
-                  "text": "Press Topo Scan to start.",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -228,25 +215,19 @@
                         "fontSize": "16px"
                       }
                     }
-                  ]
+                  ],
+                  "text": "Press Topo Scan to start."
                 }
               ]
+            },
+            {
+              "type": "paragraph"
             },
             {
               "type": "paragraph",
               "content": [
                 {
                   "type": "text",
-                  "text": ""
-                }
-              ]
-            },
-            {
-              "type": "paragraph",
-              "content": [
-                {
-                  "type": "text",
-                  "text": "Node label: ",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -255,11 +236,11 @@
                         "fontSize": "16px"
                       }
                     }
-                  ]
+                  ],
+                  "text": "Node label: "
                 },
                 {
                   "type": "text",
-                  "text": "in-degree",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -268,11 +249,11 @@
                         "fontSize": "16px"
                       }
                     }
-                  ]
+                  ],
+                  "text": "in-degree"
                 },
                 {
                   "type": "text",
-                  "text": " while waiting \u2192 ",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -281,11 +262,11 @@
                         "fontSize": "16px"
                       }
                     }
-                  ]
+                  ],
+                  "text": " while waiting \u2192 "
                 },
                 {
                   "type": "text",
-                  "text": "#position",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -294,11 +275,11 @@
                         "fontSize": "16px"
                       }
                     }
-                  ]
+                  ],
+                  "text": "#position"
                 },
                 {
                   "type": "text",
-                  "text": " when processed",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -307,7 +288,8 @@
                         "fontSize": "16px"
                       }
                     }
-                  ]
+                  ],
+                  "text": " when processed."
                 }
               ]
             },
@@ -316,7 +298,6 @@
               "content": [
                 {
                   "type": "text",
-                  "text": "  \u25a0 ",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -325,11 +306,11 @@
                         "fontSize": "16px"
                       }
                     }
-                  ]
+                  ],
+                  "text": "\u25a0 "
                 },
                 {
                   "type": "text",
-                  "text": "waiting in queue  ",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -338,11 +319,11 @@
                         "fontSize": "16px"
                       }
                     }
-                  ]
+                  ],
+                  "text": "in queue   "
                 },
                 {
                   "type": "text",
-                  "text": "  \u25a0 ",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -351,11 +332,11 @@
                         "fontSize": "16px"
                       }
                     }
-                  ]
+                  ],
+                  "text": "\u25a0 "
                 },
                 {
                   "type": "text",
-                  "text": "processed  ",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -364,7 +345,8 @@
                         "fontSize": "16px"
                       }
                     }
-                  ]
+                  ],
+                  "text": "processed   "
                 }
               ]
             }

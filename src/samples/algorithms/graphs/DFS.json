@@ -50,7 +50,7 @@
         "row": 2,
         "col": 14,
         "widthCells": 14,
-        "heightCells": 13,
+        "heightCells": 11,
         "content": {
           "type": "doc",
           "content": [
@@ -59,7 +59,6 @@
               "content": [
                 {
                   "type": "text",
-                  "text": "Depth-First Search",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -71,25 +70,19 @@
                     {
                       "type": "bold"
                     }
-                  ]
+                  ],
+                  "text": "Depth-First Search"
                 }
               ]
+            },
+            {
+              "type": "paragraph"
             },
             {
               "type": "paragraph",
               "content": [
                 {
                   "type": "text",
-                  "text": ""
-                }
-              ]
-            },
-            {
-              "type": "paragraph",
-              "content": [
-                {
-                  "type": "text",
-                  "text": "Problem",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -101,7 +94,8 @@
                     {
                       "type": "bold"
                     }
-                  ]
+                  ],
+                  "text": "Problem"
                 },
                 {
                   "type": "text",
@@ -114,7 +108,6 @@
               "content": [
                 {
                   "type": "text",
-                  "text": "Traverse a directed graph recursively. Each node records an entry time (first visit) and an exit time (once all descendants are explored).",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -123,25 +116,19 @@
                         "fontSize": "16px"
                       }
                     }
-                  ]
+                  ],
+                  "text": "Traverse a directed graph recursively. Each node records an entry time (first visit) and an exit time (once all descendants are explored)."
                 }
               ]
+            },
+            {
+              "type": "paragraph"
             },
             {
               "type": "paragraph",
               "content": [
                 {
                   "type": "text",
-                  "text": ""
-                }
-              ]
-            },
-            {
-              "type": "paragraph",
-              "content": [
-                {
-                  "type": "text",
-                  "text": "Algorithm",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -153,7 +140,8 @@
                     {
                       "type": "bold"
                     }
-                  ]
+                  ],
+                  "text": "Algorithm"
                 },
                 {
                   "type": "text",
@@ -166,7 +154,6 @@
               "content": [
                 {
                   "type": "text",
-                  "text": "Click Analyze, then click any node to run DFS from it.",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -175,7 +162,8 @@
                         "fontSize": "16px"
                       }
                     }
-                  ]
+                  ],
+                  "text": "Click Analyze, then click any node to start DFS from it."
                 }
               ]
             },
@@ -184,7 +172,6 @@
               "content": [
                 {
                   "type": "text",
-                  "text": "Node label: ",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -193,11 +180,11 @@
                         "fontSize": "16px"
                       }
                     }
-                  ]
+                  ],
+                  "text": "Node label: "
                 },
                 {
                   "type": "text",
-                  "text": "entry:exit",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -206,11 +193,11 @@
                         "fontSize": "16px"
                       }
                     }
-                  ]
+                  ],
+                  "text": "entry:exit"
                 },
                 {
                   "type": "text",
-                  "text": " timestamps.",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -219,7 +206,8 @@
                         "fontSize": "16px"
                       }
                     }
-                  ]
+                  ],
+                  "text": " timestamps."
                 }
               ]
             },
@@ -228,7 +216,6 @@
               "content": [
                 {
                   "type": "text",
-                  "text": "Reset DFS clears colors and timestamps so you can pick a new root.",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -237,25 +224,19 @@
                         "fontSize": "16px"
                       }
                     }
-                  ]
+                  ],
+                  "text": "Reset DFS clears colors and timestamps so you can pick a new root."
                 }
               ]
+            },
+            {
+              "type": "paragraph"
             },
             {
               "type": "paragraph",
               "content": [
                 {
                   "type": "text",
-                  "text": ""
-                }
-              ]
-            },
-            {
-              "type": "paragraph",
-              "content": [
-                {
-                  "type": "text",
-                  "text": "  \u25a0 ",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -264,11 +245,11 @@
                         "fontSize": "16px"
                       }
                     }
-                  ]
+                  ],
+                  "text": "\u25a0 "
                 },
                 {
                   "type": "text",
-                  "text": "visiting  ",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -277,11 +258,11 @@
                         "fontSize": "16px"
                       }
                     }
-                  ]
+                  ],
+                  "text": "visiting   "
                 },
                 {
                   "type": "text",
-                  "text": "  \u25a0 ",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -290,11 +271,11 @@
                         "fontSize": "16px"
                       }
                     }
-                  ]
+                  ],
+                  "text": "\u25a0 "
                 },
                 {
                   "type": "text",
-                  "text": "fully explored  ",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -303,11 +284,11 @@
                         "fontSize": "16px"
                       }
                     }
-                  ]
+                  ],
+                  "text": "fully explored   "
                 },
                 {
                   "type": "text",
-                  "text": "  \u25a0 ",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -316,11 +297,11 @@
                         "fontSize": "16px"
                       }
                     }
-                  ]
+                  ],
+                  "text": "\u25a0 "
                 },
                 {
                   "type": "text",
-                  "text": "already visited (back edge)  ",
                   "marks": [
                     {
                       "type": "textStyle",
@@ -329,7 +310,8 @@
                         "fontSize": "16px"
                       }
                     }
-                  ]
+                  ],
+                  "text": "back edge   "
                 }
               ]
             }
