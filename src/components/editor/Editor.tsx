@@ -294,27 +294,46 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
     vizDecorationsRef.current = editor.deltaDecorations(vizDecorationsRef.current, decorations);
   }, [activeCode]);
 
-  // Update active step decoration (highlight the current executed line)
+  // Update active step decoration (highlight the current executed line).
+  // If the target line is inside a collapsed region, highlights the fold header instead.
   const updateActiveDecoration = useCallback(() => {
     const editor = editorRef.current;
     const monaco = monacoRef.current;
     if (!editor || !monaco) return;
 
-    const decorations: editor.IModelDeltaDecoration[] = [];
-
-    if (localCurrentLine != null) {
-      decorations.push({
-        range: new monaco.Range(localCurrentLine, 1, localCurrentLine, 1),
-        options: {
-          isWholeLine: true,
-          className: 'active-executed-line',
-          marginClassName: 'active-executed-line-margin',
-        },
-      });
+    if (localCurrentLine == null) {
+      activeDecorationsRef.current = editor.deltaDecorations(activeDecorationsRef.current, []);
+      return;
     }
 
-    activeDecorationsRef.current = editor.deltaDecorations(activeDecorationsRef.current, decorations);
+    // HiddenRangeModel tracks the merged set of lines hidden by collapsed folds.
+    // A hidden range [start, end] means the fold header is at start-1.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const foldingController = editor.getContribution<any>('editor.contrib.folding');
+    const hiddenRanges: Array<{ startLineNumber: number; endLineNumber: number }> =
+      foldingController?.hiddenRangeModel?.hiddenRanges ?? [];
+
+    let line = localCurrentLine;
+    for (const range of hiddenRanges) {
+      if (range.startLineNumber <= line && line <= range.endLineNumber) {
+        line = range.startLineNumber - 1;
+        break;
+      }
+    }
+
+    activeDecorationsRef.current = editor.deltaDecorations(activeDecorationsRef.current, [{
+      range: new monaco.Range(line, 1, line, 1),
+      options: {
+        isWholeLine: true,
+        className: 'active-executed-line',
+        marginClassName: 'active-executed-line-margin',
+      },
+    }]);
   }, [localCurrentLine]);
+
+  // Keep a ref so the fold-change listener always calls the latest closure.
+  const updateActiveDecorationRef = useRef(updateActiveDecoration);
+  useEffect(() => { updateActiveDecorationRef.current = updateActiveDecoration; }, [updateActiveDecoration]);
 
   // Scroll to the current executed line when it changes
   useEffect(() => {
@@ -337,6 +356,28 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
     vizDecorationsRef.current = [];
     activeDecorationsRef.current = [];
     setEditorMountKey((k) => k + 1);
+
+    // Re-run the active step decoration when the user folds/unfolds a region.
+    // onDidChangeHiddenAreas covers view-layer fold changes; foldingModel.onDidChange
+    // catches fold state changes before the view layer (belt-and-suspenders).
+    disposablesRef.current.push(editorInstance.onDidChangeHiddenAreas(() => {
+      updateActiveDecorationRef.current();
+    }));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const foldingController = editorInstance.getContribution<any>('editor.contrib.folding');
+    const modelPromise = foldingController?.getFoldingModel?.();
+    if (modelPromise) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      modelPromise.then((foldingModel: any) => {
+        if (foldingModel) {
+          disposablesRef.current.push(foldingModel.onDidChange(() => {
+            // Defer until after HiddenRangeModel has processed the change and the
+            // synchronous change-decoration chain has fully completed.
+            Promise.resolve().then(() => updateActiveDecorationRef.current());
+          }));
+        }
+      });
+    }
 
     monaco.languages.setLanguageConfiguration('python', {
       comments: { lineComment: '#' },
