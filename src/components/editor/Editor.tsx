@@ -608,6 +608,12 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
       setTabs(newTabs);
       setActiveTabId((newTabs.find(t => !t.fromImport) ?? newTabs[0]).id);
       onChange(combineTabs(newTabs));
+
+      // Clear Monaco's undo stack. @monaco-editor/react uses executeEdits() when
+      // the value prop changes, which preserves undo history. Calling model.setValue()
+      // directly resets the undo/redo stack, so Ctrl+Z won't return to the previous sample.
+      const activeCodeAfterLoad = (newTabs.find(t => !t.fromImport) ?? newTabs[0]).code ?? '';
+      editorRef.current?.getModel()?.setValue(activeCodeAfterLoad);
     },
   }), [tabs, onChange, foldActiveVizBlocks]);
 
