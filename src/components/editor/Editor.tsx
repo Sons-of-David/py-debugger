@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
+import { useRef, useEffect, useLayoutEffect, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import MonacoEditor, { type Monaco } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import type * as MonacoTypes from 'monaco-editor';
@@ -106,6 +106,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
   const loadSampleRef = useRef(loadSample);
   useEffect(() => { loadSampleRef.current = loadSample; }, [loadSample]);
 
+  // Set to true around model.setValue() in load() to suppress the spurious onChange
+  // that would write the new tab's code into the stale active tab in state.
+  const suppressOnChangeRef = useRef(false);
+
   // Tabs that have a pending viz-block fold (populated by foldVizBlocks, drained as tabs become active)
   const pendingFoldTabsRef = useRef<Set<string>>(new Set());
 
@@ -117,12 +121,13 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
   const activeCode = activeTab.code;
   const isActiveTabImport = activeTab?.fromImport ?? false;
 
-  // Store effectiveActiveTabId in a ref so handleTabCodeChange always reads the
-  // latest value, even if @monaco-editor/react holds a stale closure of the handler.
+  // Ref avoids stale closures in Monaco's onChange; useLayoutEffect (not useEffect)
+  // keeps it current before @monaco-editor/react's value-sync useEffect fires.
   const effectiveActiveTabIdRef = useRef(effectiveActiveTabId);
-  useEffect(() => { effectiveActiveTabIdRef.current = effectiveActiveTabId; });
+  useLayoutEffect(() => { effectiveActiveTabIdRef.current = effectiveActiveTabId; });
 
   const handleTabCodeChange = useCallback((newCode: string) => {
+    if (suppressOnChangeRef.current) return;
     const targetId = effectiveActiveTabIdRef.current;
     setTabs(prev => {
       const current = prev.find(t => t.id === targetId);
@@ -662,7 +667,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
       // the value prop changes, which preserves undo history. Calling model.setValue()
       // directly resets the undo/redo stack, so Ctrl+Z won't return to the previous sample.
       const activeCodeAfterLoad = (newTabs.find(t => !t.fromImport) ?? newTabs[0]).code ?? '';
+      suppressOnChangeRef.current = true;
       editorRef.current?.getModel()?.setValue(activeCodeAfterLoad);
+      suppressOnChangeRef.current = false;
     },
   }), [tabs, onChange, foldActiveVizBlocks]);
 
