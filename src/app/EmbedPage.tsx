@@ -9,6 +9,7 @@ import { executeCode, type TraceStageInfo } from '../python-engine/executor';
 import { setHandlers, hasAnyClickHandler } from '../visual-panel/handlersState';
 import { SAMPLES } from './sampleRegistry';
 import { useTimelineNavigation, type AppMode } from '../timeline/useTimelineNavigation';
+import { extractCodeFromEditorState } from '../components/editor/editorUtils';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -117,8 +118,9 @@ export function EmbedPage() {
   // Auto-analyze when Pyodide is ready
   useEffect(() => {
     if (!pyodideReady || !sample) return;
-    const code = sample.data.userCode;
-    if (!code) return;
+    const getSample = (rawName: string) => SAMPLES.find(s => s.rawName === rawName)?.data;
+    const code = extractCodeFromEditorState(sample.data.editorState ?? sample.data.userCode, getSample);
+    if (!code.trim()) return;
     runAnalysis(code, sample.data.visualPanel ?? {});
   // Only run once when pyodide becomes ready for the current sample
   // eslint-disable-next-line react-hooks/exhaustive-deps
