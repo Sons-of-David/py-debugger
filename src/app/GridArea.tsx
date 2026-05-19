@@ -20,6 +20,9 @@ import { useGridState } from '../visual-panel/hooks/useGridState';
 import type { VisualBuilderElementBase } from '../api/visualBuilder';
 import { executeClickHandler, executeDragHandler, executeInputChanged, type TraceStageInfo, type DragType } from '../python-engine/executor';
 import { appendError } from '../output-terminal/terminalState';
+import { getStateAt, getMaxTime } from '../timeline/timelineState';
+import { buildGridObjects } from '../visual-panel/hooks/useGridState';
+import type { GridObject } from '../visual-panel/types/grid';
 import { migrateTextBox, type TextBox } from '../text-boxes/types';
 
 import type { CaptureRegion } from '../visual-panel/components/CaptureRegionLayer';
@@ -37,6 +40,18 @@ const buttonDisabled =
 
 const panelHeader =
   "flex-shrink-0 h-10 px-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between";
+
+function findPanelOrigin(objects: Map<string, GridObject>, elemId: number): { col: number; row: number } | undefined {
+  for (const obj of objects.values()) {
+    if (obj.info.dragData?.elemId === elemId) {
+      return {
+        col: obj.absElement.x - obj.info.dragData.x,
+        row: obj.absElement.y - obj.info.dragData.y,
+      };
+    }
+  }
+  return undefined;
+}
 
 export interface GridAreaHandle {
   loadGridObjects: (elements: VisualBuilderElementBase[]) => void;
@@ -123,10 +138,17 @@ export const GridArea = forwardRef<GridAreaHandle, GridAreaProps>(
       if (result.timeline.length > 0) onTrace?.(result);
     }, [onTrace]);
 
-    const handleElementDrag = useCallback(async (elemId: number, x: number, y: number, dragType: DragType) => {
+    const handleElementDrag = useCallback(async (elemId: number, x: number, y: number, dragType: DragType): Promise<{ col: number; row: number } | undefined> => {
       const result = await executeDragHandler(elemId, y, x, dragType);
-      if (result.error) { appendError(result.error); return; }
+      if (result.error) { appendError(result.error); return undefined; }
       if (result.timeline.length > 0) onTrace?.(result);
+      // After onTrace, timelineState is updated synchronously. Use it to compute the
+      // element's new absolute position so Grid can correct a stale panel origin
+      // (needed when on_drag moves the containing panel).
+      const lastElements = getStateAt(getMaxTime());
+      if (!lastElements) return undefined;
+      const newObjects = buildGridObjects(lastElements);
+      return findPanelOrigin(newObjects, elemId);
     }, [onTrace]);
 
     // ---------------------------------------------------------------------------

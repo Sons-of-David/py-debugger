@@ -38,7 +38,7 @@ interface GridProps {
   darkMode?: boolean;
   mouseEnabled?: boolean;
   onElementClick?: (elemId: number, x: number, y: number) => void;
-  onElementDrag?: (elemId: number, x: number, y: number, dragType: 'start' | 'mid' | 'end') => Promise<void> | void;
+  onElementDrag?: (elemId: number, x: number, y: number, dragType: 'start' | 'mid' | 'end') => Promise<{ col: number; row: number } | undefined> | void;
   onElementInput?: (elemId: number, text: string) => void;
   // Text box props
   textBoxes?: TextBox[];
@@ -129,6 +129,12 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
   const handleDragStart = useCallback((elemId: number, x: number, y: number, panelOriginCol: number, panelOriginRow: number) => {
     dragStateRef.current = { elemId, lastRow: y, lastCol: x, panelOriginCol, panelOriginRow };
     Promise.resolve(onElementDragRef.current?.(elemId, x, y, 'start'))
+      .then((newOrigin) => {
+        if (newOrigin && dragStateRef.current) {
+          dragStateRef.current.panelOriginCol = newOrigin.col;
+          dragStateRef.current.panelOriginRow = newOrigin.row;
+        }
+      })
       .finally(() => { dragCallInFlightRef.current = false; });
   }, []);
 
@@ -146,6 +152,12 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
     // Wrap in Promise.resolve so the in-flight flag clears whether the handler
     // returns a Promise (async) or void (sync / not defined).
     Promise.resolve(onElementDragRef.current?.(elemId, col, row, 'mid'))
+      .then((newOrigin) => {
+        if (newOrigin && dragStateRef.current) {
+          dragStateRef.current.panelOriginCol = newOrigin.col;
+          dragStateRef.current.panelOriginRow = newOrigin.row;
+        }
+      })
       .finally(() => { dragCallInFlightRef.current = false; });
   }, [getCellFromMouseEvent, onHoverCell]);
 
