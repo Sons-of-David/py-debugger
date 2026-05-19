@@ -15,24 +15,9 @@ interface FoldingModel {
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
-export interface Tab {
-  id: string;
-  name: string;
-  code: string;
-  hidden?: boolean; // if true: executes but shows as a narrow strip in the tab bar; trace skips it
-  fromImport?: boolean; // read-only, not persisted, removed as a group
-  importSource?: string; // rawName of the source sample (set when fromImport)
-}
-
-export interface TabLineInfo {
-  tab: Tab;
-  localLine: number; // 1-indexed line within that tab's code
-}
-
-/** Combine tabs rightmost-first (rightmost tab's code appears at the top). */
-function combineTabs(tabs: Tab[]): string {
-  return [...tabs].reverse().map(t => t.code).join('\n');
-}
+export type { Tab, TabLineInfo } from './editorUtils';
+import { combineTabs, resolveEditorTabs } from './editorUtils';
+import type { Tab, TabLineInfo } from './editorUtils';
 
 /**
  * Map a 1-indexed line number in the combined code back to a specific tab
@@ -624,40 +609,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({
       return info?.tab.hidden ?? false;
     },
     load: (state: unknown) => {
-      let parsedTabs: Tab[];
-      if (state && typeof state === 'object' && 'tabs' in state && Array.isArray((state as { tabs: unknown }).tabs)) {
-        parsedTabs = (state as { tabs: Tab[] }).tabs;
-      } else if (typeof state === 'string') {
-        parsedTabs = [{ id: 'tab-1', name: 'main', code: state }];
-      } else {
-        parsedTabs = [{ id: 'tab-1', name: 'main', code: '' }];
-      }
-
-      // Resolve any fromImport tabs that have no code (saved as references)
-      const importSources = [...new Set(
-        parsedTabs.filter(t => t.fromImport && t.importSource && !t.code).map(t => t.importSource!)
-      )];
-      const injectedTabs: Tab[] = importSources.flatMap(source => {
-        const data = loadSampleRef.current?.(source);
-        const editorState = (data && typeof data === 'object' && 'editorState' in data)
-          ? (data as { editorState: unknown }).editorState
-          : data;
-        const srcTabs = (editorState && typeof editorState === 'object' && 'tabs' in editorState
-          && Array.isArray((editorState as { tabs: unknown }).tabs))
-          ? (editorState as { tabs: Tab[] }).tabs
-          : [];
-        return srcTabs.map(t => ({
-          ...t,
-          id: `import-${t.id}`,
-          fromImport: true as const,
-          importSource: source,
-          hidden: parsedTabs.find(s => s.importSource === source && s.name === t.name)?.hidden ?? t.hidden ?? false,
-        }));
-      });
-
-      const newTabs = importSources.length > 0
-        ? [...parsedTabs.filter(t => !t.fromImport), ...injectedTabs]
-        : parsedTabs;
+      const resolved = resolveEditorTabs(state, loadSampleRef.current ?? undefined);
+      const newTabs = resolved.length > 0 ? resolved : [{ id: 'tab-1', name: 'main', code: '' }];
 
       setTabs(newTabs);
       setActiveTabId((newTabs.find(t => !t.fromImport) ?? newTabs[0]).id);
